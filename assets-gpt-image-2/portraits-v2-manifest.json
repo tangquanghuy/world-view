@@ -1,0 +1,167 @@
+{
+  "generator": "gpt-image-2",
+  "method": "independent text-to-image generation, no reference image supplied as edit input",
+  "count": 16,
+  "assets": [
+    {
+      "file": "portrait-v2-01.png",
+      "source": "portrait-v2-01.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "de509eef049b2ce1d7d7b8cfed4f2b1583f323e6cdda6511f7d590cfcef37f7c"
+    },
+    {
+      "file": "portrait-v2-02.png",
+      "source": "portrait-v2-02.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "f6a6500e709d442f0dd90920d30a0fbc751b39b23a896ce8716060e617694d5e"
+    },
+    {
+      "file": "portrait-v2-03.png",
+      "source": "portrait-v2-03.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "3253e16dc9b94d5d642cf685c645de9b7797eee8be17e83850f4e72089fd843c"
+    },
+    {
+      "file": "portrait-v2-04.png",
+      "source": "portrait-v2-04.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "892d604850a5e9d8248fb747a258803c6924a8a7ff9a6294b2aef3992f962ee9"
+    },
+    {
+      "file": "portrait-v2-05.png",
+      "source": "portrait-v2-05.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "e30eb7f480b3e54ba1f6bdb63447ed44ceda9e6e9ffc11a0854b06fb7eb5d13d"
+    },
+    {
+      "file": "portrait-v2-06.png",
+      "source": "portrait-v2-06.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "400a72daf2baae48896723783ba26f234bad340b9c66296b522adae69f47265b"
+    },
+    {
+      "file": "portrait-v2-07.png",
+      "source": "portrait-v2-07.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "608c61d548beb281ff209b1c5469a4da7597af64cce2485e5193e1c6f8d647d2"
+    },
+    {
+      "file": "portrait-v2-08.png",
+      "source": "portrait-v2-08.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "1fe29535a3b4ca3f4583d855283f7e9907009c3c58645b8c185936b52ec8dc9d"
+    },
+    {
+      "file": "portrait-v2-09.png",
+      "source": "portrait-v2-09.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "666010d887e5415c8735851214529b9013466be983f748b73909f0418808514a"
+    },
+    {
+      "file": "portrait-v2-10.png",
+      "source": "portrait-v2-10.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "816e4f29e957d22651ac7bea1b5b37110167ef14b966a89c75263955e37797bb"
+    },
+    {
+      "file": "portrait-v2-11.png",
+      "source": "portrait-v2-11.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "5b57e06f39241ab666003a4d4d9d1ea82ddad8b45061c6e20c6436ff0638465f"
+    },
+    {
+      "file": "portrait-v2-12.png",
+      "source": "portrait-v2-12.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "6aca58a6d6d0274ba8f90be04e4b92d1498acd010007d8755998c4aa35febab7"
+    },
+    {
+      "file": "portrait-v2-13.png",
+      "source": "portrait-v2-13.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "ae1c06ee2986b3e06e9e94efc5df39b1d5064f3337d5d8055ac1ff0fe11a125f"
+    },
+    {
+      "file": "portrait-v2-14.png",
+      "source": "portrait-v2-14.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "9432d7e037854513f4eb1d7163d10622b6a037cf586a2345be855b3a45a7a950"
+    },
+    {
+      "file": "portrait-v2-15.png",
+      "source": "portrait-v2-15.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "cdb2a500deabc21c82c343330f878536969022fd1dd94175a3fa81f5e685bf38"
+    },
+    {
+      "file": "portrait-v2-16.png",
+      "source": "portrait-v2-16.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "343a7848312519754be68576181d936509285a917b31bf3a7669f41481932d09"
+    }
+  ]
+}

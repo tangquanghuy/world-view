@@ -1,0 +1,174 @@
+{
+  "portrait_import_count": 6,
+  "avatar_import_count": 8,
+  "assets": [
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-17.png",
+      "source": "portraits/portrait-neutral-005.png",
+      "selection_reason": "broad bell-shaped side cloak",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "98b9c3487c4629d6dcfab09f251a4c639715b54261a689944d9365f522525907"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-18.png",
+      "source": "portraits/portrait-neutral-006.png",
+      "selection_reason": "short-haired walking profile with layered jacket",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "8c2de9f473a7b93a768d32dd53741847702ecd232a71dd9e42aee7a06f4487db"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-19.png",
+      "source": "portraits/portrait-neutral-009.png",
+      "selection_reason": "compact cape and loose-trouser walking profile",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "c64eed9d40a80db199210cdcec055c0ef889a5cb98e68a7b1456c9a9b1b2c16b"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-20.png",
+      "source": "portraits/portrait-neutral-011.png",
+      "selection_reason": "high scarf and long asymmetrical wrap",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "473f7901e3b31ddcaeaf525aacf45fa81efe2bde7a6731338665c773a47b5861"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-21.png",
+      "source": "portraits/portrait-neutral-013.png",
+      "selection_reason": "short mantle and narrow-leg profile",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "b783d0c09b3b2a034cd46d38cec858afb46b2832b27d3b65056e493c4c4166e8"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-22.png",
+      "source": "portraits/portrait-neutral-015.png",
+      "selection_reason": "long structured coat and walking profile",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "538e133335b0b97846923fa6c95f33458b6c4d6ecd5c29ca17f82756495fa8a3"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-01.png",
+      "source": "avatars/avatar-neutral-003.png",
+      "selection_reason": "high collar and swept side fringe",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "449b30dc44b60cf0279fbb2f999853679a8963b8b12845278c0395389bf927f1"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-02.png",
+      "source": "avatars/avatar-neutral-008.png",
+      "selection_reason": "long wavy side-profile hair",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "59dce34c3bfa01a00e5d35433f8522b435cf2f871aa9e450ac098df7d8588a7d"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-03.png",
+      "source": "avatars/avatar-neutral-010.png",
+      "selection_reason": "long straight hair and raised collar",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "643d225f5a11d690814ca45f7349d4a2548dcff3bbda5b1d3828cf69dcaf2238"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-04.png",
+      "source": "avatars/avatar-neutral-014.png",
+      "selection_reason": "wide soft hood and wavy hair",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "93a9186b5976e275b7c19b5331b286ee6513830f238e7cb9bc4b301b22626f72"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-05.png",
+      "source": "avatars/avatar-neutral-017.png",
+      "selection_reason": "clean short-hair profile",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "3d477de32cc249fd684453e58858c92e8806a9073f1ca03b6dea524cfc94a048"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-06.png",
+      "source": "avatars/avatar-neutral-018.png",
+      "selection_reason": "soft cap and curly hair silhouette",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "4fff0ff8c4c6d5d61ec10041fd428885aff9f8051de5ebaadf2a4665fd7167c9"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-07.png",
+      "source": "avatars/avatar-neutral-022.png",
+      "selection_reason": "curled ponytail side silhouette",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "0165e60e14cabffcfb4082597c7ac7062805ce515efc7b2ff6e784ee841ca73e"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-08.png",
+      "source": "avatars/avatar-neutral-028.png",
+      "selection_reason": "tied-back hair and tall collar",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "4c0b15ac42e1ed62e7463dcb77c120c22f3ac8c614838baee64da5439507e1e9"
+    }
+  ]
+}

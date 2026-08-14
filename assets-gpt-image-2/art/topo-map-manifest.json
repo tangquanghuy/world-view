@@ -1,0 +1,35 @@
+{
+  "generator": "gpt-image-2",
+  "selected_source": "assets-gpt-image-2/_raw-v2/topo-map/topo-map-1.png",
+  "output_size": [
+    2400,
+    810
+  ],
+  "safe_area": [
+    500,
+    0,
+    1900,
+    810
+  ],
+  "usage": "background-size: cover; center",
+  "mean_rgb": [
+    26.07,
+    34.4,
+    51.32
+  ],
+  "channel_extrema": [
+    [
+      0,
+      75
+    ],
+    [
+      7,
+      92
+    ],
+    [
+      16,
+      136
+    ]
+  ],
+  "sha256": "b1606c21fa486236bea8e6dca0848f2d368f7339ca662d10d1ccdcf5295d0c5e"
+}

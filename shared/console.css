@@ -1,0 +1,379 @@
+/* =============================================================================
+   控制台外壳与通用组件。依赖 tokens.css，四个页面共用。
+   页面专属组件（任务卡、链路图、势力拓扑等）留在各自的 HTML 里。
+   ========================================================================== */
+
+/* ---------- 页头 ---------- */
+/* 右边摆几件东西各页不一样，所以只写死「标题占剩下的宽」这一列，
+   其余交给 grid-auto-flow:column 自动开。写死六列的时候，页面少摆一件
+   就在右边留一道 11px 的空 gap，多摆一件又会掉到第二行。 */
+.header{
+  position:relative;z-index:2;
+  display:grid;grid-auto-flow:column;
+  grid-template-columns:minmax(300px,1fr);grid-auto-columns:auto;
+  align-items:center;gap:11px;
+  height:76px;padding:0 18px 0 0;
+}
+.brand{display:flex;align-items:center;gap:2px;min-width:0}
+.brand-art{flex:0 0 auto;width:100px;height:76px;background:var(--art-compass) center/contain no-repeat}
+.brand-text{min-width:0}
+.brand h1{margin:0;color:var(--ink);font:700 30px/1.15 var(--serif);letter-spacing:.02em}
+.brand p{margin:3px 0 0;color:var(--ink4);font:14px/1.4 var(--ui)}
+
+.hbox{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:14px;
+  height:58px;padding:0 18px;
+  border-radius:var(--r-chip);
+  background:rgba(255,255,255,.78);
+  box-shadow:var(--sh1);
+}
+.hbox::after{content:"";position:absolute;right:-6px;bottom:-4px;width:150px;height:52px;background:var(--art-castle) right bottom/contain no-repeat;opacity:.35;pointer-events:none}
+.hbox small{display:block;color:var(--ink4);font:13px/1.3 var(--ui)}
+/* 每段（「王历 312 年」「霜月 12 日」）内部不断行，只允许在段与段之间折 */
+.clock-date{color:var(--ink4);font:14px/1.3 var(--ui)}
+.clock-date i{font-style:normal;white-space:nowrap}
+.clock-date i+i::before{content:" · ";color:var(--ink5)}
+.clock-time{color:var(--ink);font:700 30px/1 var(--serif);font-variant-numeric:tabular-nums}
+.speed-val{color:var(--ink2);font:600 22px/1 var(--serif)}
+.speed-mark{color:var(--gold);font-size:16px}
+
+.pill{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:46px;padding:0 20px;border:0;border-radius:999px;
+  background:rgba(255,255,255,.86);color:var(--ink2);
+  font:15px var(--ui);cursor:pointer;box-shadow:var(--sh1);
+  transition:background .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+.pill:hover{transform:translateY(-1px);box-shadow:var(--sh3)}
+.pill.primary{background:linear-gradient(135deg,#7b8bab,#5c7099);color:#fff}
+.pill .glyph{display:inline-flex;gap:3px}
+.pill .glyph i{display:block;width:3px;height:13px;border-radius:2px;background:currentColor}
+.tri{width:0;height:0;border-left:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent}
+
+/* ---------- 主体骨架 ---------- */
+.shell{position:relative;z-index:2;display:grid;grid-template-columns:158px minmax(0,1fr);gap:12px;padding:0 18px 18px}
+.side{position:sticky;top:12px;align-self:start;display:flex;flex-direction:column;gap:9px}
+.nav{display:grid;gap:5px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  min-height:44px;padding:0 12px;border:0;border-radius:12px;
+  background:rgba(255,255,255,.6);color:var(--ink3);
+  font:15px var(--ui);text-align:left;cursor:pointer;
+  transition:background .2s ease,color .2s ease,transform .2s ease;
+}
+.nav-item:hover{background:rgba(255,255,255,.9);transform:translateX(2px)}
+.nav-item .ni{flex:0 0 auto;width:20px;height:20px;color:#8a94a3}
+.nav-item.on{
+  background:linear-gradient(120deg,#7e8cab,#5f7396);color:#fff;
+  box-shadow:0 0 0 1.5px var(--gold),0 6px 18px rgba(95,115,150,.32);
+}
+.nav-item.on .ni{color:#fff}
+.nav-item.on::after{content:"✦";margin-left:auto;color:var(--gold-soft);font-size:12px}
+.side-art{height:190px;border-radius:var(--r-panel);background:var(--art-sidebar) center bottom/contain no-repeat;opacity:.9}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:12px;align-items:start}
+.col{display:grid;gap:12px;min-width:0}
+
+/* ---------- 面板 ---------- */
+/* container-type 让面板内部能按自身宽度调版：右侧栏只有 344px，
+   翻页条那种「按钮 文字 按钮」在窄面板里必须换行，但在宽面板里要留在一行。 */
+.panel{position:relative;min-width:0;border-radius:var(--r-panel);background:var(--paper);box-shadow:var(--sh2);container-type:inline-size}
+.phead{display:flex;align-items:center;gap:9px;padding:12px 18px 0}
+.pmark{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;color:var(--hue-ink);background:var(--hue-soft)}
+.pmark svg{width:17px;height:17px}
+.phead>div{min-width:0}
+.phead h2{margin:0;color:var(--ink2);font:600 20px/1.3 var(--serif)}
+.phead .sub{display:block;color:var(--ink5);font:14px/1.35 var(--ui)}
+.paction{
+  margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;
+  min-height:38px;padding:0 9px;border:0;border-radius:var(--r-chip);
+  background:transparent;color:var(--indigo-ink);font:14px var(--ui);white-space:nowrap;cursor:pointer;
+  transition:background .16s ease;
+}
+.paction:hover{background:var(--indigo-soft)}
+.pbody{padding:12px 18px 16px}
+
+/* ---------- 宽浮层 ----------
+   窄栏里排不开的东西的去处：右侧栏只有 344px，一份完整档案竖着叠进去就是
+   一根又窄又长的竹竿。浮层给到 1080px，同样的字段横着铺开反而好读。
+   总览的「所有人的往来」全图和势力与地区的「完整档案」都用这一套外壳，
+   页面自己只管往 .sheet-box 里塞内容。
+   交互约定（页面各自接三行）：点遮罩关、Esc 关、右上 ✕ 关。
+   max-height:100% + overflow:auto 是必须的：内容比屏幕高时浮层自己滚，
+   不能让 body 滚——遮罩是 fixed 的，body 一滚内容就跑到遮罩外面去了。 */
+.sheet{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px;background:rgba(38,44,56,.44);backdrop-filter:blur(2px)}
+.sheet[hidden]{display:none}
+.sheet-box{position:relative;width:min(1080px,100%);max-height:100%;overflow:auto;border-radius:var(--r-panel);background:var(--paper);box-shadow:0 26px 70px rgba(40,36,28,.34)}
+.sheet-close{position:absolute;right:14px;top:12px;width:32px;height:32px;border:0;border-radius:50%;background:var(--sunken);color:var(--ink3);font:16px var(--ui);cursor:pointer}
+.sheet-close:hover{background:var(--rule)}
+/* 浮层顶栏直接复用面板的 .phead，只是内边距不一样：右边要给 ✕ 让位，底下不留白
+   （紧跟着的内容块自己带 padding）。总览和势力与地区一度各自在行内写同一串魔数。
+   角色档案没走这条——它的顶栏带 46px 立绘和两行名字，是另一个东西（.sheet-head，留在本页）。 */
+.sheet .phead{padding:16px 62px 0 20px}
+/* 390 下 24px 的遮罩内边距占掉 12% 宽度，浮层里本来就没多少地方了 */
+@media(max-width:560px){
+  .sheet{padding:12px}
+  .sheet-close{right:8px;top:8px}
+  .sheet .phead{padding:14px 46px 0 14px}
+}
+
+/* ---------- 字段名 / 字段值 ----------
+   全站唯一的字段展示规格。字段名 = 图标 + 13px 半粗 + 主色，
+   字段值 = 14px 常规 + 深墨色。两者只差 1px 字号和两级灰度是分不开的，
+   六项排在一起就会变成一堵没有落点的字墙。 */
+.k{display:flex;align-items:center;gap:5px;color:var(--hue-ink);font:600 13px/1.4 var(--ui);letter-spacing:.03em}
+.k svg{flex:0 0 auto;width:14px;height:14px;opacity:.85}
+.v{display:block;margin-top:4px;color:var(--ink2);font:400 14px/1.65 var(--ui);overflow-wrap:anywhere}
+/* 字段网格，列数用 --kv-cols 调 */
+.kv{display:grid;grid-template-columns:repeat(var(--kv-cols,3),minmax(0,1fr));gap:11px 18px}
+.kv>div{min-width:0}
+/* 值是整句话的字段横跨整行（termRow 的第四个元素给 true）。
+   两列网格里一句「身量偏高，浅色长发束起，学院深蓝罩袍，随身一只装抄录工具的旧皮夹」
+   要折三行，旁边的「性别：男」只有一行，这一行就空掉大半——同一行的两格是等高的。
+   跨行之后同样的字数只折两行，右边也不再有那块空白。 */
+.kv>div.w{grid-column:1/-1}
+
+/* ---------- 语义胶囊 ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;align-self:flex-start;justify-self:start;
+  width:fit-content;max-width:100%;padding:4px 10px;border-radius:var(--r-chip);
+  background:var(--hue-soft);color:var(--hue-ink);font:600 14px/1.35 var(--ui);white-space:nowrap;
+}
+.chip.line{background:transparent;box-shadow:inset 0 0 0 1px var(--hue-track)}
+.chip.solid{background:var(--hue);color:#fff}
+.chip svg{width:14px;height:14px}
+
+/* ---------- 头像与纹章 ---------- */
+.avs{display:flex;align-items:center;gap:7px}
+.av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
+.av.ph{display:grid;place-items:center;color:var(--hue-ink);font:600 15px var(--ui)}
+.av-more{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hue-track);color:var(--hue-ink);font:600 14px var(--ui)}
+/* 势力与团体用盾形纹章，跟人物的圆头像一眼分得开，类型不必再写成文字。
+   描边不能用 outline：outline 画在边框盒外面，会被 clip-path 整条裁掉。
+   改成 padding-box / border-box 两层背景，1.5px 的"边"就落在裁切范围内了。 */
+.av.crest,.pav.crest{
+  border-radius:0;clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);box-shadow:none;
+  border:1.5px solid transparent;
+  background:linear-gradient(var(--hue-soft),var(--hue-soft)) padding-box,
+             linear-gradient(var(--hue-track),var(--hue-track)) border-box;
+}
+/* 装真纹章的那一枚要换成深底。assets-gpt-image-2 的 crest / sigil 是纯白像素 +
+   透明通道（留给前端着色的坯子，不是成品图），压在上面那层 --hue-soft 浅底上
+   等于隐形——总览页和角色档案页的关系网里，势力和地区的盾一直是空白的。
+   白纹能读的底只有深底，所以真有图时把盘面压深、边换成金色。
+
+   按 img / span 分开写而不是加一个类：取不到图时渲染的是 .ph 那一支（名称首字），
+   首字是深字，得留在浅底上。两种情况本来就走两个标签。 */
+img.av.crest,img.pav.crest{
+  background:
+    radial-gradient(circle at 32% 20%,color-mix(in srgb,var(--hue) 52%,#38456b) 0%,transparent 68%) padding-box,
+    linear-gradient(158deg,#2b3455 0%,#1e2740 55%,#151c2f 100%) padding-box,
+    linear-gradient(rgba(228,193,136,.72),rgba(228,193,136,.72)) border-box;
+  filter:drop-shadow(0 1px 1px rgba(6,10,20,.45));
+}
+/* 盾形下半是尖角，字要往上提，否则视觉重心掉到空白里 */
+.av.crest.ph,.pav.crest.ph{align-content:start;padding-top:4px}
+
+/* 名单式头像 + 名字 + 角色。用 flex 而不是等宽网格：格子按名字长短收缩，
+   三个人不会被拉到满行各据一方；换行后自然形成一份名单。 */
+.parts{display:flex;flex-wrap:wrap;gap:9px 26px;margin-top:7px}
+.part{display:flex;align-items:center;gap:9px;min-width:0;max-width:250px}
+.pinfo{display:flex;flex-direction:column;min-width:0}
+.pinfo b{margin:0;color:var(--ink2);font:600 14px/1.35 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinfo small{color:var(--hue-ink);font:14px/1.35 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pav{flex:0 0 auto;width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
+.pav.ph{display:grid;place-items:center;color:var(--hue-ink);font:600 14px var(--ui)}
+
+/* ---------- 时间戳 ----------
+   页面上所有「几点几分／某月某日」的小字都长这样：低一档墨色 + 等宽数字。
+   等宽数字是必需的——时间戳常成列出现，比例数字会让每行的冒号错开。 */
+.tm{color:var(--ink4);font:14px/1.45 var(--ui);font-variant-numeric:tabular-nums}
+
+/* 这里原来有一组 .legend（线段图例）。四个页面按「不写图例」那条规矩全删干净了，
+   整组随之删除。要是又想加图例，先回头看 README 文案规矩第 3 条：
+   图上每条线本来就带着文字标签，图例是把同一件事说两遍；
+   图真的读不懂，该重画的是图。 */
+
+/* ---------- 空态 ----------
+   四个页面原先各写了一套（sched-empty / ego-empty / parts-empty / empty），
+   同一句「这里没有东西」长出四个样子。统一成一个类加两个修饰。 */
+.nodata{margin:0;color:var(--ink4);font:14px/1.6 var(--ui)}
+.nodata b{color:var(--ink3);font:600 14px/1.5 var(--ui)}
+/* 撑满并居中：用在关系图这种有固定高度的画布里 */
+.nodata.mid{display:grid;place-items:center;height:100%;text-align:center}
+/* 成框：用在卡片内部，需要把空态和上面的字段明确隔开时。虚线框读作「这一格是空的」，
+   跟实心的 sunken 底不一样——后者会被当成一块有内容的区域。 */
+.nodata.box{
+  display:grid;gap:5px;padding:12px 14px;border:1.5px dashed var(--rule);border-radius:var(--r-card);
+  background:linear-gradient(158deg,rgba(247,246,240,.75),rgba(255,254,250,.75));overflow-wrap:break-word;
+}
+.parts-empty{margin-top:7px}
+
+/* ---------- 进度：百分比在上、进度条整行在下 ---------- */
+.prow{display:grid;gap:6px}
+.pct{color:var(--ink2);font:600 22px/1.1 var(--serif);font-variant-numeric:tabular-nums}
+/* display 必须显式写：.bar 常被放进非 grid 的容器，span 保持 inline 时 height 不生效，
+   进度条会塌成一条错位的色块。 */
+.bar{display:block;overflow:hidden;height:8px;border-radius:4px;background:var(--hue-track)}
+.bar i{display:block;width:var(--p,0%);height:100%;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--hue) 80%,#fff),var(--hue));transition:width .5s ease}
+
+/* ---------- 时间尺 ----------
+   总览的世界演进流和角色档案的今日日程共用。刻度不是写死的 08:00/12:00/18:00，
+   由页面按本批数据实际覆盖的时间跨度算出来，塞进 .tick 的 --x。
+   轨道两端对齐刻度的取值范围（8%–90%），否则线头会孤零零伸出去一截。 */
+.ruler{position:relative;display:flex;align-items:flex-end;height:54px;margin:8px 18px 2px;padding-bottom:12px}
+.ruler::before{
+  content:"";position:absolute;left:8%;right:8%;bottom:9px;height:2px;border-radius:1px;
+  background:linear-gradient(90deg,var(--indigo-track),var(--violet-track),var(--amber-track));
+}
+/* 右端箭头，表示时间还在往前走 */
+.ruler::after{content:"";position:absolute;right:6%;bottom:5px;width:0;height:0;border-left:9px solid var(--amber-track);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.tick{position:absolute;bottom:0;left:var(--x);translate:-50% 0;display:grid;justify-items:center;gap:3px}
+.tick svg{width:16px;height:16px;color:var(--gold)}
+.tick b{color:var(--ink2);font:600 17px/1 var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tick small{color:var(--ink4);font:13px/1.2 var(--ui);white-space:nowrap}
+.tick i{width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px var(--indigo-track)}
+.tick.now b{color:var(--gold-ink)}
+.tick.now small{color:var(--gold-ink);font-weight:600}
+.tick.now i{background:var(--gold);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--gold-glow)}
+
+/* ---------- 横向时间轴 ---------- */
+.tl{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:end;min-height:86px;padding:4px 20px 0}
+.tl::before{content:"";position:absolute;left:32px;right:32px;bottom:38px;height:3px;border-radius:2px;background:var(--tl-stops);opacity:.85}
+.tl-node{position:relative;display:grid;justify-items:center;gap:6px;padding:0 4px 5px;border:0;background:transparent;cursor:pointer}
+.tl-name{color:var(--hue-ink);font:600 14px/1.3 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tl-time{color:var(--ink4);font:14px/1.3 var(--ui);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tl-dot{position:relative;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--hue) 30%,transparent) 0 46%,color-mix(in srgb,var(--hue) 10%,transparent) 62%,transparent 76%);transition:transform .26s ease}
+.tl-dot::before{content:"";width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(72,66,52,.22),0 0 0 1px color-mix(in srgb,var(--hue) 38%,transparent)}
+.tl-dot::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--hue)}
+.tl-node[data-p="active"] .tl-dot::after{background:linear-gradient(90deg,var(--hue) 50%,transparent 50%)}
+.tl-node[data-p="done"] .tl-dot::after{background:var(--hue)}
+.tl-node[data-p="key"] .tl-dot::after{background:var(--hue);box-shadow:inset 0 0 0 2px var(--hue),0 0 0 4px color-mix(in srgb,var(--hue) 22%,transparent)}
+.tl-node[data-p="closed"] .tl-dot::after{background:color-mix(in srgb,var(--hue) 52%,#fff)}
+.tl-node:hover .tl-dot,.tl-node:focus-visible .tl-dot{transform:scale(1.15)}
+
+/* ---------- 事件卡 ----------
+   原型里事件是几张独立白卡，不是用分隔线切开的列表 */
+/* 事件卡是 <button>：它本来就只有「点开这个事件」一个用途。
+   原来两页各写各的——总览是 div 挂吐司，任务页是 div 加 tabindex 再手写一个
+   Enter/空格的 keydown。那是在拿 div 模仿按钮，浏览器免费给的东西自己重做一遍。 */
+/* 图标跟标题同行，正文和页脚吃满整张卡——原型就是这么摆的。
+   原来是左右两栏（52px 圆标 | 正文），侧栏 344px 下正文只剩 218px：
+   「下次检查 海盗代表答复停火文本」后面那个「时」被挤到第二行独自站着，
+   地点也常年两行。同一份文字给到 282px 就都是一行。
+   **一张卡最贵的是它的宽度，别拿去养装饰件。** 圆标同时从 52 缩到 30，
+   形状跟着 .pmark 走圆角方块：圆形在这套图里是人物头像的形状，事件不是人。 */
+.ev{display:block;width:100%;padding:12px 13px;border:0;border-radius:var(--r-card);background:var(--card);box-shadow:var(--sh1);font:inherit;color:inherit;text-align:left;cursor:pointer;transition:box-shadow .26s ease,transform .26s ease}
+.ev+.ev{margin-top:10px}
+.ev:hover{transform:translateY(-2px);box-shadow:var(--sh3)}
+.ev:focus-visible{outline:2px solid var(--hue);outline-offset:2px}
+.ev.on{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 20px var(--gold-glow)}
+/* 标题换行时圆标跟状态胶囊都咬第一行，不要一个居中一个顶格：.chip 全局是
+   align-self:flex-start，圆标跟着顶格，再用负外边距把 30px 的方块骑到 22px
+   的首行上居中（(30-22)/2≈4）。单行标题的观感跟居中对齐时一模一样。 */
+.ev-mark{flex:0 0 auto;align-self:flex-start;display:grid;place-items:center;width:30px;height:30px;margin-top:-4px;border-radius:9px;color:var(--hue-ink);background:var(--hue-soft)}
+.ev-mark img,.ev-mark svg{width:19px;height:19px}
+.ev-top{display:flex;align-items:flex-start;gap:9px}
+.ev-top b{min-width:0;color:var(--ink2);font:600 16px/1.4 var(--ui);overflow-wrap:anywhere}
+.ev-top .chip{flex:0 0 auto;margin-left:auto}
+.ev p{margin:8px 0 0;color:var(--ink3);font:14px/1.65 var(--ui);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 类别做成实色小标签，其余各带图标——三行同色文字堆着谁都读不进去 */
+.ev-foot{display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px;margin-top:8px;color:var(--ink4);font:14px/1.5 var(--ui)}
+.ev-tag{
+  flex:0 0 auto;padding:2px 8px;border-radius:var(--r-chip);
+  /* 14px 不是 13px：这是语义胶囊不是字段名，13px 那个口子只留给字段名。
+     同一张卡上的 .chip 也是 14px，两个胶囊挨着差一档字号看着像没对齐。 */
+  background:var(--hue-soft);color:var(--hue-ink);font:600 14px/1.4 var(--ui);white-space:nowrap;
+}
+/* 换行而不是省略号。这两个元素是 flex 容器，里面是「图标 + 标签 + 裸文本」，
+   裸文本会被包成匿名 flex item，而 text-overflow 对匿名 item 不生效——
+   写 ellipsis 的结果是文字被 overflow:hidden 直接切掉且不出省略号，
+   末字被竖着劈成半个，页面上看不出这里少了东西。 */
+/* 图标一列、文字一列：文字换行时第二行落回文字的左边，不会缩到图标底下去。
+   写成 flex 的时候文字是个匿名 item，第二行起点跟着 item 走，读起来是散的。 */
+.ev-foot .at,.ev-foot .next{display:grid;grid-template-columns:14px minmax(0,1fr);align-items:start;gap:5px;min-width:0}
+.ev-foot .at>svg,.ev-foot .next>svg{margin-top:3px}
+.ev-foot .at{flex:1 1 auto}
+.ev-foot .next{flex:1 1 100%}
+.ev-foot svg{flex:0 0 auto;width:14px;height:14px;color:var(--hue);opacity:.75}
+.ev-foot .next i{margin-right:7px;color:var(--hue-ink);font:600 13px/1.4 var(--ui);font-style:normal;white-space:nowrap}
+/* 窄屏下这两行常常多出一个字掉到第二行独自站着。pretty 让浏览器为末行留字，
+   不支持时退回普通折行，没有副作用。间隔用 7px 外边距而不是一个全角空格：
+   同样能把粗体标签和值分开，省下来的半个字宽常常刚好够那一行收住。 */
+.ev-foot .at>span,.ev-foot .next>span,.ev p{text-wrap:pretty}
+
+/* ---------- 下一次检查 ----------
+   任务与事件页右栏收尾的一行。以前它是「世界概况」面板里的最后一格，那个面板
+   （三个计数 + 四条自造的等级）删掉之后，这行自己站在栏里，所以按面板的规格给底。 */
+.wstate{padding:11px 14px;border-radius:var(--r-panel);background:var(--paper);box-shadow:var(--sh2);color:var(--ink2);font:15px var(--ui);text-align:center}
+.wstate[hidden]{display:none}
+
+/* ---------- 收在面板底部的一行强调条 ---------- */
+.nowline{margin:0 18px 14px;padding:8px 14px;border-radius:var(--r-chip);background:var(--gold-soft);color:var(--gold-ink);font:14px/1.5 var(--ui);text-align:center}
+
+/* ---------- 翻页 ----------
+   卡位有限，早的往后翻，不做静默截断 */
+.pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 12px;padding:14px 18px 4px}
+.pager:empty{display:none}
+.pg{
+  padding:6px 13px;border:1px solid var(--rule);border-radius:8px;
+  background:var(--paper);color:var(--ink3);font:14px/1.4 var(--ui);cursor:pointer;
+  transition:border-color .18s ease,color .18s ease;
+}
+.pg:hover:not(:disabled){border-color:var(--indigo);color:var(--indigo-ink)}
+.pg:disabled{opacity:.38;cursor:default}
+.pg{white-space:nowrap;flex:0 0 auto}
+/* 放不下时整块换到下一行，而不是从中间断开 */
+.pg-n{flex:1 1 auto;color:var(--ink4);font:14px/1.4 var(--ui);font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+/* 窄面板里说明文字独占一行，两个按钮留在同一行分列两端 */
+@container (max-width:430px){
+  .pager{justify-content:space-between}
+  .pg-n{order:2;flex:1 1 100%}
+}
+
+/* ---------- 提示条 ---------- */
+.toast{position:fixed;left:50%;bottom:26px;z-index:50;translate:-50% 12px;opacity:0;padding:11px 20px;border-radius:999px;background:rgba(43,52,66,.94);color:#fff;font:14px var(--ui);pointer-events:none;transition:opacity .25s ease,translate .25s ease}
+.toast.on{opacity:1;translate:-50% 0}
+
+/* ---------- 响应式：逐档降列，绝不压列宽 ---------- */
+@media(max-width:1440px){
+  .main{grid-template-columns:minmax(0,1fr) 320px}
+}
+@media(max-width:1180px){
+  .brand h1{font-size:27px}
+  .main{grid-template-columns:minmax(0,1fr)}
+  .shell{grid-template-columns:150px minmax(0,1fr)}
+}
+@media(max-width:860px){
+  /* 换行摆：auto-flow 得跟着从 column 改回 row，否则东西继续往右开新列，永远不换行。
+     单列不是两列：顶栏右边现在只剩世界时间一件（速度倍率和播控都删了），
+     两列会把它塞进半个格子，390 下「22:00」被挤到第二行。 */
+  .header{height:auto;padding:10px 14px;grid-auto-flow:row;grid-template-columns:minmax(0,1fr);row-gap:10px}
+  .brand{grid-column:1/-1}
+  .shell{grid-template-columns:minmax(0,1fr);padding:0 14px 20px}
+  .side{position:static}
+  .nav{grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);overflow-x:auto;padding-bottom:4px}
+  .side-art{display:none}
+  .kv{--kv-cols:2}
+}
+@media(max-width:560px){
+  .kv{--kv-cols:1}
+  /* 30px 的时钟在半屏宽的框里放不下：日期与时刻改成上下两行，
+     并排会把时刻挤到卡片右下角、压在城堡底纹上。 */
+  /* 放不下就换行，但别硬让日期独占一行：顶栏收成单列之后这个框是通栏的，
+     390 下也有 362px，日期和时刻并排摆得开。原来那条 flex:1 1 100% 是
+     时钟框只有半屏宽时打的补丁，现在只会白占一行。 */
+  .hbox{height:auto;padding:8px 12px;gap:2px 10px;flex-wrap:wrap}
+  .hbox>div{min-width:0}
+  .clock-time{font-size:24px}
+  .tl{grid-auto-flow:row;padding:6px 14px}
+  /* 27px 是圆点真正的圆心：左内边距 14px + 圆点半径 13px */
+  .tl::before{left:27px;right:auto;top:14px;bottom:14px;width:3px;height:auto;background:var(--tl-stops-v)}
+  /* 必须逐个指定 grid-area。DOM 顺序是 name → dot → time，靠自动放置的话
+     名字会落进 26px 的圆点格里跟圆点叠在一起，渲染成「港口冲○升级」。 */
+  .tl-node{grid-template-columns:26px minmax(0,1fr);grid-template-rows:auto auto;justify-items:start;gap:1px 11px;padding:7px 0}
+  .tl-dot{grid-area:1/1/3/2;align-self:center}
+  .tl-name{grid-area:1/2/2/3;max-width:none}
+  .tl-time{grid-area:2/2/3/3}
+}

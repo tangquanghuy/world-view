@@ -1,0 +1,2402 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台世界引擎 · 势力与地区</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/console.css">
+<style>
+/* =============================================================================
+   势力与地区页 · 对照 示意图势力图.png 整屏复刻
+   通用令牌与外壳在 shared/tokens.css + shared/console.css，这里只放本页组件。
+
+   原型左主右辅五面板：左上势力格局（暗底地图）、左中各地情势、右上势力档案、
+   右下地区／热点／关系名录、底部通栏世界动向。
+
+   实现里把世界动向和名录提到了最上面通栏，各地情势留在左栏。
+   通栏的是两块恒高的（209 / 246），留在栏里的是唯一会伸缩的那块（500→2181）——
+   于是收起态两栏差 1px，展开时长出来的是左栏，空的那头是 344px 的窄条而不是主栏。
+   反过来试过一版（各地情势通栏），两栏是齐了，整页却长了 230px：通栏的块跟谁都
+   不共享纵向空间。见 README「恒高的块提到通栏，会伸缩的块留在栏里」。 */
+
+/* 通栏面板要跨过 .main 的两列，所以 .main 外面再套一层纵向栅格。
+   直接把它塞进 .col 会被右侧 344px 那一列挤住。 */
+.mainwrap{display:grid;gap:12px;min-width:0}
+
+/* ---------- 本页的美术槽位 ----------
+   势力格局的暗底地图。规格见 美术资产清单.md：2400×810，background-size:cover，
+   中央 1400×810 安全区，图里不许写字，最亮不越过 #4b5c88，别画满。
+
+   声明在这里而不是 tokens.css：custom property 里的相对 url() 在 Chromium 里按
+   "用它的那张样式表"解析，tokens.css 里的 ../assets/ 一旦被页面 <style> 引用就会
+   多退一层目录，直接 404（踩过）。
+
+   资产还没出，所以生效值先给 none——缺件的 url() 会在控制台留一条
+   ERR_FILE_NOT_FOUND，_tools/shot.cjs 会当告警报出来。
+   资产就位后把 --art-topo-map 改成 var(--art-topo-map-src) 就完事，
+   画布那边的 cover／居中／晕影／安全区都已经排好；哪天资产又被撤掉，改回 none
+   就退回下面那三层 CSS 渐变，不破图。 */
+:root{
+  --art-topo-map-src:url("assets-gpt-image-2/art/topo-map.png");
+  --art-topo-map:var(--art-topo-map-src);
+}
+
+/* ---------- 纹章与徽记的底座 ----------
+   assets-gpt-image-2 的 crest / sigil 是「纯白像素 + 透明通道」，
+   _tools/art-palette.cjs 量出来平均亮度 1.00、饱和度 0.00——它们是留给前端着色的
+   坯子，不是成品图（assets-gpt-image-2/README.md 写着「方便前端通过 currentColor、
+   mask 或 CSS 滤色统一着色」）。
+
+   这批 PNG 原来直接压在 --hue-soft 那种浅底上，白纹配浅底就是隐形：各地情势左边
+   五枚地区徽记在截图里是五团白雾，名录里的 30px 那版干脆什么都看不见，
+   势力档案「对外关系」的两枚盾也是空的。
+
+   白图能读的底只有一种：深底。所以凡是装这批 PNG 的槽位统一垫一枚深色印章——
+   暗蓝盘 + 主色斜光 + 金色细环，跟画布上的节点徽章同一套材质。浅底面板和暗底
+   地图因此对得上：同一个势力在两处长得一样，不是一处发白一处发亮。
+
+   用 :has(img) 选中而不是让 JS 多加一个类：图片真的 404 时 onerror 会把 <img>
+   换成名称首字，选择器当场失配，底座自动退回浅底深字——那才是首字该待的地方，
+   深底配深字反而看不见。 */
+/* 底座分两族，跟画布上的徽章同一套规矩：势力是暖调靛蓝盘配金边，
+   地区是冷调青灰盘配钢边。浅底面板和暗底地图因此说同一种话——
+   一枚印章什么材质，就说明它是一伙人还是一块地。
+   .fmark 一个类同时装两种：.crest 是势力（盾），.sq 是地区（圆角方，见 frow 的 shape）。 */
+.fcrest,.rsig,.idx-i,.fmark{--seal-tint:color-mix(in srgb,var(--hue) 52%,#38456b)}
+.fcrest:has(img),.rsig:has(img),.idx-i:has(img),.fmark:has(img){
+  background:
+    radial-gradient(circle at 32% 20%,var(--seal-tint) 0%,transparent 68%),
+    linear-gradient(158deg,#2b3455 0%,#1e2740 55%,#151c2f 100%);
+  color:#f4f8ff;
+}
+.rsig:has(img),.idx-i:has(img),.fmark.sq:has(img),.fmark.rd:has(img){
+  --seal-tint:color-mix(in srgb,var(--hue) 34%,#3c5f78);
+  background:
+    radial-gradient(circle at 32% 20%,var(--seal-tint) 0%,transparent 68%),
+    linear-gradient(158deg,#28455a 0%,#1c3040 55%,#111d28 100%);
+}
+/* 白纹贴在深盘上容易发飘，垫一道极短的投影就压住了 */
+.fcrest img,.rsig img,.idx-i img,.fmark img{filter:drop-shadow(0 1px 1px rgba(6,10,20,.5))}
+
+/* ---------- 势力格局画布 ----------
+   原型这一块是一张暗底地图：山脉、海岸、地形起伏，节点浮在地形上，所以整块读起来
+   是「世界」而不是流程图底纹。地形是美术资产（assets-gpt-image-2/art/topo-map.png，2400×810，
+   规格见 美术资产清单.md），这里只留槽位：
+
+     · 图在最上一层，下面垫着原来那三层 CSS 渐变；
+     · 文件缺失时 background-image 那一层不绘制，渐变原样露出来，不破图；
+     · 走 var(--art-topo-map)，跟 bloom-tl / bloom-br 同一套写法（声明在 tokens.css，
+       url() 相对 shared/ 解析）。
+
+   旧版还在画布中段画了一条地平线亮带（势力在天上、地界在地上）。那条带把画面切成
+   上下两块，是「像泳道图」的主要来源，整条删掉——两类节点靠徽记本身和状态胶囊区分。 */
+.gwrap{
+  position:relative;overflow:hidden;
+  margin:10px 18px 0;border-radius:var(--r-card);
+  background-image:
+    /* 地形上再蒙一层。资产本身山脊很亮（最亮到 #4b5c88），节点的暗蓝盘压上去
+       只差一档，徽章边缘糊在山脊里，连线更是直接被地形纹理吃掉。
+       蒙层放在 background-image 的第一位（第一层在最上），只压地形不压节点——
+       下面 ::after 那层是压在节点之上的，两件事不能合成一层做。 */
+    radial-gradient(118% 92% at 50% 40%,rgba(14,20,36,.34) 0%,rgba(9,13,25,.66) 100%),
+    var(--art-topo-map),
+    radial-gradient(130% 64% at 50% 118%,rgba(214,170,106,.22),transparent 64%),
+    radial-gradient(76% 48% at 16% -10%,rgba(148,174,214,.15),transparent 66%),
+    linear-gradient(178deg,#1b2440 0%,#232c47 38%,#302f48 68%,#3b3748 100%);
+  background-size:auto,cover,auto,auto,auto;
+  background-position:center,center,center,center,center;
+  background-repeat:no-repeat;
+  box-shadow:inset 0 0 0 1px rgba(206,168,106,.26),var(--sh1);
+}
+/* 四周压暗把视线收回中间。地图资产就位后这一层同样有用：切图边缘不会硬邦邦地断掉。
+   地形本身已经被上面那层蒙过一道，这里就只留四角的收边，压太狠会把靠边的节点
+   一起压暗——它跟节点在同一摞里，z-index 比画布高。 */
+.gwrap::after{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(126% 96% at 50% 44%,transparent 56%,rgba(8,12,22,.34) 100%);
+}
+/* 角落罗盘。复用页头那张。它是给暖白底做的（浅底深线），直接压低不透明度贴在暗底上
+   会露出一整块浅色方底——试过，像贴了张纸。所以先 invert 反相成"黑底白线"，
+   再用 screen 混色把黑底吃掉，只剩白线。素材缺失就什么都不画。 */
+.gwrap::before{
+  content:"";position:absolute;left:16px;bottom:14px;width:104px;height:72px;
+  z-index:1;pointer-events:none;opacity:.20;
+  filter:invert(1) contrast(1.15);mix-blend-mode:screen;
+  background:url("assets/art/header-compass.png") no-repeat center/contain;
+}
+.gcanvas{position:relative;z-index:1;width:100%}
+/* 整层连线垫一道短投影。地形是有纹理的，1.3px 的背景线压在山脊上会被吃掉半截；
+   投影加在 <svg> 上而不是每条 path 上，是因为 _tools/graph-cross.cjs 按
+   "计算出来的 stroke 不是 none"数连线，多描一条就多算一条边。 */
+.gcanvas svg.wires{
+  position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;
+  filter:drop-shadow(0 1px 1.5px rgba(5,9,18,.62));
+}
+.gcanvas svg.wires path{transition:stroke-opacity .2s ease}
+/* 当前正在看依据的那条线。只加一层同色外发光，不动线宽也不动不透明度——
+   主次就两档，选中态不许自己再开一档。 */
+.gcanvas svg.wires path.sel{filter:drop-shadow(0 0 5px currentColor)}
+
+/* 悬停任一节点或关系名：只留下跟它有关的那张子图，其余淡出。
+   一次读一小块，比把十几条线同时看清楚现实得多。 */
+.gnode,.gtag{transition:opacity .2s ease}
+.gcanvas.dimming .gnode{opacity:.22}
+.gcanvas.dimming .gnode.lit{opacity:1}
+.gcanvas.dimming .gtag{opacity:0}
+.gcanvas.dimming .gtag.lit{opacity:1}
+.gcanvas.dimming svg.wires path{stroke-opacity:.06}
+.gcanvas.dimming svg.wires path.lit{stroke-opacity:1}
+
+/* width:max-content 是必须的，不能省。节点是绝对定位 + left:var(--x)，绝对定位盒子
+   的"收缩到内容"宽度会被 left 到包含块右边缘的剩余空间钳住——translate(-50%) 是
+   排版之后才生效的，排版当下并不知道节点其实会左移半个身位。结果就是越靠右的节点
+   被压得越窄：实测最右侧的地区只剩 58.5px，名字被省略号切成「旧港夜…」，状态胶囊
+   横着出血 13px，量出来的碰撞盒也跟着失真。
+   内层再套 .gbox 做 grid，是因为 <button> 自己当 grid 容器时 Chromium 算固有宽度
+   同样不把居中子项算全。 */
+.gnode{
+  position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;
+  display:block;width:max-content;padding:0;border:0;background:transparent;
+  font:inherit;cursor:pointer;
+}
+.gnode .gbox{display:grid;justify-items:center;gap:7px;max-width:var(--gnw,168px)}
+/* 外发光比节点盒子大一圈。做成伪元素而不是真元素：真元素会被溢出体检
+   当成"子元素越界"报出来，而它本来就是刻意出血的装饰。 */
+.gnode::before{
+  content:"";position:absolute;left:50%;top:-13px;width:88px;height:88px;translate:-50% 0;
+  border-radius:50%;background:radial-gradient(circle,var(--gc) 0%,transparent 66%);
+  opacity:.16;pointer-events:none;transition:opacity .22s ease;
+}
+.gnode:hover::before,.gnode:focus-visible::before,.gnode.on::before{opacity:.4}
+/* 名字和状态字的上限必须写成 var(--gnw) 这种确定长度，不能写 max-width:100%。
+   .gnode 是绝对定位的 grid，宽度靠内容撑；子元素用百分比上限时，Chromium 在算
+   固有宽度那一轮把百分比当成 0，列宽只剩下唯一有确定尺寸的徽记，
+   于是名字和状态双双被省略号切掉，量出来的 n.w 也比实际窄——布局跟着算错。 */
+/* 名字长过一行就折成两行，不用省略号。节点多的时候徽章和名字宽度都会收
+   （见 renderGraph 里的 shrink），10 字长名在 124px 宽里必然一行放不下——
+   折行是把字排出来，省略号是把字吃掉，README 那条"不做静默截断"管的就是后者。 */
+/* 描边发光收紧一档：原来 0 0 10px 那一圈把字撑出一团雾，字反而不锐。
+   近处一道实影负责压住地形纹理，远处一道淡晕负责收边，就这两层。 */
+.gnode .gname{
+  max-width:var(--gnw,168px);color:#f8fafe;font:600 16px/1.32 var(--ui);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;text-align:center;letter-spacing:.2px;
+  text-shadow:0 1px 2px rgba(6,10,20,.96),0 0 7px rgba(6,10,20,.7);
+}
+.gnode.r .gname{font-size:15px}
+.gnode .gstate{
+  display:flex;align-items:center;gap:4px;max-width:var(--gnw,168px);
+  color:var(--gc,#cfdcee);font:600 14px/1.5 var(--ui);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 0 4px rgba(9,14,26,.95),0 1px 2px rgba(9,14,26,.9);
+}
+.gnode .gstate svg{flex:0 0 auto;width:14px;height:14px}
+/* 常态（活跃 / 单方控制）压低一档：四个势力全是「活跃」时，四枚一模一样的
+   彩色胶囊只是噪声。反常的那几个——争夺中、归属不明、休眠——才亮起来，
+   一眼就能挑出这一带哪里不对劲。字一个没少，只是分了轻重。 */
+.gnode .gstate.quiet{color:#c3ccdc;font-weight:400}
+/* 反常态的胶囊。原来是 1px 纯 currentColor 的实心圈，在暗底上是全画面最锐的一道
+   边——一个「争夺中」比中心那枚徽章还抢眼，读起来像报错。
+   改成同色染底 + 半透明描边：还是那一档亮，但不再是唯一一道硬边。 */
+.gnode .gstate.loud{
+  padding:1.5px 10px;border-radius:var(--r-chip);
+  background:color-mix(in srgb,var(--gc,#cfdcee) 15%,rgba(10,16,29,.84));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gc,#cfdcee) 50%,transparent),
+             0 2px 6px rgba(5,9,18,.5);
+  text-shadow:none;
+}
+/* 九个节点统一成同一种圆形徽章：金环 + 暗盘 + 内发光，照原型。
+   上一版把势力做成盾形排上排、地区做成圆角方排下排，形状加站位两重区分叠在一起，
+   结果整张图读成了泳道流程图。势力和地区现在只靠两件事区分：徽记本身（纹章／地物）
+   和名字底下那行状态（活跃／交易中　对　争夺中／单方控制），跟原型一致。 */
+/* 徽章按"压印出来的币"做，不是"填了色的圆"：
+     暗描边  先把徽章从地形上切下来，不然圆边糊在山脊里
+     金环    2px，比原来的 1.6px 半透明环立得住
+     顶部内高光 + 底部内阴影  一上一下，圆盘才鼓起来
+     落地投影  让它浮在地形之上，而不是印在地形里
+   这几层缺一层就退回原来那种平贴的深蓝圆点。 */
+.gmedal{
+  /* 势力＝金环暖盘，地区＝钢环冷盘，见下面 .gnode.r .gmedal。
+     两族的差别只在"是什么材质"，形状和站位一律不动——那两样一叠上来就是泳道。 */
+  --rim:rgba(224,190,132,.52);
+  --rim-lit:rgba(244,215,166,.85);
+  --rim-in:rgba(233,205,152,.20);
+  --face-hi:#4c5d8d; --face-mid:#2b3556; --face-lo:#161d31;
+  position:relative;display:grid;place-items:center;
+  width:var(--sz,60px);height:var(--sz,60px);border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 116%,var(--gl,transparent) 0%,transparent 58%),
+    radial-gradient(circle at 34% 20%,var(--face-hi) 0%,var(--face-mid) 46%,var(--face-lo) 100%);
+  box-shadow:
+    0 0 0 1px rgba(9,14,26,.85),
+    0 0 0 3px var(--rim),
+    0 0 0 4px rgba(8,12,22,.34),
+    inset 0 1px 1px rgba(202,222,255,.30),
+    inset 0 -9px 15px rgba(6,10,20,.55),
+    0 9px 20px rgba(4,8,16,.55);
+  color:#f4f8ff;font:600 21px/1 var(--serif);
+  transition:transform .2s ease,box-shadow .2s ease;
+}
+/* 地区那一族：环换成冷钢色，盘面偏青灰——地界是水土，不是金银。
+   金只留给势力和"当前选中"，两者不会撞：地区节点从不进选中态
+   （点地区是滚到下面那一行，见 pickNode），所以冷环不会被选中态盖掉。 */
+.gnode.r .gmedal{
+  --rim:rgba(156,190,214,.50);
+  --rim-lit:rgba(198,226,246,.85);
+  --rim-in:rgba(186,215,236,.20);
+  --face-hi:#42647c; --face-mid:#24394b; --face-lo:#121d29;
+}
+/* 盘面里再收一圈细线，是币缘那道压印。放 ::after 不放 border：
+   border 会挤掉 place-items 居中的内容盒。 */
+.gmedal::after{
+  content:"";position:absolute;inset:4px;border-radius:50%;pointer-events:none;
+  box-shadow:inset 0 0 0 1px var(--rim-in),inset 0 0 11px rgba(8,13,26,.5);
+}
+/* 纹章素材本身就是纯白像素 + 透明通道（见上面「纹章与徽记的底座」），
+   暗盘上直接铺就行。原来这里挂着 brightness(0) invert(1)，那是给旧的黑色线稿
+   svg 反相用的，白图上是一对相互抵消的空操作。 */
+.gmedal img{
+  width:calc(var(--sz,60px) * .54);height:calc(var(--sz,60px) * .54);
+  opacity:.96;filter:drop-shadow(0 1px 2px rgba(5,9,18,.7));
+}
+/* 能点的东西要自己看起来能点：悬停抬一下、金环亮一档 */
+.gnode:hover .gmedal,.gnode:focus-visible .gmedal{
+  transform:translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(9,14,26,.85),
+    0 0 0 3px var(--rim-lit),
+    0 0 0 4.5px rgba(8,12,22,.38),
+    inset 0 1px 1px rgba(202,222,255,.34),
+    inset 0 -9px 15px rgba(6,10,20,.5),
+    0 13px 24px rgba(4,8,16,.6);
+}
+/* 选中的那个：金环加粗 + 外圈晕 + 大光斑。九个节点的环都是金的，所以选中态不能
+   只靠"换成金色"，得靠亮度和光斑面积拉开。 */
+.gnode.on::before{background:radial-gradient(circle,#eec98d 0%,transparent 66%);opacity:.42}
+.gnode.on .gmedal{
+  box-shadow:
+    0 0 0 1px rgba(9,14,26,.85),
+    0 0 0 3.4px #eecb93,
+    0 0 0 8px rgba(236,202,146,.16),
+    0 0 30px rgba(236,202,146,.46),
+    inset 0 1px 1px rgba(212,230,255,.34),
+    inset 0 -9px 15px rgba(6,10,20,.48),
+    0 9px 20px rgba(4,8,16,.55);
+}
+.gnode.on .gmedal::after{box-shadow:inset 0 0 0 1px rgba(240,214,164,.36),inset 0 0 11px rgba(8,13,26,.45)}
+
+/* 关系名。压在线上，靠描边发光读清，不垫深色方块——垫了就像流程图控件。 */
+.gtag{
+  position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;
+  display:flex;align-items:center;gap:4px;
+  padding:1px 7px;border:0;border-radius:var(--r-chip);background:transparent;
+  color:var(--gc,#cfdcee);font:600 14px/1.6 var(--ui);white-space:nowrap;cursor:pointer;
+  text-shadow:0 0 3px #0d1524,0 0 6px #0d1524,0 0 11px rgba(13,21,36,.85),0 1px 2px #0d1524;
+}
+.gtag span{display:flex;align-items:center;gap:4px}
+.gtag svg{flex:0 0 auto;width:13px;height:13px}
+.gtag:hover,.gtag.on{background:rgba(13,20,36,.88);box-shadow:inset 0 0 0 1px rgba(255,255,255,.11);text-shadow:none;z-index:3}
+/* 背景线的关系名默认不出。上一版 14 条线上挂了 14 个标签，标签自己就是噪声大头。
+   现在只有主线（跟当前势力直接相关的那几条）常显；其余的字还在，悬停任一节点时
+   跟着它的子图一起亮出来——点这个节点就把它变成主线，标签也就常显了。 */
+.gtag.bg{opacity:0;pointer-events:none}
+/* 亮出来的背景标签一律垫深底：它出现的位置底下可能压着别的线，甚至压着一个
+   （已经淡下去的）节点，垫底才保证一定读得清。常显的主线标签不垫，靠描边发光。 */
+.gcanvas.dimming .gtag.bg.lit{
+  opacity:1;pointer-events:auto;
+  background:rgba(13,20,36,.9);box-shadow:inset 0 0 0 1px rgba(255,255,255,.11);text-shadow:none;
+}
+/* 边太密时收成圆点。文字没删，挪进悬停/点选态——契约允许一个势力挂 10 条关系，
+   十几个势力就是上百条边，一百多个文字标签在一块画布上摆不开。 */
+.gtag.mini{padding:3px;text-shadow:none}
+.gtag.mini i{display:block;width:10px;height:10px;border-radius:50%;background:var(--gc);box-shadow:0 0 0 2px rgba(14,22,40,.75)}
+.gtag.mini span{display:none}
+.gtag.mini:hover,.gtag.mini:focus-visible,.gtag.mini.on{padding:1px 7px}
+.gtag.mini:hover i,.gtag.mini:focus-visible i,.gtag.mini.on i{display:none}
+.gtag.mini:hover span,.gtag.mini:focus-visible span,.gtag.mini.on span{display:block}
+.gempty{display:grid;place-items:center;height:180px;color:#c8d3e4;font:15px/1.7 var(--ui)}
+
+/* 这里原有一套线型图例的样式（.gkey / .phead.wkey），删了。
+   图例进出过两轮：先按规矩 3 删掉，后来背景线标签改成悬停才现身，
+   以「那条线没字了」为由加回来，现在按规矩重新删掉。
+   背景线本来就是背景——细、淡、不抢眼，它的名字在悬停、在名录、在完整档案里都有。
+   为了给一档刻意压暗的东西作注，在标题栏常年占一行，不划算。 */
+
+/* 关系依据。默认落在本轮最近变动过的那条关系上，点线换一条——所以这块永远
+   在讲一件具体的事，不是一句"点一下这里会显示…"的占位话。 */
+.gfoot{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;margin:10px 18px 14px;padding:11px 14px;border-radius:var(--r-card);background:var(--sunken)}
+.gfoot .k{align-self:center}
+.gfoot .who{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:var(--ink2);font:600 15px/1.4 var(--ui)}
+/* 长文本一行不超过 ~40 个汉字，超了眼睛回不到行首 */
+.gfoot p{grid-column:1/-1;max-width:40em;margin:0;color:var(--ink3);font:14px/1.65 var(--ui);overflow-wrap:anywhere}
+.gfoot p+p{margin-top:2px}
+.gfoot p em{margin-right:7px;color:var(--hue-ink);font:600 14px/1.65 var(--ui);font-style:normal}
+.gfoot .hint{font-weight:400;color:var(--ink3)}
+
+
+/* ---------- 枚举强度条 ----------
+   契约明令禁止生成繁荣度／治安／影响力这类评分，所以这里的分段条只表达
+   "枚举第几档"，不显示任何百分比，推导口径写在 title 里。 */
+.steps{display:flex;align-items:center;gap:3px;min-width:66px}
+.steps i{flex:1 1 0;height:8px;min-width:6px;border-radius:3px;background:var(--hue-track)}
+.steps i.on{background:var(--hue)}
+/* 允许换行：档位条后面跟的说明可能是「第 3 / 5 档」，也可能是一个很长的势力名，
+   不换行的话窄一点的格子里直接横着捅出去。 */
+.steprow{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;min-width:0}
+.steprow b{flex:0 1 auto;min-width:0;color:var(--hue-ink);font:600 14px/1.4 var(--ui);overflow-wrap:anywhere}
+
+/* ---------- 地区概览 ---------- */
+.regrow{border-radius:var(--r-card);background:var(--card);box-shadow:var(--sh1)}
+.regrow+.regrow{margin-top:10px}
+.regrow.on{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 20px var(--gold-glow)}
+/* 用 flex-wrap 而不是固定列数的 grid：面板宽度从 974px（1536 档）一路缩到
+   334px（390 档），任何一套固定列宽都会在某一档把最后一格挤出去。 */
+/* 各格的 flex-basis 之和决定"查看详情"要不要另起一行，而它单独占一行就要多花
+   42px×每行。1536 档面板内宽 938：旧的一套基准（128+130×3+220+94＋6 个 18px 间隙）
+   算下来 1021，超出 83px，三行收起态白白多了 126px。基准收到下面这套（112+108×3
+   +180+94＋6 个 12px）＝832，按钮回到同一行。各格都还带 flex-grow，剩下的 106px
+   照 1:1:1:1:2 分回去，实际列宽只比原来窄 5～16px。
+   1280 档内宽 706 装不下这一行，按钮照旧换行——那一档本来就该往下长。 */
+.rtop{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;
+  width:100%;padding:12px 14px;
+  border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;
+}
+.rsig{
+  flex:0 0 auto;display:grid;place-items:center;width:50px;height:50px;border-radius:15px;
+  background:linear-gradient(150deg,var(--hue-soft),color-mix(in srgb,var(--hue) 22%,#fff));
+  box-shadow:inset 0 0 0 1px var(--hue-track);color:var(--hue-ink);font:600 19px/1 var(--serif);
+}
+.rsig:has(img){box-shadow:inset 0 0 0 1px rgba(163,201,224,.46),0 2px 6px rgba(42,38,28,.18)}
+.rsig img{width:30px;height:30px}
+.rname{flex:1 1 112px;min-width:0}
+.rname b{display:block;color:var(--ink2);font:600 17px/1.35 var(--serif);overflow-wrap:anywhere}
+.rcell{flex:1 1 108px;min-width:0}
+.rcell.wide{flex:2 1 180px}
+.rcell .v{margin-top:3px}
+/* 收起态只放最新一条，两行封顶。这里用 -webkit-line-clamp 而不是定高溢出隐藏：
+   体检脚本把行数钳制算作"刻意截断"，定高硬切则会被判成内容溢出。 */
+.rchg{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+  margin-top:4px;color:var(--ink3);font:14px/1.5 var(--ui);overflow-wrap:anywhere;
+}
+.rchg em{color:var(--ink4);font-style:normal;white-space:nowrap}
+.rown{display:flex;align-items:center;gap:7px;min-width:0}
+/* 归属势力前面这一小块也走盾形。行里塞不下 44px 的 .av.crest，但形状必须
+   跟势力对得上——同一页里地区是圆角方，势力是盾，不能这里退化成一个方点。 */
+.rown .dot{
+  flex:0 0 auto;width:12px;height:14px;background:var(--hue);
+  clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);
+}
+.rown span{min-width:0;color:var(--ink2);font:14px/1.5 var(--ui);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmore{
+  flex:0 0 auto;margin-left:auto;display:inline-flex;align-items:center;gap:5px;
+  padding:6px 13px;border-radius:var(--r-chip);
+  background:var(--indigo-soft);color:var(--indigo-ink);font:600 14px/1.4 var(--ui);white-space:nowrap;
+}
+.rexp{padding:2px 14px 14px;border-top:1px solid var(--rule);margin:0 14px}
+.rexp .pager{padding:10px 0 0}
+/* 展开一个地区，左栏这块有 938px。条件和变化各自独占一整行的话，宽度全花在
+   把一条事实横着拉长上，反而不好读。两栏并排：同样的高度里多摆一半内容，
+   每栏 456px 也还在舒服的行长内，一个展开的地区行从 545px 收到 390px。
+   窄屏（面板 <900px）退回竖排。 */
+@container (min-width:900px){
+  .rexp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px;align-items:start}
+  .rexp .rx.wide{grid-column:1/-1}
+}
+
+/* 区块小标题：图标 + 主色 + 半粗，和正文一眼分得开 */
+.sh{display:flex;align-items:center;gap:6px;margin:14px 0 0;color:var(--hue-ink);font:600 15px/1.4 var(--ui)}
+.sh svg{flex:0 0 auto;width:16px;height:16px;opacity:.9}
+.sh em{margin-left:2px;color:var(--ink5);font:400 14px/1.4 var(--ui);font-style:normal}
+
+/* 事实条：左侧一道主色，承载 fact / impact 这种"事实 + 影响"两级文本 */
+.facts{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.factit{position:relative;padding:9px 12px 9px 14px;border-radius:var(--r-card);background:var(--sunken);overflow:hidden}
+.factit::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--hue)}
+.factit .ft{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.factit .ft .chip{padding:1px 8px}
+/* 时间戳走 ink4 不走 ink5：这些块底色是 --sunken，ink5 压在上面只有 4.35 对比度，
+   过不了 AA（同样的颜色放白卡片上是 4.71，能过——踩过一次坑）。 */
+
+/* 事实与影响都是整句话，行长超过 ~40 个汉字就回不到行首了。左栏面板宽 974px，
+   不封顶的话一行能排到 65 个字。 */
+.factit b{display:block;max-width:40em;color:var(--ink2);font:400 14px/1.65 var(--ui);overflow-wrap:anywhere}
+.factit small{display:block;max-width:40em;margin-top:3px;color:var(--ink4);font:14px/1.55 var(--ui);overflow-wrap:anywhere}
+.linkrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.linkbtn{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border:1px solid var(--hue-track);border-radius:var(--r-chip);background:var(--paper);
+  color:var(--hue-ink);font:14px/1.45 var(--ui);cursor:pointer;
+}
+.linkbtn:hover{background:var(--hue-soft)}
+.linkbtn svg{width:13px;height:13px}
+.nodata.box{margin-top:8px}
+
+/* ---------- 当前选中势力 ---------- */
+.fhead{display:grid;grid-template-columns:66px minmax(0,1fr);align-items:center;gap:12px;padding:12px 18px 0}
+.fcrest{
+  position:relative;display:grid;place-items:center;width:66px;height:66px;
+  clip-path:polygon(0 0,100% 0,100% 56%,50% 100%,0 56%);
+  background:linear-gradient(160deg,var(--hue-soft),color-mix(in srgb,var(--hue) 26%,#fff));
+  color:var(--hue-ink);font:600 24px/1 var(--serif);
+}
+.fcrest::before{content:"";position:absolute;inset:0;clip-path:inherit;box-shadow:inset 0 0 0 2px var(--hue)}
+/* 盾形的边只能画在 ::before 上：clip-path 会把 outline 和外扩的 box-shadow 整条裁掉 */
+.fcrest:has(img)::before{box-shadow:inset 0 0 0 2px rgba(228,193,136,.72),inset 0 0 24px rgba(122,154,216,.20)}
+.fcrest img{width:38px;height:38px;margin-top:-4px}
+.fcrest span{margin-top:-8px}
+.fmeta{min-width:0}
+.fmeta h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;color:var(--ink2);font:600 21px/1.3 var(--serif)}
+.fmeta p{display:flex;align-items:flex-start;gap:5px;margin:4px 0 0;color:var(--ink4);font:14px/1.5 var(--ui)}
+.fmeta p svg{flex:0 0 auto;width:14px;height:14px;margin-top:4px;color:var(--hue);opacity:.85}
+.fmeta p>span{min-width:0}
+.sect{padding:0 18px}
+.sect .pager{padding:10px 0 0}
+.frule{margin:14px 18px 0;border-top:1px solid var(--rule)}
+
+/* ---------- 摘要卡里的对象行：一行一条 ----------
+   照原型的「外交状态」那一块：小纹章 + 名字 + 状态胶囊，一条一行。
+   原来每个对象都把自己的子字段摊成独立行（一条资源 130px、一条对外关系 126px），
+   右栏 344px 定宽被拉到 1520px，比左栏整个「各地情势」还高。
+   子字段现在全去 1080px 的完整档案浮层，一行两条记录地铺，窄条这里只留"是谁 + 什么状态"。 */
+.frow{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:9px;padding:7px 0}
+.frow+.frow{border-top:1px solid var(--rule)}
+.fmark{
+  display:grid;place-items:center;width:28px;height:28px;
+  background:var(--hue-soft);color:var(--hue-ink);font:600 13px/1 var(--serif);
+}
+.fmark.crest{clip-path:polygon(0 0,100% 0,100% 56%,50% 100%,0 56%)}
+.fmark.sq{border-radius:9px}
+.fmark.rd{border-radius:50%}
+.fmark svg{width:16px;height:16px}
+.fmark img{width:18px;height:18px}
+.fmark.crest span,.fmark.crest svg,.fmark.crest img{margin-top:-4px}
+.fsum{display:flex;align-items:baseline;gap:4px 7px;flex-wrap:wrap;min-width:0}
+.fn{min-width:0;color:var(--ink2);font:600 15px/1.45 var(--ui);overflow-wrap:anywhere}
+.fv{min-width:0;color:var(--ink3);font:14px/1.55 var(--ui);overflow-wrap:anywhere}
+.fsum .chip{padding:1px 8px}
+/* 资源那一节照原型铺成一条横排：类型 + 数量，挨着排，排不下才换行。
+   契约的 quantity 是事实性字符串（「可动用 82,150 金币」）不是裸数字，
+   所以做不到原型那种三项一行，但也不该一项占掉五行。 */
+.rline{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.ritem{display:flex;align-items:baseline;gap:6px;min-width:0;color:var(--hue-ink)}
+.ritem>svg{flex:0 0 auto;width:15px;height:15px;margin-top:2px}
+.ritem b{flex:0 0 auto;font:600 14px/1.5 var(--ui)}
+.ritem span{min-width:0;color:var(--ink2);font:14px/1.5 var(--ui);overflow-wrap:anywhere}
+
+/* 字段名和字段值排在同一行：名在左，值从名字右边缘往下折。
+   竖排（名一行、值一行）每项要 45px，横排 26px——窄栏里差出一半的高度。
+   规格仍是 README 那条：名 13px 半粗主色，值 14px 常规。 */
+.kvi{display:flex;gap:7px;min-width:0}
+.kvi+.kvi{margin-top:4px}
+.kvi>.k{flex:0 0 auto;margin-top:2px}
+.kvi>span{min-width:0;color:var(--ink3);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
+.chiprow{display:flex;flex-wrap:wrap;gap:5px 6px;min-width:0}
+.chiprow .chip{padding:2px 9px}
+
+/* ---------- 完整档案浮层里的宽表 ----------
+   浮层 1080px，一条记录的五六个子字段横着一排就摆完了，不用折叠也不用翻页。
+   每格自带字段名，宽屏时由表头统一写、格内隐藏；窄屏表头撤掉、格内的名字露出来
+   （字段名藏不藏都不影响字段值，值一直在）。 */
+/* 表格排不排得开取决于浮层本身有多宽（1080px 上限、窄屏是 100% 减遮罩内边距），
+   跟视口宽度不是一回事，所以用容器查询而不是媒体查询。 */
+.dsheet{padding:16px 20px 20px;container-type:inline-size}
+.dsec{margin-top:16px}
+/* 一行两条记录。宽度花在"多摆一条"上，不是"把一条摊得更开"：
+   1040px 的内容区拆成两栏各 507px，一条附注能连着写三十几个字不折行；
+   摊成五列的时候每格只有 150px，同样一句话要折三行。 */
+/* auto-fit 而不是写死两列：势力手上有几条记录是数据说了算，星辉典籍会每一节
+   都只有一条，写死两列就是格格空着右半边——一整份档案看下来右边是条白带。
+   auto-fit 会把整条空掉的轨道塌掉，一条记录就铺满一行。 */
+.drecs{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px}
+.drec{padding:11px 14px 12px;border-radius:var(--r-card);background:var(--sunken)}
+.drec>header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;min-width:0}
+.drec>header>b{min-width:0;color:var(--ink2);font:600 15px/1.45 var(--serif);overflow-wrap:anywhere}
+.drec .chip{padding:2px 9px}
+/* 字段名走同一道竖线，值才对得齐；每条记录一个网格，名的宽度按本条最长的那个走 */
+.dls{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;margin-top:7px}
+.dk{color:var(--hue-ink);font:600 14px/1.6 var(--ui);white-space:nowrap}
+/* 一条记录独占一行时这格有 1000px，一行能排七十来个字，早过了读得舒服的长度。
+   卡片该撑满，字不该——右边留白比长行好。 */
+.dv{min-width:0;max-width:42em;color:var(--ink3);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
+.dv .chip{margin-left:6px}
+.dchg{
+  display:flex;gap:7px;align-items:flex-start;margin:9px 0 0;padding-top:8px;
+  border-top:1px dashed var(--rule);color:var(--ink3);font:14px/1.55 var(--ui);
+}
+.dchg svg{flex:0 0 auto;width:15px;height:15px;margin-top:3px;color:var(--hue-ink)}
+.dchg span{min-width:0;overflow-wrap:anywhere}
+/* 压到 --ink5 会掉到 4.35，过不了 AA 的 4.5。区别主要靠图标从主色变灰，
+   不靠把字压淡——字再淡一档就得拿可读性换。 */
+.dchg.none,.dchg.none svg{color:var(--ink4)}
+@media(max-width:560px){.dsheet{padding:14px 14px 18px}}
+
+/* ---------- 索引面板 ---------- */
+.tabs{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:8px 18px 0;border-bottom:1px solid var(--rule)}
+.tabbtns{display:flex;gap:20px;min-width:0}
+/* 名录横排摆不下时不换第二排：第二排常常只站一两个，右边空掉大半，
+   面板还平白高出一截——地区全收起时那片空当就是这么来的。多的用箭头翻。
+   翻页条本来在面板底下，占一整行还写着「第 1/2 页 共 5 个地区」；
+   一排格子配一对箭头就够了，挪到页签这一行的右端，不再多占一行。 */
+.stripnav{display:flex;align-items:center;gap:7px;padding-bottom:7px}
+.stripnav i{color:var(--ink4);font:13px/1 var(--ui);font-style:normal;font-variant-numeric:tabular-nums}
+.stripnav button{display:grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);color:var(--ink3);cursor:pointer;transition:border-color .18s ease,color .18s ease}
+.stripnav button:hover:not(:disabled){border-color:var(--indigo);color:var(--indigo-ink)}
+.stripnav button:disabled{opacity:.34;cursor:default}
+.stripnav svg{width:12px;height:12px}
+.tabs button{
+  position:relative;flex:0 0 auto;min-height:40px;padding:0 2px;border:0;border-radius:0;
+  background:transparent;color:var(--ink4);font:15px/1.4 var(--ui);cursor:pointer;
+}
+.tabs button.on{color:var(--indigo-ink);font-weight:600}
+.tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;border-radius:2px;background:var(--indigo)}
+.idx{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:4px 10px;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--rule);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.idx:last-child{border-bottom:0}
+.idx:hover .idx-n{color:var(--hue-ink)}
+.idx-i{grid-row:1/3;display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--hue-soft);color:var(--hue-ink)}
+.idx-i svg{width:17px;height:17px}
+.idx-i:has(img){box-shadow:inset 0 0 0 1px rgba(163,201,224,.44)}
+.idx-i img{width:20px;height:20px}
+.idx-n{min-width:0;color:var(--ink2);font:600 15px/1.4 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .18s ease}
+.idx .steprow{grid-column:2/4}
+.idx p{grid-column:2/4;margin:2px 0 0;color:var(--ink4);font:14px/1.55 var(--ui);overflow-wrap:anywhere}
+/* 名录提到通栏之后有 1300px。五条竖着摞成一列，右边空掉一大片，页面还白长 200px。
+   auto-fill 而不是写死列数：三个页签的条目宽度不一样（地区一行一个名字，
+   热点还带两行说明），让它自己决定一排放几个。
+   排得下几格由这行说了算，一页放几条再照着它算（idxPageSize），
+   所以一页正好占一排、不会溢到第二排去。
+   最小格宽跟着页签走：地区一条就是「名字＋状态胶囊」两行短字，230px 够用，
+   五个地区一排摆得下就不用翻页了；热点和关系每条带一两行叙述，窄了就摞成三四行。 */
+.idxbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--idxmin,290px),1fr));gap:0 26px}
+/* 分了列之后 :last-child 只管得着最后一格，别的列末尾还挂着分隔线，
+   而列与列之间又没有竖线——横平竖不平。索性整片去掉底线，靠间距分条。 */
+.idxbody .idx{border-bottom:0}
+/* 真分成多列时才改列宽：名字原来占 1fr，把状态胶囊一路顶到格子右边，
+   中间空一大截。让名字只占它自己那么宽，胶囊就贴着名字走。
+   单列时（窄屏）胶囊靠右是对的，那是一张表的读法，所以套容器查询。 */
+@container (min-width:640px){
+  .idxbody .idx{grid-template-columns:30px minmax(0,max-content) minmax(0,1fr);padding:8px 0 10px}
+}
+
+/* ---------- 底部通栏：世界演进时间轴 ----------
+   auto-fill 而不是 repeat(N)：条目数变多时自动换行成第二排，
+   旧版固定列数在 1280 和 390 上一律横向溢出。 */
+.wtl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px 14px;padding:14px 18px 4px}
+.wti{position:relative;padding:26px 12px 12px;border-radius:var(--r-card);text-align:left;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
+.wti::before{content:"";position:absolute;left:0;right:0;top:14px;height:2.5px;border-radius:2px;background:linear-gradient(90deg,var(--hue-track),transparent)}
+.wti::after{content:"";position:absolute;left:12px;top:8px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 0 0 2.5px var(--hue),0 1px 4px rgba(72,66,52,.2)}
+.wti.now{background:var(--card);box-shadow:var(--sh3)}
+.wti.now::after{background:var(--hue);box-shadow:0 0 0 2.5px var(--hue),0 0 12px var(--gold-glow)}
+.wti .wt{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.wti time{flex:0 0 auto;color:var(--hue-ink);font:600 15px/1.3 var(--serif);font-variant-numeric:tabular-nums}
+.wti .wsrc{display:flex;align-items:center;gap:4px;min-width:0;color:var(--ink5);font:14px/1.4 var(--ui)}
+.wti .wsrc svg{flex:0 0 auto;width:13px;height:13px;opacity:.8}
+.wti b{display:block;margin-top:5px;color:var(--ink2);font:400 14px/1.6 var(--ui);overflow-wrap:anywhere}
+.wti small{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--hue-ink);font:14px/1.5 var(--ui);overflow-wrap:anywhere}
+.wti small svg{flex:0 0 auto;width:13px;height:13px;opacity:.85}
+
+/* 面板宽度而不是视口宽度才是这里的决定因素——右栏 344px 和左栏 974px 在同一个
+   视口宽度下并存，所以走容器查询。.panel 已经声明了 container-type:inline-size。 */
+@container (max-width:470px){
+  .tabs{gap:14px}
+}
+@media(max-width:700px){
+  .gwrap,.gfoot{margin-left:14px;margin-right:14px}
+  .rtop{gap:9px 12px;padding:12px}
+  .rsig{width:44px;height:44px}
+  .rsig img{width:24px;height:24px}
+  .wtl{padding-left:14px;padding-right:14px;gap:16px 12px}
+}
+</style>
+</head>
+<body>
+
+<script src="shared/icons.js"></script>
+
+<header class="header">
+  <div class="brand">
+    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-text">
+      <h1>后台世界引擎</h1>
+      <p>当玩家不在场时，世界依然在呼吸</p>
+    </div>
+  </div>
+
+  <div class="hbox">
+    <div>
+      <small>世界时间</small>
+      <span class="clock-date" id="wDate">—</span>
+    </div>
+    <b class="clock-time" id="wClock">--:--</b>
+  </div>
+
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <nav class="nav" id="nav"></nav>
+    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+  </aside>
+
+  <div class="mainwrap">
+
+    <!-- 世界动向和名录通栏摆在最上面。
+         这两块一个是"刚刚发生了什么"、一个是"这页上有哪些东西"，本来就该先读到；
+         而且它们高度恒定，通栏之后底下那排两栏只剩「势力格局＋各地情势」对「势力档案」
+         这一组对手，配平变成一件确定的事。 -->
+    <section class="panel">
+      <header class="phead">
+        <span class="pmark h-green"><svg><use href="#i-flow"/></svg></span>
+        <div><h2>世界动向</h2><span class="sub" id="wtlSub"></span></div>
+        <!-- 原来这里弹一句吐司「完整世界演进流在世界演进页」。
+             与其告诉人家该去哪儿，不如把他送过去。 -->
+        <button class="paction" type="button" onclick="P.goto('overview')">完整时间线 ›</button>
+      </header>
+      <div class="wtl" id="wtl"></div>
+      <div class="pager" id="wtlPager"></div>
+    </section>
+
+    <section class="panel">
+      <header class="phead">
+        <span class="pmark h-indigo"><svg><use href="#i-list"/></svg></span>
+        <div><h2>名录</h2><span class="sub" id="idxSub"></span></div>
+      </header>
+      <div class="tabs"><div class="tabbtns" id="tabs"></div><div class="stripnav" id="idxNav"></div></div>
+      <div class="pbody idxbody" style="padding-top:2px" id="idxBody"></div>
+    </section>
+
+    <div class="main">
+      <div class="col">
+
+        <section class="panel">
+          <header class="phead">
+            <span class="pmark h-violet"><svg><use href="#i-flag"/></svg></span>
+            <div><h2>势力格局</h2><span class="sub" id="graphSub"></span></div>
+            <button class="paction" id="graphToggle">放开画面 ⤢</button>
+          </header>
+          <div class="gwrap"><div class="gcanvas" id="canvas"></div></div>
+          <div class="gfoot h-indigo" id="gfoot"></div>
+        </section>
+
+        <!-- 各地情势留在左栏，跟右栏的势力档案并排。通栏摆过两版，两次都更差。
+             第二次是删掉档案卡那三格概览之后重新量的，1536 档三种开合状态：
+
+               状态      左栏在栏里   各地情势通栏
+               全收起      1688px       2021px
+               展开一个    2101px       2434px
+               全部展开    3369px       3667px
+
+             每种状态都长三百多。原因是这一块**摊宽了并不会变矮**：收起态每行本来
+             就是一行胶囊，974px 和 1330px 都是一行；于是通栏只是把它从"跟档案卡
+             共享纵向空间"变成"自己独占一段"。空档也没消失，只是从收起态的 165px
+             变成三种状态恒定的 347px（势力格局 675 对势力档案 1022）。
+             见 README「恒高的块提到通栏，会伸缩的块留在栏里」。 -->
+        <section class="panel">
+          <header class="phead">
+            <span class="pmark h-teal"><svg><use href="#i-map"/></svg></span>
+            <div><h2>各地情势</h2><span class="sub" id="regionSub"></span></div>
+            <button class="paction" id="regionExpandAll">全部展开 ⌄</button>
+          </header>
+          <div class="pbody" style="padding-top:10px" id="regions"></div>
+          <div class="pager" id="regionPager"></div>
+        </section>
+
+      </div>
+
+      <div class="col">
+
+        <section class="panel" id="stancePanel">
+          <header class="phead">
+            <span class="pmark h-amber"><svg><use href="#i-shield"/></svg></span>
+            <div><h2>势力档案</h2></div>
+          </header>
+          <div id="stance"></div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 完整档案。外壳是 shared 的 .sheet／.sheet-box／.sheet-close，
+     跟总览页那张全图浮层同一套；里面的宽表是本页的。 -->
+<div class="sheet" id="dossier" hidden>
+  <div class="sheet-box">
+    <button class="sheet-close" id="dossierClose" aria-label="关闭完整档案">✕</button>
+    <header class="phead">
+      <span class="pmark h-amber"><svg><use href="#i-shield"/></svg></span>
+      <div><h2>完整档案</h2></div>
+    </header>
+    <div class="dsheet" id="dossierBody"></div>
+  </div>
+</div>
+
+<i class="spark" style="left:5%;top:16%"></i>
+<i class="spark gold" style="left:47%;top:7%"></i>
+<i class="spark" style="right:6%;top:34%"></i>
+<i class="spark" style="left:22%;bottom:9%"></i>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="mock/world-state-v09.js"></script>
+<script src="shared/vocab.js"></script>
+<script src="shared/wtime.js"></script>
+<script src="shared/panel.js"></script>
+<script>
+const {$,$$,arr,esc,L,fieldKey,termRow,kvGrid,renderPager,toast,crestFile,sigilFile,hueCycler,mode}=P;
+
+/* 数据源固定是 mock/world-state-v09.js。压力测试会把 FACTIONS / REGIONS 换掉，
+   所以这里用 let，不直接引用 P.DATA。 */
+let FACTIONS=arr(P.DATA.factions);
+let REGIONS=arr(P.DATA.regions);
+
+/* ---------- 枚举 → 视觉 ----------
+   每一组都对着 shared/vocab.js 里的一条枚举写；缺项回落中性色与通用图标，
+   不硬编码具体势力名或地区名。 */
+const FACTION_HUE={active:'green',dormant:'amber',retired:'purple'};
+const FACTION_ICON={active:'i-spark',dormant:'i-moon',retired:'i-lock'};
+
+/* control.status 五档。旧版把这五档全渲染成同一种灰字，是审查里的 P0-5。 */
+const CONTROL_HUE={controlled:'green',shared:'teal',contested:'rose',unclaimed:'amber',unclear:'violet'};
+const CONTROL_ICON={controlled:'i-crown',shared:'i-hand',contested:'i-swords',unclaimed:'i-ask',unclear:'i-eye'};
+/* 强弱序，只用来点亮分段条的第几格，不是分数也不是百分比 */
+const CONTROL_RANK={controlled:5,shared:4,contested:3,unclear:2,unclaimed:1};
+const CONTROL_RANK_NOTE='控制状态五档强弱序：单方控制 > 共管 > 争夺中 > 归属不明 > 无归属';
+
+const AREA_HUE={control:'green',operate:'teal',garrison:'indigo',influence:'violet',contested:'rose',transit:'amber'};
+const AREA_ICON={control:'i-crown',operate:'i-cart',garrison:'i-tower',influence:'i-wave',contested:'i-swords',transit:'i-route'};
+const AREA_RANK={control:6,operate:5,garrison:4,influence:3,contested:2,transit:1};
+const AREA_RANK_NOTE='地区关系六档强弱序：控制 > 经营 > 驻防 > 影响 > 争夺中 > 过境';
+
+const RES_ICON={funds:'i-coin',personnel:'i-people',supplies:'i-box',transport:'i-cart',
+                information:'i-eye',sites:'i-arch',authority:'i-crown',other:'i-spark'};
+const RES_HUE={funds:'amber',personnel:'indigo',supplies:'teal',transport:'amber',
+               information:'violet',sites:'green',authority:'purple',other:'teal'};
+const COND_ICON={commerce:'i-cart',order:'i-scales',access:'i-lock',population:'i-people',
+                 infrastructure:'i-arch',supply:'i-grain',travel:'i-route',weather:'i-cloud',other:'i-spark'};
+const COND_HUE={commerce:'amber',order:'indigo',access:'violet',population:'teal',
+                infrastructure:'indigo',supply:'green',travel:'amber',weather:'teal',other:'purple'};
+const REL_HUE={alliance:'green',cooperation:'teal',trade:'amber',employment:'indigo',member:'indigo',
+               service:'indigo',contact:'violet',friendship:'green',family:'green',
+               rivalry:'amber',hostility:'rose',debt:'purple',influence:'violet'};
+const TARGET_ICON={person:'i-people',faction:'i-shield',region:'i-map',task:'i-scroll',event:'i-bell',other:'i-spark'};
+const KSRC_ICON={witnessed:'i-eye',record:'i-scroll',reported:'i-chat',public:'i-bell',rumor:'i-chat',inferred:'i-ask'};
+const KST_HUE={confirmed:'green',uncertain:'amber',disputed:'rose',outdated:'purple'};
+
+/* 暗底上的提亮色。tokens 的主色是给暖白底调的，直接用在画布上一律不过 AA。 */
+const DK={indigo:'#a9bee1',amber:'#e9c08a',violet:'#c3b9ea',green:'#a6cdad',
+          rose:'#f2b3a2',purple:'#bfb5e6',teal:'#9acace'};
+
+/* 同一个键在全页永远同一个颜色。势力和地区共用一个色环，两者不会撞色。 */
+let hueOf=null;
+function buildHues(){
+  const cyc=hueCycler();
+  FACTIONS.forEach(f=>cyc('f:'+f.name));
+  REGIONS.forEach(r=>cyc('r:'+r.name));
+  hueOf=cyc;
+}
+
+const chip=(hue,icon,text,tip)=>'<span class="chip h-'+hue+'"'+(tip?' title="'+esc(tip)+'"':'')+'>'+
+  (icon?'<svg><use href="#'+icon+'"/></svg>':'')+esc(text)+'</span>';
+const sectionH=(icon,text,note)=>'<h4 class="sh"><svg><use href="#'+icon+'"/></svg>'+esc(text)+
+  (note?'<em>'+esc(note)+'</em>':'')+'</h4>';
+/* 空数组、空串在数据里到处都是（全部势力 knowledge 都是 []，多处 recent_change 是空串），
+   一律给一句说明，不留空白方块，也不渲染 undefined。 */
+const emptyNote=t=>'<p class="nodata box">'+esc(t)+'</p>';
+/* 右栏 344px 里的空态。虚线框那版一句话要占 48px，一个面板里摆七次就是三百多像素
+   全在说"这儿没东西"。共享的 .nodata 底子本身就是一行字，不加 .box 修饰即可。 */
+const thinNote=t=>'<p class="nodata">'+esc(t)+'</p>';
+
+/** 字段名与字段值同一行。竖排每项 45px，横排 26px，右栏里差出一半高度。 */
+const kvi=(icon,name,val)=>'<div class="kvi">'+fieldKey(icon,name)+'<span>'+esc(val||'未记录')+'</span></div>';
+
+/** 摘要卡里的一条：小纹章 + 名字 + 状态胶囊（或一个关键值）。 */
+function frow(o){
+  return '<div class="frow h-'+o.hue+'"'+(o.title?' title="'+esc(o.title)+'"':'')+'>'+
+    '<span class="fmark '+(o.shape||'sq')+'">'+o.inner+'</span>'+
+    '<span class="fsum"><b class="fn">'+esc(o.name||'未记录')+'</b>'+(o.chips||'')+
+      (o.val?'<span class="fv">'+esc(o.val)+'</span>':'')+'</span>'+
+  '</div>';
+}
+
+/* ---------- 完整档案浮层的宽表 ----------
+   cols = [[图标, 字段名, 网格宽], ...]，rows = [[单元格html, ...], ...]
+   每个单元格自带字段名（宽屏隐藏、窄屏露出），表头只是宽屏下的一次性抬头。 */
+/* 完整档案的记录块。
+   契约把一条记录拆成五六个字段，是为了让引擎能分别更新——那是存储的拆法。
+   照搬成五列表格，1080px 全花在"把一条记录横着摊开"上，每格只剩 150px、
+   五到十个字，读的人得自己把句子拼回去。这里换成一行摆两条记录：
+   每条竖着排，主句占满一整栏，附注在下面对齐成两列。
+
+   rec = {head, chips, lines, change}
+     head    这条记录的主句，一眼能认出说的是哪一条（数量、对象名、事实……）
+     chips   枚举字段，本来就是词不是句，做成胶囊比做成表格格子省地方
+     lines   [字段名, 值]，值给字符串就转义，给 {h:...} 按原样插
+     change  recent_change 一类的"本轮变了什么"，单独一行、跟正文隔开 */
+function drec(recs,empty){
+  if(!recs.length)return thinNote(empty);
+  return '<div class="drecs">'+recs.map(r=>{
+    const lines=(r.lines||[]).filter(l=>l&&l[1]);
+    return '<article class="drec">'+
+      '<header><b>'+esc(r.head||'未记录')+'</b>'+(r.chips||'')+'</header>'+
+      (lines.length?'<div class="dls">'+lines.map(l=>
+        '<span class="dk">'+esc(l[0])+'</span>'+
+        '<span class="dv">'+(l[1]&&l[1].h!==undefined?l[1].h:esc(l[1]))+'</span>').join('')+'</div>':'')+
+      /* 「本轮无变化」是我们补的话，不是数据。跟真变化同一个重量摆着，
+         一屏扫下来分不清哪条动过——压成灰的。 */
+      (r.change?'<p class="dchg'+(r.hasChange?'':' none')+'"><svg><use href="#i-spark"/></svg><span>'+
+        (r.change.h!==undefined?r.change.h:esc(r.change))+'</span></p>':'')+
+    '</article>';
+  }).join('')+'</div>';
+}
+const raw=h=>({h});
+
+/** 枚举档位条。只点亮第几格，不显示任何数字，推导口径写进 title。 */
+function steps(rank,total,hue,label,note){
+  let s='<div class="steprow h-'+hue+'" title="'+esc(note)+'"><span class="steps">';
+  for(let i=1;i<=total;i++)s+='<i'+(i<=rank?' class="on"':'')+'></i>';
+  return s+'</span>'+(label?'<b>'+esc(label)+'</b>':'')+'</div>';
+}
+/** 「共 N 条」只在列表真被翻页截断时才写。屏幕上数得出来的数字不复述。 */
+const hiddenCount=(n,per)=>n>per?'共 '+n+' 条，每页 '+per+' 条':'';
+
+const FACTION_BY=new Map();
+const REGION_BY=new Map();
+function buildIndex(){
+  FACTION_BY.clear();REGION_BY.clear();
+  FACTIONS.forEach(f=>FACTION_BY.set(f.name,f));
+  REGIONS.forEach(r=>REGION_BY.set(r.name,r));
+}
+
+/* 纹章／徽记。P.crestFile 按 resources[].type 的众数取图、P.sigilFile 按
+   conditions[].category 的众数取图，取不到才回落首字——所以四个势力不会长得一样。 */
+function crestInner(f,cls){
+  const file=crestFile(f);
+  const ini=esc(String(f&&f.name||'?').slice(0,1));
+  return file
+    ? '<img src="'+file+'" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\''+ini+'\'}))">'
+    : '<span>'+ini+'</span>';
+}
+function sigilInner(r){
+  const file=sigilFile(r);
+  const ini=esc(String(r&&r.name||'?').slice(0,1));
+  return file
+    ? '<img src="'+file+'" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\''+ini+'\'}))">'
+    : '<span>'+ini+'</span>';
+}
+const crestBasis=f=>{
+  const t=mode(arr(f&&f.resources),'type');
+  return t?'纹章按资源构成取图：'+L('resource.type',t):'资源构成为空，纹章回落到名称首字';
+};
+const sigilBasis=r=>{
+  const c=mode(arr(r&&r.conditions),'category');
+  return c?'徽记按地区条件取图：'+L('region.condition',c):'地区条件为空，徽记回落到名称首字';
+};
+
+/* ---------- 选中状态 ---------- */
+let selFaction=0, selEdge=-1, graphOpen=false;
+/* 档案里那六个列表原来各有一条翻页条。现在整份档案在 1080px 的浮层里一次排完，
+   翻页状态跟着一起去掉——右栏摘要卡不翻页，超出 SUM_MAX 的写一句指向浮层。 */
+let regionPage=0;
+let idxTab=0, idxPage=0, wtlPage=0;
+const rowOpen=new Set();          // 展开中的地区行
+const rowPage=new Map();          // 每个地区行两个列表各自的页码
+
+const curFaction=()=>FACTIONS[Math.min(selFaction,FACTIONS.length-1)]||null;
+
+/* =============================================================================
+   势力格局
+   旧版是一圈环形布局：13 条曲线互相穿过，节点名、状态、关系名混在一层，
+   边全画出来了，可"谁在跟谁较劲"反而看不出来。这版换成两条带：
+
+     · 势力在上、地界在下，中间空出一条只放关系名的走廊；
+     · 势力之间的关系走上方的拱线，势力与地界走自上而下的流线，两类线不混在一起；
+     · 带内顺序用重心法 + 相邻交换把交叉压到最低（本轮数据能排到零交叉）；
+     · 同一对节点之间的多重关系合成一条线。旧版 13 条边里有 4 条是平行重线
+       ——「主控方」和「经营」画在同一对节点之间，说的是同一件事；
+       现在线宽和王冠图标表达"归谁管"，标签只写关系名。
+
+   合并进来的角色一条不丢：全在 .gfoot 的依据栏和节点／连线的 title 里。
+   ========================================================================== */
+const PAD=16, NGAP=26, ROWGAP=16;
+
+function graphNodes(){
+  const list=[];
+  FACTIONS.forEach(f=>list.push({key:'f:'+f.name,kind:'f',name:f.name,data:f}));
+  REGIONS.forEach(r=>list.push({key:'r:'+r.name,kind:'r',name:r.name,data:r}));
+  return list;
+}
+
+/** 一对节点只出一条线。同一对之间的多重角色（主控 / 经营 / 争夺 / 结盟…）
+    收进 roles[]，按分量排序后决定线型与标签，依据逐条留着。
+    目标不在图上的关系（人物／任务／事件，或没有对应地区记录的地名）不画线，
+    但它们在右栏「对外关系」「地区联系」里逐条列出，不会被吞掉。 */
+/* 图上没有节点的关系对象。契约允许 relations[].target_type 是 person / task / event，
+   这三类在这张"势力与地区"的地图上没有节点，本轮 mock 恰好五条全是 faction，
+   真数据一来就会有。它们不画线（理由见 offstageNote），但要数得出来。 */
+let OFFSTAGE=[];
+
+function graphEdges(keys){
+  const map=new Map();
+  OFFSTAGE=[];
+  const add=(a,b,role)=>{
+    if(!keys.has(a)||!keys.has(b)||a===b)return;
+    const x=a<b?a:b, y=a<b?b:a;
+    let e=map.get(x+'~'+y);
+    if(!e){e={a:x,b:y,kind:(x[0]==='f'&&y[0]==='f')?'ff':'fr',roles:[]};map.set(x+'~'+y,e)}
+    const same=e.roles.find(r=>r.label===role.label);
+    if(same){                              // 双方各记一次的同一条关系，依据合并
+      if(role.basis&&!same.basis.includes(role.basis))same.basis+='；'+role.basis;
+      if(role.change&&!same.change.includes(role.change))same.change+='；'+role.change;
+      if(!same.at)same.at=role.at;
+      return;
+    }
+    e.roles.push(role);
+  };
+  FACTIONS.forEach(f=>{
+    arr(f.relations).forEach(r=>{
+      const bk=r.target_type==='faction'?'f:'+r.target_name:r.target_type==='region'?'r:'+r.target_name:'';
+      if(!keys.has(bk))OFFSTAGE.push({from:f.name,name:r.target_name,
+        type:L('relation.target',r.target_type||'other'),label:L('relation.type',r.relation_type)});
+      add('f:'+f.name,bk,{rank:3,label:L('relation.type',r.relation_type),
+        hue:REL_HUE[r.relation_type]||'indigo',icon:'',
+        basis:r.current_basis||'',change:r.recent_change||'',at:r.changed_at||'',
+        from:f.name,to:r.target_name,kind:'势力之间'});
+    });
+    arr(f.areas).forEach(a=>{
+      add('f:'+f.name,'r:'+a.name,{rank:a.relation_type==='contested'?5:3,
+        label:L('area.relation',a.relation_type),
+        hue:AREA_HUE[a.relation_type]||'teal',icon:AREA_ICON[a.relation_type]||'',
+        basis:a.current_state||'',change:a.recent_change||'',at:'',
+        from:f.name,to:a.name,kind:'势力与地区'});
+    });
+  });
+  REGIONS.forEach(r=>{
+    const c=r.control||{};
+    if(c.primary_faction)add('f:'+c.primary_faction,'r:'+r.name,{rank:4,label:'主控',
+      hue:'green',icon:'i-crown',
+      basis:r.name+' 记在 '+c.primary_faction+' 名下',change:'',at:'',
+      from:c.primary_faction,to:r.name,kind:'势力与地区'});
+    arr(c.contesting_factions).forEach(n=>add('f:'+n,'r:'+r.name,{rank:5,label:'争夺中',
+      hue:'rose',icon:'i-swords',
+      basis:n+' 正在争夺 '+r.name,change:'',at:'',
+      from:n,to:r.name,kind:'势力与地区'}));
+  });
+  return [...map.values()].map(e=>{
+    e.roles.sort((x,y)=>y.rank-x.rank);
+    const top=e.roles[0];
+    /* 标签写关系本身（经营 / 影响 / 结盟…）；"归谁管"改由线宽 + 王冠图标表达，
+       只有除了主控什么都没记的那种地界，才拿「主控」当标签。 */
+    const named=e.roles.find(r=>r.rank===3)||top;
+    const own=e.roles.some(r=>r.label==='主控');
+    const fight=e.roles.some(r=>r.label==='争夺中');
+    e.label=fight?'争夺中':named.label;
+    e.hue=fight?'rose':named.hue;
+    e.icon=fight?'i-swords':(own?'i-crown':(named.icon||''));
+    /* 线型只分族，不分主次：实线是"势力与地区"（谁站在哪块地上，地面上的事实），
+       虚线是"势力之间"（往来，看不见的那种）。原型也是这么分的（贸易路线、
+       情报流动走虚线）。主次交给粗细和亮度，两套编码不混。 */
+    e.style=e.kind==='ff'?'dash':'solid';
+    e.arrow=e.kind==='fr';                 // 势力伸手到地区，有方向；势力之间是相互的
+    e.from=top.from;e.to=top.to;e.detailKind=top.kind;
+    return e;
+  });
+}
+
+/** 图上画不了的那几条关系怎么交代。数得出来 + 说清去哪看，不做静默丢弃。 */
+function offstageNote(){
+  if(!OFFSTAGE.length)return '';
+  const kinds=[...new Set(OFFSTAGE.map(o=>o.type))].join('、');
+  return '另有 '+OFFSTAGE.length+' 条关系牵向'+kinds+'，图上不画，档案里逐条记着';
+}
+
+let EDGES=[],GEOM=[],NODEBOX=new Map();
+function renderGraph(){
+  const box=$('#canvas');
+  const nodes=graphNodes();
+  const keys=new Set(nodes.map(n=>n.key));
+  EDGES=graphEdges(keys);
+
+  if(!nodes.length){
+    box.style.height='180px';
+    box.className='gcanvas';
+    box.innerHTML='<div class="gempty">本轮没有势力或地区的记录</div>';
+    $('#graphSub').textContent='';
+    return;
+  }
+
+  const W=box.clientWidth||900;
+  const cur=curFaction();
+
+  /* 节点一多就把徽章和名字宽度一起收：9 个节点时徽章 60px、名字 168px，
+     22 个节点时徽章 44px、名字 112px。这是"节点变多"的第二道降级
+     （第一道在 layoutRadial 末尾：横向排不下时整体压扁间距）。 */
+  const many=nodes.length;
+  // 窄屏也算一种"挤"：390 档画布只有 334px 宽，徽章跟着收一档，竖向才不至于长太多
+  const shrink=(many<=12?1:many<=18?.86:.74)*(W<560?.88:1);
+  const gnw=Math.max(96,Math.min(168,Math.floor(W/2)-24)*shrink);
+  box.className='gcanvas';
+  box.style.setProperty('--gnw',Math.round(gnw)+'px');
+  nodes.forEach(n=>{
+    // 势力的徽章按手里几处地区排大小；这不是评分，是"攥着几块地"这个事实
+    const base=n.kind==='f'?58+Math.min(3,arr(n.data.areas).length)*4:58;
+    n.sz=Math.round(base*shrink);
+  });
+
+  /* 第一遍：先把节点插进去量真实盒子。名字长度、状态那行的高度都要算进布局，
+     靠估算迟早会在某个名字上翻车。 */
+  box.innerHTML=nodes.map(n=>nodeHTML(n,cur)).join('');
+  const els=$$('.gnode',box);
+  /* 取"节点自己 + 内层盒子"的并集当碰撞盒。CSS 那边已经把出血修掉了，这里
+     再兜一道：一旦哪天子元素又溢出，宁可排得稀一点，也不能算出假的"没碰撞"。 */
+  nodes.forEach((n,i)=>{
+    const el=els[i],inner=el.firstElementChild;
+    n.w=Math.ceil(Math.max(el.offsetWidth,inner?inner.offsetWidth:0));
+    n.h=Math.ceil(Math.max(el.offsetHeight,inner?inner.offsetHeight:0));
+  });
+  NODEBOX=new Map(nodes.map(n=>[n.key,n]));
+
+  const lay=layoutRadial(nodes,W,graphOpen);
+  box.style.height=lay.H+'px';
+  GEOM=EDGES.map(e=>edgeGeom(e,lay));
+
+  /* 主次两档。主线 = 跟当前选中势力直接相连的边，其余一律是背景线。
+     不再按"归属／争夺／势力之间"分三四档轻重——分到五档等于没有主线，
+     读者只看到五种差不多粗的线。 */
+  const key=cur?'f:'+cur.name:'';
+  const main=EDGES.map(e=>e.a===key||e.b===key);
+  const sel=edgeIndex();
+  const gaps=breakGaps(main);
+
+  // 背景线先画、主线后画：主线压在上面，断口才落在该断的那一边
+  const wires=EDGES.map((e,i)=>main[i]?'':wirePath(e,GEOM[i],i,false,sel,gaps[i])).join('')+
+              EDGES.map((e,i)=>main[i]?wirePath(e,GEOM[i],i,true,sel,null):'').join('');
+  const tags=placeTags(EDGES,nodes,lay.pos,W,lay.H,sel,main);
+
+  box.innerHTML='<svg class="wires">'+arrowDefs()+frame(W,lay.H)+wires+'</svg>'+
+    nodes.map(n=>nodeHTML(n,cur,lay.pos.get(n.key))).join('')+tags;
+
+  $$('.gnode',box).forEach(el=>el.addEventListener('click',()=>pickNode(el.dataset.k)));
+  $$('.gtag',box).forEach(el=>el.addEventListener('click',()=>{
+    selEdge=Number(el.dataset.e);renderGraph();renderEdgeFoot();
+  }));
+  wireFocus(box);
+  $('#graphSub').textContent=graphSubline();
+}
+
+/* 这里一度有个四项线型图例（势力→地区／势力⇌势力／其余关系／争夺·敌对）。
+   按 README 文案规矩第 3 条删了：图上每条主线都带着文字标签，箭头指着方向，
+   争夺的节点自己挂着红色「争夺中」——图例说的每一件事图上都已经说过一遍。
+   规矩里那句「图例只在图确实无法自解释时才留，而那通常意味着图该重画」
+   反过来也成立：删掉之后要是真读不懂，该动的是图，不是把图例加回来。 */
+
+/* ---------- 交叉处的断口 ----------
+   不躲交叉，只让交叉点可读：背景线经过主线时断开一小截，读起来就知道谁在上面。
+   地图和地铁图用了一百年的老办法。
+   实现上不额外画一层描边（那会凭空多出一批 path，也会把线宽档位搅乱），
+   而是按算出来的交点位置直接给这条背景线拼一个 stroke-dasharray。 */
+const GAPW=9;
+function poly(g,n){
+  const pts=[];let len=0;
+  for(let i=0;i<=n;i++){
+    const p=bezAt(g,i/n);
+    if(i)len+=Math.hypot(p[0]-pts[i-1][0],p[1]-pts[i-1][1]);
+    pts.push([p[0],p[1],len]);
+  }
+  return pts;
+}
+function segHit(a,b,c,d){
+  const den=(d[1]-c[1])*(b[0]-a[0])-(d[0]-c[0])*(b[1]-a[1]);
+  if(Math.abs(den)<1e-9)return -1;
+  const ua=((d[0]-c[0])*(a[1]-c[1])-(d[1]-c[1])*(a[0]-c[0]))/den;
+  const ub=((b[0]-a[0])*(a[1]-c[1])-(b[1]-a[1])*(a[0]-c[0]))/den;
+  return (ua<0||ua>1||ub<0||ub>1)?-1:ua;
+}
+/** 每条背景线返回一个 dasharray 字符串（或 null）。main 是"这条是不是主线"。 */
+function breakGaps(main){
+  const P=GEOM.map((g,i)=>poly(g,56));
+  return GEOM.map((g,i)=>{
+    if(main[i])return null;
+    const me=P[i],total=me[me.length-1][2];
+    const hits=[];
+    EDGES.forEach((e,j)=>{
+      if(!main[j]||j===i)return;
+      // 共用端点的两条线不算交叉，断口也不该开在接头上
+      if(EDGES[i].a===e.a||EDGES[i].a===e.b||EDGES[i].b===e.a||EDGES[i].b===e.b)return;
+      const other=P[j];
+      for(let a=0;a<me.length-1;a++)for(let b=0;b<other.length-1;b++){
+        const t=segHit(me[a],me[a+1],other[b],other[b+1]);
+        if(t<0)continue;
+        const at=me[a][2]+(me[a+1][2]-me[a][2])*t;
+        if(at>14&&at<total-14&&!hits.some(h=>Math.abs(h-at)<GAPW*1.6))hits.push(at);
+      }
+    });
+    if(!hits.length)return null;
+    hits.sort((x,y)=>x-y);
+    // 断口两侧留下的实线段
+    const runs=[];let at=0;
+    hits.forEach(h=>{runs.push(Math.max(1,h-GAPW/2-at));at=h+GAPW/2});
+    runs.push(Math.max(1,total-at));
+    return dashRuns(runs,GAPW,EDGES[i].style==='dash');
+  });
+}
+/** 把"实线段长度"列表拼成 dasharray。虚线族的实线段自己还要再切成虚线。 */
+function dashRuns(runs,gap,dashed){
+  const out=[];
+  const push=(on,off)=>out.push(+on.toFixed(1),+off.toFixed(1));
+  runs.forEach((L,i)=>{
+    const tail=i<runs.length-1?gap:0;
+    if(!dashed){push(Math.max(L,.1),tail);return}
+    let r=L;
+    while(r>0){
+      const on=Math.min(8,r);r-=on;
+      if(r<=0){push(on,tail);break}
+      const off=Math.min(6,r);r-=off;
+      if(r<=0){push(on,off+tail);break}
+      push(on,off);
+    }
+  });
+  return out.join(' ');
+}
+
+/** 箭头。势力伸手到地区是有方向的，一个色一个 marker。 */
+function arrowDefs(){
+  const hues=[...new Set(EDGES.filter(e=>e.arrow).map(e=>e.hue))];
+  if(!hues.length)return '';
+  return '<defs>'+hues.map(h=>'<marker id="fr-ar-'+h+'" viewBox="0 0 10 10" refX="9" refY="5" '+
+    'markerWidth="4.6" markerHeight="4.6" orient="auto-start-reverse">'+
+    '<path d="M0 1.4 L9.2 5 L0 8.6 Z" fill="'+DK[h]+'"/></marker>').join('')+'</defs>';
+}
+
+/** 面板副标题只写图上一眼看不出来的事：这一带正在争的是哪块地、谁在争。
+    势力数、地区数、连线条数屏幕上摆着，不复述。 */
+function graphSubline(){
+  const hot=REGIONS.filter(r=>{
+    const c=r.control||{};
+    return c.status==='contested'||arr(c.contesting_factions).length;
+  });
+  const say=r=>{
+    const c=r.control||{};
+    const who=[c.primary_faction,...arr(c.contesting_factions)].filter(Boolean);
+    return r.name+(who.length>1?' 争夺中：'+who.join(' 对 '):' 争夺中');
+  };
+  let s=hot.length
+    ? hot.slice(0,2).map(say).join('　　')+(hot.length>2?'　等 '+hot.length+' 处':'')
+    : '';
+  const off=offstageNote();
+  if(off)s+=(s?'　·　':'')+off;
+  if(tagMode==='mini')s+=(s?'　·　':'')+'连线过密，关系名收成了圆点';
+  return s;
+}
+
+/* ---------- 布局：以最忙的势力为中心的有机散布 ----------
+   上一版是「势力一排、地区一排」的两排网格，靠压平来躲交叉。交叉是躲掉了，代价是
+   整张图不再是地图：等距的两排 + 中间一条地平线，读起来就是泳道流程图。
+   原型是放射状的：最核心的势力居中，其余按亲疏铺在四周，弧线大开大合，交叉照有。
+
+   这一版的定坐标分四步，全程确定性（同一份数据每次画出来一模一样，没有随机抖动）：
+
+     1  算加权度数：一条边算 1，跟地区的占据／争夺这类"硬关系"多算一点。
+        最忙的那个势力当圆心。
+     2  排环顺序：从圆心做一次深度优先，同一串关系连着访问，所以相关的节点在环上
+        也挨着；第一环按椭圆周长算装得下几个，装不下的溢到第二环（环数封顶两圈，
+        再多就该收徽章尺寸，不是加环）。
+     3  定角度：按弧长等分，不按角度等分（扁椭圆上等角度会把节点堆到上下两端）。
+        半径再按"跟圆心咬得多紧"微调，咬得紧的靠近圆心。
+        横向乘一个椭圆系数——画布宽 700–1300、高 400 上下，正圆会在左右空出两大块。
+     4  松弛：只按真实盒子把仍然叠着的节点推开，横向夹在栏内、竖向让画布长高。
+        刻意不加边的弹簧（会把整张图拽成一条链，见函数末尾的注）。迭代 340 轮。 */
+
+/** 每个节点连了多少、多硬。中心节点由此决定，半径也按它排。 */
+function nodeWeight(){
+  const w=new Map();
+  const bump=(k,v)=>w.set(k,(w.get(k)||0)+v);
+  EDGES.forEach(e=>{
+    // 争夺和归属是硬关系：正在被三家争的地区、攥着五处地的势力，都该往中间站
+    const v=1+(e.roles.some(r=>r.label==='争夺中'||r.label==='主控')?0.6:0);
+    bump(e.a,v);bump(e.b,v);
+  });
+  return w;
+}
+
+/** 定坐标。返回 {pos,H,cx,cy}。open 是「放开画面」，把半径整体放大一档。 */
+function layoutRadial(nodes,W,open){
+  const w=nodeWeight();
+  const deg=k=>w.get(k)||0;
+  const adj=new Map(nodes.map(n=>[n.key,[]]));
+  EDGES.forEach(e=>{
+    if(adj.has(e.a)&&adj.has(e.b)){adj.get(e.a).push(e.b);adj.get(e.b).push(e.a)}
+  });
+
+  /* 圆心：连得最多的势力。并列时手里地区多的优先，再并列按名字定，
+     保证同一份数据每次都选到同一个，图不会自己跳。 */
+  const fac=nodes.filter(n=>n.kind==='f');
+  const pool=fac.length?fac:nodes;
+  const hub=pool.slice().sort((a,b)=>
+    deg(b.key)-deg(a.key)||
+    arr(b.data.areas).length-arr(a.data.areas).length||
+    (a.name<b.name?-1:1))[0];
+
+  /* 排环顺序：从圆心做一次深度优先，同一串关系连着访问，所以相关的节点在环上
+     也挨着，线不必横穿整张图。跳出去的分支按加权度数选，重的先走。 */
+  const order=[],seen=new Set([hub.key]);
+  (function walk(k){
+    adj.get(k).slice().sort((a,b)=>deg(b)-deg(a)||(a<b?-1:1)).forEach(o=>{
+      if(seen.has(o))return;
+      seen.add(o);order.push(o);walk(o);
+    });
+  })(hub.key);
+  // 本轮一条边都没有的节点也要有位置，排在最后
+  nodes.forEach(n=>{if(!seen.has(n.key)){seen.add(n.key);order.push(n.key)}});
+
+  const byKey=new Map(nodes.map(n=>[n.key,n]));
+  const avgW=nodes.reduce((s,n)=>s+n.w,0)/Math.max(1,nodes.length);
+  const avgH=nodes.reduce((s,n)=>s+n.h,0)/Math.max(1,nodes.length);
+
+  /* 环的尺寸不按"节点几个"凭空定，按画布还剩多少地方定：
+     横半轴吃满栏宽，竖半轴从"内环不能压到圆心那个节点"起步，装不下再往外长。
+     椭圆是必须的——画布宽 700–1300、高 400 上下，正圆会在左右各空出一大块。 */
+  const room=W-2*SIDE;
+  const rx=Math.max(120,(room-avgW*0.92)/2);
+  // 竖半轴：先保证内环压不到圆心那个节点，再往上抬一档——贴着下限会摊成一条横带，
+  // 读起来是链不是图（试过 ry=124，八个节点排成一排）。
+  const ryMin=Math.max(hub.h/2+avgH/2+14,avgH*1.02);
+  const ryMax=(open?760:540)/2;
+  // 椭圆周长（拉马努金近似）够摆几个节点
+  const perim=(a,b)=>Math.PI*(1.5*(a+b)-Math.sqrt(Math.max(0,a*b)));
+  /* 一个节点在环上要占多长弧。取"横着排要多宽"和"竖着排要多高"的大者：
+     窄屏上椭圆会立起来，环的左右两段是竖着走的，只按宽度算会算出假的够用。 */
+  const slot=Math.max(avgW*0.66+22,avgH*0.95+14);
+  let ry=Math.min(ryMax,ryMin*1.3);
+  while(ry<ryMax&&Math.floor(perim(rx,ry)/slot)<order.length)ry+=10;
+
+  /* 一环装不下就开第二环（更外一圈，周长更大）。环数封顶两圈：三圈以上竖向早就
+     超出画布了，那时该降级的是徽章尺寸（见 renderGraph 里的 shrink），不是加环。 */
+  const cap1=Math.max(3,Math.floor(perim(rx,ry)/slot));
+  const inner=order.slice(0,cap1),outer=order.slice(cap1);
+  const ry2=outer.length?ry+avgH*0.96:ry;
+
+  /* 环上按弧长等分，不按角度等分。扁椭圆上等角度会把节点堆到上下两端、
+     把左右两头拉空（试过，上面挤两个、下面挤两个，中间一大片空）。 */
+  const arcAngles=(ax,ay,a0,ws)=>{
+    const N=720,cum=[0];
+    for(let i=1;i<=N;i++){
+      const t0=a0+2*Math.PI*(i-1)/N,t1=a0+2*Math.PI*i/N;
+      cum.push(cum[i-1]+Math.hypot(ax*(Math.cos(t1)-Math.cos(t0)),ay*(Math.sin(t1)-Math.sin(t0))));
+    }
+    const tot=ws.reduce((s,v)=>s+v,0)||1;
+    let acc=0;
+    return ws.map(v=>{
+      const want=(acc+v/2)/tot*cum[N];acc+=v;
+      let i=1;while(i<N&&cum[i]<want)i++;
+      const seg=cum[i]-cum[i-1];
+      return a0+2*Math.PI*(i-1+(seg?(want-cum[i-1])/seg:0))/N;
+    });
+  };
+
+  /* 半径按关系强度微调：跟圆心咬得越紧的靠得越近（原型里也是这样，
+     几个节点明显离中间那枚更近）。等半径的正椭圆看着像仪表盘刻度。 */
+  const hubTie=k=>{
+    const e=EDGES.find(x=>(x.a===k&&x.b===hub.key)||(x.b===k&&x.a===hub.key));
+    if(!e)return 0;
+    return e.roles.length+(e.roles.some(r=>r.label==='争夺中'||r.label==='主控')?1:0);
+  };
+  const pull=k=>1.07-Math.min(.27,hubTie(k)*.09);
+
+  const A0=-Math.PI/2;   // 第一个节点落在正上方（原型里 星辉学会 就在圆心正上）
+  const pos=new Map();
+  const ringPut=(keys,ax,ay,a0)=>{
+    if(!keys.length)return;
+    const angs=arcAngles(ax,ay,a0,keys.map(k=>byKey.get(k).w+40));
+    keys.forEach((k,i)=>{
+      const f=pull(k);
+      pos.set(k,{x:Math.cos(angs[i])*ax*f,y:Math.sin(angs[i])*ay*f});
+    });
+  };
+  pos.set(hub.key,{x:0,y:0});
+  ringPut(inner,rx,ry,A0);
+  // 外环错开半格起步，免得内外两圈的节点在同一个方位上叠成一条辐条
+  ringPut(outer,rx,ry2,A0+Math.PI/Math.max(1,outer.length));
+
+  /* 松弛：只做一件事——把摆完之后仍然叠着的节点推开，按量出来的真实盒子推，
+     不按估算。这里刻意不加"边的弹簧"：弹簧会把长边拽短，几轮下来整张图被拉成
+     一条链（试过，九个节点收成了一条斜着的串），环形结构全没了。
+     位置整体偏了不用管，最后按外框重新居中。
+     确定性：初始位置是算出来的，没有随机数，同一份数据每次都收敛到同一处。 */
+  const P=nodes.map(n=>{const p=pos.get(n.key);return {x:p.x,y:p.y,n}});
+  const GAPX=22,GAPY=12;
+  const IT=340;
+  /* 横向是硬边界，每轮都夹回来。不夹的话叠在一起的节点会被推到栏外，最后按外框
+     整体压扁 x——压完又叠回去了（390 档上实测五对节点相叠）。夹住 x 以后互斥
+     只能往竖向让，画布跟着变高：窄屏本来就该往下长，跟旧版换行铺排是一个道理。 */
+  const limX=n=>Math.max(0,(room-n.w)/2);
+  for(let it=0;it<IT;it++){
+    const k=1-it/IT*0.85;                          // 越到后面动得越小，收敛
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+      const a=P[i],b=P[j];
+      const needX=(a.n.w+b.n.w)/2+GAPX,needY=(a.n.h+b.n.h)/2+GAPY;
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const ox=needX-Math.abs(dx),oy=needY-Math.abs(dy);
+      if(ox<=0||oy<=0)continue;                    // 盒子没重叠就不管
+      // 往"分开最省力"的那个方向推
+      if(ox/needX<oy/needY){
+        const s=(dx>=0?1:-1)*ox*.5*k;a.x-=s;b.x+=s;
+      }else{
+        const s=(dy>=0?1:-1)*oy*.5*k;a.y-=s;b.y+=s;
+      }
+    }
+    P.forEach(p=>{const L=limX(p.n);p.x=Math.max(-L,Math.min(L,p.x))});
+  }
+
+  // 平移到画布坐标，量出实际外框再决定画布多高
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  P.forEach(p=>{
+    x0=Math.min(x0,p.x-p.n.w/2);x1=Math.max(x1,p.x+p.n.w/2);
+    y0=Math.min(y0,p.y-p.n.h/2);y1=Math.max(y1,p.y+p.n.h/2);
+  });
+  const spanX=x1-x0,spanY=y1-y0;
+  /* 横向排不下时整体压扁（只压间距，节点盒子不动）。这是"节点变多"的第三道降级，
+     前两道是徽章缩小和第二环。 */
+  const sx=spanX>room?room/spanX:1;
+  const out=new Map();
+  P.forEach(p=>out.set(p.n.key,{
+    x:Math.round(SIDE+(p.x-x0)*sx+(room-spanX*sx)/2),
+    y:Math.round(PAD+8+(p.y-y0)),
+  }));
+  return {pos:out,H:Math.round(spanY+PAD*2+16),cx:W/2,cy:PAD+8+spanY/2};
+}
+
+/* 两侧比 PAD 再留宽一点：节点贴着画框边会跟四角折角撞在一起，
+   而且最外侧那条连线会顺着边框走，看着像画框漏了一道。 */
+const SIDE=PAD+26;
+
+/* ---------- 一条边的几何 ----------
+   原型的线是大弧度的弧，不是折线也不是浅弧。这里一律用一条对称的三次贝塞尔：
+   两端落在徽章的圆环上（斜下方向的从整个节点盒子底下走，否则会横穿名字），
+   控制点在中垂线上偏出去，偏的方向背着画面中心——这样弧线是往外鼓的，
+   不会一窝挤在圆心那个节点身上。 */
+
+/** 节点的接线点。dx/dy 是出线方向。 */
+function anchor(n,p,dx,dy){
+  const rc=n.sz/2+4;
+  const mcy=p.y-n.h/2+n.sz/2;                      // 徽章圆心比节点盒子中心高：名字和状态在下面
+  const len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+  // 朝下走的线从盒子底边出去，绕开名字和状态那两行字
+  if(uy>0.55){
+    const bottom=p.y+n.h/2+3;
+    const t=(bottom-mcy)/Math.max(uy,1e-6);
+    return [p.x+Math.max(-n.w/2+8,Math.min(n.w/2-8,ux*t)),bottom];
+  }
+  return [p.x+ux*rc,mcy+uy*rc];
+}
+
+function edgeGeom(e,lay){
+  const A=lay.pos.get(e.a),B=lay.pos.get(e.b);
+  const na=NODEBOX.get(e.a),nb=NODEBOX.get(e.b);
+  const p0=anchor(na,A,B.x-A.x,B.y-A.y);
+  const p3=anchor(nb,B,A.x-B.x,A.y-B.y);
+  const dx=p3[0]-p0[0],dy=p3[1]-p0[1],d=Math.hypot(dx,dy)||1;
+  const mx=(p0[0]+p3[0])/2,my=(p0[1]+p3[1])/2;
+  // 法线方向；朝外（背离画面中心）鼓
+  let nx=-dy/d,ny=dx/d;
+  const ox=mx-lay.cx,oy=my-lay.cy;
+  if(nx*ox+ny*oy<0){nx=-nx;ny=-ny}
+  /* 弧高按弦长走，封顶 46：短边不能鼓成一个圈，长边也不能鼓到画布外面。
+     势力之间的关系鼓得多一点——它们常常是长边，跟"势力踩着地区"那种短边分得开。 */
+  const bow=Math.min(46,d*(e.kind==='ff'?0.19:0.13)+8);
+  return {p0,p3,p1:[p0[0]+dx*.28+nx*bow,p0[1]+dy*.28+ny*bow],
+          p2:[p0[0]+dx*.72+nx*bow,p0[1]+dy*.72+ny*bow]};
+}
+const bezAt=(g,t)=>{
+  const u=1-t,a=u*u*u,b=3*u*u*t,c=3*u*t*t,d=t*t*t;
+  return [a*g.p0[0]+b*g.p1[0]+c*g.p2[0]+d*g.p3[0],a*g.p0[1]+b*g.p1[1]+c*g.p2[1]+d*g.p3[1]];
+};
+const bezTan=(g,t)=>{
+  const u=1-t,a=3*u*u,b=6*u*t,c=3*t*t;
+  return [a*(g.p1[0]-g.p0[0])+b*(g.p2[0]-g.p1[0])+c*(g.p3[0]-g.p2[0]),
+          a*(g.p1[1]-g.p0[1])+b*(g.p2[1]-g.p1[1])+c*(g.p3[1]-g.p2[1])];
+};
+const pathD=g=>'M'+g.p0[0].toFixed(1)+' '+g.p0[1].toFixed(1)+
+  ' C'+g.p1[0].toFixed(1)+' '+g.p1[1].toFixed(1)+' '+g.p2[0].toFixed(1)+' '+g.p2[1].toFixed(1)+
+  ' '+g.p3[0].toFixed(1)+' '+g.p3[1].toFixed(1);
+
+/** 悬停一个节点或一个关系名，只留下跟它有关的那张子图。
+    十几条线同时看清楚是不现实的，一次读一小块才读得动。 */
+function wireFocus(box){
+  const rel=new Map();
+  EDGES.forEach((e,i)=>{
+    [e.a,e.b].forEach(k=>{if(!rel.has(k))rel.set(k,new Set());rel.get(k).add(i)});
+  });
+  const clear=()=>{box.classList.remove('dimming');$$('.lit',box).forEach(el=>el.classList.remove('lit'))};
+  const light=(keys,idxs)=>{
+    clear();box.classList.add('dimming');
+    $$('.gnode',box).forEach(el=>{if(keys.has(el.dataset.k))el.classList.add('lit')});
+    idxs.forEach(i=>$$('[data-e="'+i+'"]',box).forEach(el=>el.classList.add('lit')));
+  };
+  const onNode=k=>{
+    const idxs=[...(rel.get(k)||[])];
+    const keys=new Set([k]);
+    idxs.forEach(i=>{keys.add(EDGES[i].a);keys.add(EDGES[i].b)});
+    light(keys,idxs);
+  };
+  $$('.gnode',box).forEach(el=>{
+    el.addEventListener('mouseenter',()=>onNode(el.dataset.k));
+    el.addEventListener('focus',()=>onNode(el.dataset.k));
+    el.addEventListener('mouseleave',clear);
+    el.addEventListener('blur',clear);
+  });
+  $$('.gtag',box).forEach(el=>{
+    const i=Number(el.dataset.e),e=EDGES[i];
+    const on=()=>light(new Set([e.a,e.b]),[i]);
+    el.addEventListener('mouseenter',on);
+    el.addEventListener('focus',on);
+    el.addEventListener('mouseleave',clear);
+    el.addEventListener('blur',clear);
+  });
+}
+
+/* 九个节点一个样：圆形金环徽章 + 名字 + 状态。势力和地区靠徽记（纹章／地物）和
+   状态说的是哪件事来区分，不靠形状，也不靠站位——这两样上一版都用了，图就变成了泳道。
+   颜色的含义只留三种：连线＝关系类别，状态字＝反常与否，金＝当前选中。
+   徽章的环一律是金的（照原型），只有"反常"的节点（争夺中／归属不明／休眠）在盘底
+   透一层状态色的光，一眼能挑出这一带哪里不对劲。 */
+function nodeHTML(n,cur,p){
+  const style=(p?'--x:'+p.x+'px;--y:'+p.y+'px':'--x:-9999px;--y:0px')+';--sz:'+(n.sz||58)+'px';
+  if(n.kind==='f'){
+    const f=n.data;
+    const st=L('faction.status',f.status);
+    const on=cur&&cur.name===f.name;
+    const quiet=f.status==='active';
+    const hue=FACTION_HUE[f.status]||'indigo';
+    const hold=arr(f.areas).length;
+    return '<button class="gnode f'+(on?' on':'')+'" data-k="'+esc(n.key)+'"'+
+      ' style="'+style+(quiet?'':';--gl:'+DK[hue]+'55')+'"'+
+      ' title="'+esc(f.name+'　'+st+'　手里 '+hold+' 处地区（areas 条数，徽章大小按此排，不是评分）　'+crestBasis(f))+'">'+
+      '<span class="gbox">'+
+      '<span class="gmedal">'+crestInner(f)+'</span>'+
+      '<span class="gname">'+esc(f.name)+'</span>'+
+      '<span class="gstate'+(quiet?' quiet':' loud')+'" style="--gc:'+DK[hue]+'">'+
+        '<svg><use href="#'+(FACTION_ICON[f.status]||'i-spark')+'"/></svg>'+esc(st)+'</span>'+
+    '</span></button>';
+  }
+  const r=n.data;
+  const c=r.control||{},cs=c.status;
+  const st=L('control.status',cs);
+  const calm=cs==='controlled'&&!arr(c.contesting_factions).length;
+  const hue=CONTROL_HUE[cs]||'indigo';
+  return '<button class="gnode r" data-k="'+esc(n.key)+'"'+
+    ' style="'+style+(calm?'':';--gl:'+DK[hue]+'55')+'"'+
+    ' title="'+esc(r.name+'　'+st+(c.primary_faction?'　归 '+c.primary_faction:'')+'　'+sigilBasis(r))+'">'+
+    '<span class="gbox">'+
+    '<span class="gmedal">'+sigilInner(r)+'</span>'+
+    '<span class="gname">'+esc(r.name)+'</span>'+
+    '<span class="gstate'+(calm?' quiet':' loud')+'" style="--gc:'+DK[hue]+'">'+
+      '<svg><use href="#'+(CONTROL_ICON[cs]||'i-ask')+'"/></svg>'+esc(st)+'</span>'+
+  '</span></button>';
+}
+
+/* 主次两档，就两档：
+     主线（跟当前选中势力直接相关）  2.6px　不透明度 .92
+     背景线（其余）                1.3px　不透明度 .38
+   上一版铺到 5 档线宽 3 档不透明度，全场最细，可它还是显得乱——分到五档就没有
+   哪一档算"主线"，读者只看到五种差不多的线。主次要靠粗分，不靠细分。
+   被点中的那条线不再另加一档，改成加一层同色的外发光（不动线宽和透明度）。 */
+const MAINW=2.6, BGW=1.3, MAINO=.92, BGO=.38;
+function wirePath(e,g,i,isMain,sel,dash){
+  const on=sel===i;
+  const d=pathD(g);
+  const col=DK[e.hue];
+  const dashAttr=dash?' stroke-dasharray="'+dash+'"'
+    :(e.style==='dash'?' stroke-dasharray="8 6"':'');
+  /* 被点中的那条线靠一层同色外发光认出来。用 filter 而不是在底下再画一条粗描边：
+     多画一条 path 会凭空多出一档线宽和一档不透明度，正是这轮要收掉的东西。 */
+  return '<path data-e="'+i+'" class="'+(on?'sel':'')+'" d="'+d+'" fill="none" stroke="'+col+
+    '" stroke-width="'+(isMain?MAINW:BGW)+'" stroke-linecap="round"'+dashAttr+
+    ' stroke-opacity="'+(isMain?MAINO:BGO)+'" style="color:'+col+'"'+
+    (e.arrow&&isMain?' marker-end="url(#fr-ar-'+e.hue+')"':'')+'/>';
+}
+
+/* 关系名摆放：一条边一个，绝不省略。两条带之间那条空走廊本来就是留给它们的，
+   所以先在 t≈0.5 附近找位置，实在撞上了再沿线滑、沿法线偏。
+   契约允许一个势力挂 10 条 relations、一个地区挂 8 个 present_factions，
+   节点一多边数是平方级涨的，几十上百个文字标签物理上摆不开——这时整体切成
+   圆点，每条边照样有自己的标记，文字挪到悬停／点选时出，是做成可交互，
+   不是静默丢弃。 */
+function placeTags(edges,nodes,pos,W,H,sel,main){
+  const boxes=nodes.map(n=>{const p=pos.get(n.key);return {x:p.x,y:p.y,w:n.w,h:n.h}});
+  const TS=[.5,.44,.56,.38,.62,.32,.68,.26,.74,.2,.8,.15,.85];
+  const OFF=[0,-14,14,-24,24,-34,34,-46,46,-58,58,-72,72,-88,88];
+  /* 主线的标签常显，所以先摆、而且互相之间要避让；背景线的标签只在悬停某个节点时
+     跟着子图亮出来，一次最多亮一小簇，所以它们之间不必互相避让（会白白挤到很远的
+     地方去），但要躲开节点和主线的标签。 */
+  const order=edges.map((e,i)=>({e,i,len:Math.hypot(
+    pos.get(e.b).x-pos.get(e.a).x,pos.get(e.b).y-pos.get(e.a).y)}))
+    .sort((x,y)=>(main[y.i]?1:0)-(main[x.i]?1:0)||x.len-y.len);
+
+  function run(mini){
+    const placed=[],spots=new Array(edges.length);
+    let bad=0;
+    order.forEach(({e,i})=>{
+      const g=GEOM[i];
+      const w=mini?16:e.label.length*14+(e.icon?21:0)+16,h=mini?16:27;
+      let best=null,bc=Infinity,bh=Infinity;
+      for(const t of TS){
+        const P=bezAt(g,t),D=bezTan(g,t),len=Math.hypot(D[0],D[1])||1;
+        for(const off of OFF){
+          const x=P[0]-D[1]/len*off,y=P[1]+D[0]/len*off;
+          if(x-w/2<2||x+w/2>W-2||y-h/2<2||y+h/2>H-2)continue;
+          const r={x,y,w,h};
+          let hitArea=0;
+          boxes.forEach(o=>{hitArea+=inter(r,o,mini?1:7)*9});
+          /* 两个背景标签互相压，只在有空位时才值得躲——它们一次只亮一小簇，
+             为了躲开对方跑到很远处反而认不出是哪条线的名字。所以压别人的权重
+             按"常显与否"分档：主线标签之间是硬冲突，背景之间只是轻微加分。 */
+          placed.forEach(o=>{hitArea+=inter(r,o,mini?1:4)*((main[i]||o.main)?7:1)});
+          // 压到节点或别的标签上，比偏离中点难看得多，权重差两个数量级
+          const cost=hitArea+Math.abs(t-.5)*80+Math.abs(off)*1.2;
+          if(cost<bc){bc=cost;bh=hitArea;best=r}
+        }
+      }
+      if(!best){const P=bezAt(g,.5);best={x:P[0],y:P[1],w,h};bh=1}   // 极端情况也照摆
+      best.main=!!main[i];
+      if(bh>0&&main[i])bad++;      // 只有常显的主线标签摆不下才算"摆不下"
+      placed.push(best);spots[i]=best;
+    });
+    return {spots,bad};
+  }
+
+  let r=run(false);
+  /* 真摆不下才整体切圆点，只切一部分会出现大小混排更难读。
+     现在只有主线的标签常显（本轮 4～6 条），比上一版 14 条好摆得多，
+     这条兜底基本走不到；节点灌到 22 个、主线十几条时还是会用上。 */
+  const mini=r.bad>Math.max(2,main.filter(Boolean).length*0.25);
+  if(mini)r=run(true);
+  tagMode=mini?'mini':'full';
+
+  return edges.map((e,i)=>{
+    const s=r.spots[i];
+    return '<button class="gtag'+(main[i]?'':' bg')+(mini?' mini':'')+(sel===i?' on':'')+'" data-e="'+i+
+      '" style="--x:'+s.x.toFixed(1)+'px;--y:'+s.y.toFixed(1)+'px;--gc:'+DK[e.hue]+'" title="'+
+      esc(e.from+' → '+e.to+'　'+e.roles.map(x=>x.label).join(' / ')+
+        (e.roles[0].basis?'　'+e.roles[0].basis:''))+'">'+
+      (mini?'<i></i>':'')+'<span>'+(e.icon?'<svg><use href="#'+e.icon+'"/></svg>':'')+
+      esc(e.label)+'</span></button>';
+  }).join('');
+}
+let tagMode='full';   // 副标题要据此说明"关系名收成了圆点"
+// pad 是"擦边也算撞"的余量：字紧贴着节点边缘同样读不清
+const inter=(a,b,pad)=>{
+  const p=pad||0;
+  return Math.max(0,Math.min(a.x+a.w/2,b.x+b.w/2+p)-Math.max(a.x-a.w/2,b.x-b.w/2-p))*
+         Math.max(0,Math.min(a.y+a.h/2,b.y+b.h/2+p)-Math.max(a.y-a.h/2,b.y-b.h/2-p));
+};
+
+/** 四角折角。地形、晕影、罗盘现在都在 CSS 那一层（地形是美术资产的槽位，
+    缺件时露出底下的渐变），这里只剩画框的四个角。
+    折角用 <rect> 填色画，不用带描边的 path：_tools/graph-cross.cjs 数连线是按
+    "计算出来的 stroke 不是 none"筛的，装饰只要带描边就会被算成一条边，
+    把线宽档位也搅乱。 */
+function frame(W,H){
+  const T=1.4,L2=22,c='rgba(212,174,110,.38)';
+  const bar=(x,y,w,h)=>'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w+'" height="'+h+'" fill="'+c+'"/>';
+  const corner=(x,y,sx,sy)=>
+    bar(sx>0?x:x-L2,sy>0?y:y-T,L2,T)+bar(sx>0?x:x-T,sy>0?y:y-L2,T,L2);
+  return '<g pointer-events="none">'+
+    corner(13,13,1,1)+corner(W-13,13,-1,1)+corner(13,H-13,1,-1)+corner(W-13,H-13,-1,-1)+
+  '</g>';
+}
+
+/** 没手动点线时，默认落在本轮最近变动过的那条关系上，其次是正在争夺的那条。
+    这样这一块永远在讲一件具体的事，不是一句"点一下这里会显示…"的占位话。 */
+function edgeIndex(){
+  if(!EDGES.length)return -1;
+  if(selEdge>=0&&selEdge<EDGES.length)return selEdge;
+  let best=-1,bt=-1;
+  EDGES.forEach((e,i)=>e.roles.forEach(r=>{
+    const t=r.at?(WTime.parse(r.at)||0):0;
+    if(t>bt){bt=t;best=i}
+  }));
+  if(best<0)best=EDGES.findIndex(e=>e.label==='争夺中');
+  return best<0?0:best;
+}
+
+/* relations[].current_basis / recent_change / changed_at、areas[].current_state、
+   control.primary_faction 这几项在图上没地方写，逐条收在这里。
+   一对节点合成一条线之后，它身上的每个角色都在这块列出来，一条不少。 */
+function renderEdgeFoot(){
+  const el=$('#gfoot');
+  const e=EDGES[edgeIndex()];
+  if(!e){
+    el.className='gfoot h-indigo';
+    el.innerHTML=fieldKey('i-link','关系')+'<span class="who hint">本轮没有可画的势力联系</span>';
+    return;
+  }
+  el.className='gfoot h-'+e.hue;
+  el.innerHTML=fieldKey(e.icon||'i-link',e.detailKind)+
+    '<span class="who">'+esc(e.from)+(e.kind==='ff'?' ⇌ ':' → ')+esc(e.to)+
+      e.roles.map(r=>chip(r.hue,r.icon||'',r.label)).join('')+'</span>'+
+    // 只有一种关系时，上面那枚 chip 已经把名字写过了，下面不再重复一遍
+    e.roles.map(r=>'<p>'+(e.roles.length>1?'<em>'+esc(r.label)+'</em>':'')+esc(r.basis||'未记录依据')+
+      (r.change?'　·　最近变化：'+esc(r.change):'　·　本轮无变化')+
+      (r.at?'　'+esc(r.at):'')+'</p>').join('');
+}
+
+function pickNode(key){
+  if(key.startsWith('f:')){
+    const i=FACTIONS.findIndex(f=>'f:'+f.name===key);
+    if(i<0)return;
+    selFaction=i;selEdge=-1;
+    renderGraph();renderEdgeFoot();renderStance();renderRegions();renderIdx();
+    // 浮层开着的时候换势力，档案要跟着换，否则看的还是上一个势力
+    if(!$('#dossier').hidden)renderDossier();
+  }else{
+    const name=key.slice(2);
+    rowOpen.add(name);
+    const all=sortedRegions();
+    const i=all.findIndex(r=>r.name===name);
+    if(i>=0)regionPage=Math.floor(i/REGION_PAGE);
+    renderRegions();
+    const el=document.querySelector('.regrow[data-n="'+CSS.escape(name)+'"]');
+    if(el)el.scrollIntoView({block:'center',behavior:'smooth'});
+  }
+}
+
+/* =============================================================================
+   地区概览
+   ========================================================================== */
+/* 通栏之后每页放几个地区不再受配平牵制，纯按"一屏读得完多少"定。
+   六个收起的地区行约 540px，接近一屏；再多就得滚着找。 */
+const REGION_PAGE=6;
+const COND_PAGE=3, CHG_PAGE=3;
+const sortedRegions=()=>REGIONS.slice().sort(WTime.byNewest('updated_at'));
+
+function taskLink(name,kind){
+  if(!name)return '';
+  return '<button class="linkbtn" data-task="'+esc(kind==='task'?name:'')+'" data-name="'+esc(name)+'">'+
+    '<svg><use href="#'+(kind==='task'?'i-scroll':'i-bell')+'"/></svg>'+
+    (kind==='task'?'关联任务':'关联事件')+'　'+esc(name)+'</button>';
+}
+
+/* 地区行的底色一律走 indigo，不再是 hueOf('r:'+名字) 轮转出来的那一档。
+
+   轮转色的本意是「同一个地区在全页永远同一个颜色」，可这一行里被它染上色的是
+   六个字段名（地区／控制状态／归属势力／控制稳固度／近期变化）——一行里最多的
+   那类字。轮到 rose 的地区，整行字段名连同左边的徽记都是红的，而它的控制状态
+   明明是绿色的「单方控制」：颜色在喊出事了，事实是什么都没出。轮到 amber 的
+   那行同理，读起来像"待处理"。
+
+   这一行里真正带状态的是控制状态胶囊和稳固度档位条，两者都由 control.status 上色，
+   争夺中才是红的。颜色留给它们，字段名退回结构色。地区身份靠徽记和名字认，
+   本来也不需要再编一道色。 */
+function regionRow(r){
+  const hue='indigo';
+  const c=r.control||{};
+  const chue=CONTROL_HUE[c.status]||'indigo';
+  const rank=CONTROL_RANK[c.status]||0;
+  const open=rowOpen.has(r.name);
+  const cur=curFaction();
+  const mine=cur&&(c.primary_faction===cur.name||arr(c.contesting_factions).includes(cur.name)||
+                   arr(r.present_factions).includes(cur.name));
+  const pf=c.primary_faction?FACTION_BY.get(c.primary_faction):null;
+  const conds=arr(r.conditions),present=arr(r.present_factions);
+  // 收起态只露最新一条，所以这里必须按架空历法排一次，不能信数组原顺序
+  const chgs=arr(r.recent_changes).slice().sort(WTime.byNewest('time'));
+  const pg=rowPage.get(r.name)||{c:0,g:0};
+
+  let exp='';
+  if(open){
+    const cp=Math.max(1,Math.ceil(conds.length/COND_PAGE)),cpi=Math.min(pg.c,cp-1);
+    const gp=Math.max(1,Math.ceil(chgs.length/CHG_PAGE)),gpi=Math.min(pg.g,gp-1);
+    exp='<div class="rexp h-'+hue+'">'+
+      '<div class="rx">'+
+      sectionH('i-scales','当前条件',hiddenCount(conds.length,COND_PAGE))+
+      (conds.length
+        ?'<ul class="facts">'+conds.slice(cpi*COND_PAGE,cpi*COND_PAGE+COND_PAGE).map(x=>{
+          const ch2=COND_HUE[x.category]||'purple';
+          return '<li class="factit h-'+ch2+'"><span class="ft">'+
+            chip(ch2,COND_ICON[x.category]||'i-spark',L('region.condition',x.category))+'</span>'+
+            '<b>'+esc(x.fact||'未记录事实')+'</b>'+
+            '<small>影响：'+esc(x.impact||'未记录影响')+'</small></li>';
+        }).join('')+'</ul>'+
+         '<div class="pager" data-pg="c" data-n="'+esc(r.name)+'"></div>'
+        :emptyNote('本轮没有记录在案的地区条件'))+
+      '</div>'+
+
+      '<div class="rx">'+
+      sectionH('i-spark','近期变化',hiddenCount(chgs.length,CHG_PAGE))+
+      (chgs.length
+        ?'<ul class="facts">'+chgs.slice(gpi*CHG_PAGE,gpi*CHG_PAGE+CHG_PAGE).map(x=>
+          '<li class="factit h-'+hue+'"><span class="ft"><span class="tm">'+esc(x.time||'时间未记录')+'</span></span>'+
+          '<b>'+esc(x.fact||'未记录变化')+'</b>'+
+          (x.related_task||x.related_event
+            ?'<span class="linkrow">'+taskLink(x.related_task,'task')+taskLink(x.related_event,'event')+'</span>'
+            :'<small>未关联任务或事件</small>')+'</li>').join('')+'</ul>'+
+         '<div class="pager" data-pg="g" data-n="'+esc(r.name)+'"></div>'
+        :emptyNote('本轮这个地区没有值得展示的变化'))+
+      '</div>'+
+
+      '<div class="rx wide">'+
+      sectionH('i-people','在场与争夺')+
+      '<div style="margin-top:8px">'+
+        (present.length
+          ?'<div class="linkrow">'+present.map(n=>'<button class="linkbtn" data-fac="'+esc(n)+'">'+
+            '<svg><use href="#i-shield"/></svg>'+esc(n)+'</button>').join('')+'</div>'
+          :emptyNote('没有记录在场势力'))+
+        (arr(c.contesting_factions).length
+          ?'<div class="linkrow" style="margin-top:7px">'+arr(c.contesting_factions).map(n=>
+            '<button class="linkbtn h-rose" data-fac="'+esc(n)+'"><svg><use href="#i-swords"/></svg>争夺方　'+esc(n)+'</button>').join('')+'</div>'
+          :'')+
+      '</div>'+
+      '<div style="margin-top:12px">'+kvGrid([
+        ['i-crown','主要控制势力',c.primary_faction],
+        ['i-spark','已推演到',r.updated_at],
+        ['i-bell','下次检查',r.next_update]
+      ],3)+'</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  return '<article class="regrow h-'+hue+(mine?' on':'')+'" data-n="'+esc(r.name)+'">'+
+    '<button class="rtop" data-open="'+esc(r.name)+'">'+
+      '<span class="rsig" title="'+esc(sigilBasis(r))+'">'+sigilInner(r)+'</span>'+
+      '<span class="rname">'+fieldKey('i-map','地区')+'<b>'+esc(r.name)+'</b></span>'+
+      '<span class="rcell">'+fieldKey(CONTROL_ICON[c.status]||'i-ask','控制状态')+
+        '<span style="display:block;margin-top:4px">'+chip(chue,'',L('control.status',c.status))+'</span></span>'+
+      '<span class="rcell">'+fieldKey('i-crown','归属势力')+
+        '<span class="rown h-'+(pf?hueOf('f:'+pf.name):'indigo')+'" style="margin-top:5px">'+
+          '<i class="dot"></i><span>'+esc(c.primary_faction||'未记录归属')+'</span></span></span>'+
+      /* 档位条把 control.status 的强弱画出来。旧版旁边还写一句「第 3 / 5 档」，
+         那只是把亮了几格念了一遍——格子自己数得出来，口径留在 title 里。 */
+      '<span class="rcell">'+fieldKey('i-shield','控制稳固度')+
+        '<span style="display:block;margin-top:9px">'+
+        steps(rank,5,chue,'',
+          CONTROL_RANK_NOTE+'；由 control.status 直接推导出的档位，不是评分也不是百分比')+
+        '</span></span>'+
+      /* 原型这一列叫「近期变化」。收起态只放最新一条，剩下的在展开区里逐条列全，
+         所以这里写清"共几条"，让人知道底下还有东西，不是只有这一句。 */
+      '<span class="rcell wide">'+fieldKey('i-spark','近期变化')+
+        '<span class="rchg">'+(chgs.length
+          ? esc(chgs[0].fact||'未记录内容')+(chgs.length>1?'<em>　还有 '+(chgs.length-1)+' 条</em>':'')
+          : '<em>本轮无变化记录</em>')+'</span></span>'+
+      '<span class="rmore">'+(open?'收起 ⌃':'查看详情 ⌄')+'</span>'+
+    '</button>'+exp+
+  '</article>';
+}
+
+function renderRegions(){
+  const all=sortedRegions();
+  const pages=Math.max(1,Math.ceil(all.length/REGION_PAGE));
+  regionPage=Math.min(regionPage,pages-1);
+  const page=all.slice(regionPage*REGION_PAGE,regionPage*REGION_PAGE+REGION_PAGE);
+  /* 副标题原来写「共 5 个地区　其中 1 个处于争夺中　按更新时间倒序」——
+     总数和排序底下的翻页条已经写着，争夺情况在上面那张图的副标题里。空着。 */
+  $('#regionSub').textContent='';
+
+  $('#regions').innerHTML=page.length?page.map(regionRow).join(''):emptyNote('本轮没有地区记录');
+  renderPager($('#regionPager'),{page:regionPage,pages,total:all.length,unit:'个地区',
+    note:'按更新时间倒序',onGo:n=>{regionPage=n;renderRegions()}});
+
+  // 展开区里两个列表各自的翻页条
+  $$('#regions .pager[data-pg]').forEach(el=>{
+    const name=el.dataset.n,which=el.dataset.pg;
+    const r=REGION_BY.get(name);if(!r)return;
+    const list=which==='c'?arr(r.conditions):arr(r.recent_changes);
+    const size=which==='c'?COND_PAGE:CHG_PAGE;
+    const pgs=Math.max(1,Math.ceil(list.length/size));
+    const st=rowPage.get(name)||{c:0,g:0};
+    renderPager(el,{page:Math.min(which==='c'?st.c:st.g,pgs-1),pages:pgs,total:list.length,
+      unit:which==='c'?'条条件':'条变化',note:'',
+      onGo:n=>{const s=rowPage.get(name)||{c:0,g:0};if(which==='c')s.c=n;else s.g=n;rowPage.set(name,s);renderRegions()}});
+  });
+
+  $$('#regions .rtop').forEach(el=>el.addEventListener('click',()=>{
+    const n=el.dataset.open;
+    if(rowOpen.has(n))rowOpen.delete(n);else rowOpen.add(n);
+    renderRegions();
+  }));
+  wireLinks($('#regions'));
+}
+
+/** 关联任务／事件按钮跳任务页，势力按钮切换当前势力。两处都会用到。 */
+function wireLinks(root){
+  $$('.linkbtn[data-name]',root).forEach(el=>el.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    P.goto('tasks', { focus: el.dataset.name });
+  }));
+  $$('.linkbtn[data-fac]',root).forEach(el=>el.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    const i=FACTIONS.findIndex(f=>f.name===el.dataset.fac);
+    if(i<0){toast(el.dataset.fac+' 不在本轮势力记录里');return}
+    pickNode('f:'+FACTIONS[i].name);
+  }));
+}
+
+/* =============================================================================
+   势力档案（右栏摘要卡）+ 完整档案（宽浮层）
+
+   分工的依据是容器宽度，不是字段重要程度：右栏是 344px 定宽，一份 35 字段的档案
+   竖着叠进去就是一根又窄又长的竹竿——原来 1520px，比左栏整个「各地情势」还高。
+   原型的右栏本来也不是档案，是一张摘要卡：身份行 / 三个指标 / 资源一横排 /
+   外交状态一行一条 / 最近动向两条，每块底下都有个「展开更多」通向别处。
+
+   所以：
+     摘要卡  = 是谁、什么状态、手里有什么、跟谁有来往、眼下在忙什么
+     完整档案 = 每条记录的全部子字段，1080px 宽表横着铺，不折叠不翻页
+   摘要卡里省掉的子字段，浮层里逐个都排出来了（见 renderDossier）。
+   ========================================================================== */
+const SUM_MAX=4;      // 摘要卡里一节最多几行，超出的写一句"还有 N 条"指向浮层
+const slice=(list,size,page)=>{
+  const pages=Math.max(1,Math.ceil(list.length/size));
+  const p=Math.min(page,pages-1);
+  return list.slice(p*size,p*size+size);
+};
+
+function renderStance(){
+  const f=curFaction();
+  const el=$('#stance');
+  if(!f){el.innerHTML='<div class="pbody">'+emptyNote('本轮没有势力记录')+'</div>';return}
+  const hue=hueOf('f:'+f.name);
+  const fh=FACTION_HUE[f.status]||'indigo';
+  const focus=f.current_focus||{};
+  const areas=arr(f.areas),res=arr(f.resources),grp=arr(f.internal_groups);
+  const rel=arr(f.relations),know=arr(f.knowledge),eff=arr(f.visible_effects);
+  const defer=arr(focus.deferred_items);
+
+  /* 这里原来挂着一句「共 4 个势力　点选拓扑图上的盾形节点切换」：势力有几个上面
+     那张图里摆着，"点哪里能切换"该由光标、悬停抬起和选中的金圈自己说，
+     不该写成一行小字教人操作。整行删掉。 */
+
+  // 摘要卡里只放最近两条动向；全部 visible_effects 在浮层和底部「世界动向」里
+  const effNew=eff.slice().sort(WTime.byNewest('time'));
+  const rest=(n,unit)=>n>SUM_MAX?'<p class="nodata" style="margin-top:7px">还有 '+(n-SUM_MAX)+
+    ' '+unit+'在完整档案里</p>':'';
+
+  el.innerHTML=
+    '<div class="fhead h-'+hue+'">'+
+      '<span class="fcrest" title="'+esc(crestBasis(f))+'">'+crestInner(f)+'</span>'+
+      /* 名字底下原来还有一句「纹章按资源构成取图：资金」——那是在解释实现怎么挑的图，
+         不是这个势力的情况。留在纹章的 title 里就够了。 */
+      '<span class="fmeta"><h3>'+esc(f.name)+chip(fh,FACTION_ICON[f.status]||'i-spark',L('faction.status',f.status))+'</h3></span>'+
+    '</div>'+
+
+    /* 名字底下原来是三格概览：「外交关系 2 · 结盟／竞争」「涉足地区 2 · 黑石港／旧港夜市」
+       「最深一层 经营」加一条六格档位条，162px。前两格数的和列的，就是这张卡片再往下
+       100px 的「对外关系」「地区联系」两节原样摆着的东西；第三格是拿 relation_type
+       排出来的档次，看一眼「地区联系」里的 经营／影响 就知道。整块删了。 */
+    '<div class="sect h-'+hue+'" style="padding-top:14px">'+
+      sectionH('i-flag','当前焦点')+
+      '<div style="margin-top:8px">'+
+        kvi('i-warn','问题',focus.issue)+
+        kvi('i-hand','行动',focus.action)+
+        /* 暂缓事项原来是两张带色条的事实卡，一张 41px。它们本来就是短语，
+           不是成句的事实陈述，做成胶囊一行能摆两个。 */
+        '<div class="kvi" style="margin-top:6px">'+fieldKey('i-hourglass','暂缓')+
+          (defer.length
+            ?'<span class="chiprow">'+defer.map(d=>chip('amber','',d)).join('')+'</span>'
+            :'<span>没有因资源或分歧而暂缓的事项</span>')+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    /* 资源照原型铺成一横排。子字段（用途 / 限制 / 本轮变化）在浮层里。 */
+    '<div class="frule"></div>'+
+    '<div class="sect h-'+hue+'">'+
+      sectionH('i-coin','资源储备')+
+      (res.length
+        ?'<div class="rline">'+res.map(x=>{
+          const rh=RES_HUE[x.type]||'teal';
+          return '<span class="ritem h-'+rh+'" title="'+esc(L('resource.type',x.type)+'：'+(x.quantity||'数量未记录'))+'">'+
+            '<svg><use href="#'+(RES_ICON[x.type]||'i-spark')+'"/></svg>'+
+            '<b>'+esc(L('resource.type',x.type))+'</b>'+
+            '<span>'+esc(x.quantity||'数量未记录')+'</span></span>';
+        }).join('')+'</div>'
+        :thinNote('本轮没有记录在案的资源'))+
+    '</div>'+
+
+    /* 对外关系照原型：一行一条，名字 + 状态胶囊。对象类型看纹章形状（盾／方／圆），
+       依据和本轮变化在浮层里。 */
+    '<div class="frule"></div>'+
+    '<div class="sect h-'+hue+'">'+
+      sectionH('i-link','对外关系')+
+      (rel.length
+        ?'<div style="margin-top:4px">'+rel.slice(0,SUM_MAX).map(r=>{
+          const rh=REL_HUE[r.relation_type]||'indigo';
+          const t=r.target_type||'other';
+          const tf=t==='faction'?FACTION_BY.get(r.target_name):null;
+          const tr=t==='region'?REGION_BY.get(r.target_name):null;
+          return frow({hue:rh,shape:t==='faction'?'crest':t==='region'?'sq':'rd',
+            inner:tf?crestInner(tf):tr?sigilInner(tr):'<svg><use href="#'+(TARGET_ICON[t]||'i-spark')+'"/></svg>',
+            name:r.target_name,chips:chip(rh,'',L('relation.type',r.relation_type)),
+            title:L('relation.target',t)+'　'+(r.target_name||'')+'　'+L('relation.type',r.relation_type)});
+        }).join('')+'</div>'+rest(rel.length,'条关系')
+        :thinNote('本轮没有记录在案的对外关系'))+
+    '</div>'+
+
+    '<div class="frule"></div>'+
+    '<div class="sect h-'+hue+'">'+
+      sectionH('i-map','地区联系')+
+      (areas.length
+        ?'<div style="margin-top:4px">'+areas.slice(0,SUM_MAX).map(a=>{
+          const ah=AREA_HUE[a.relation_type]||'teal';
+          const reg=REGION_BY.get(a.name);
+          return frow({hue:ah,shape:'sq',
+            inner:reg?sigilInner(reg):'<svg><use href="#i-map"/></svg>',
+            name:a.name,
+            chips:chip(ah,AREA_ICON[a.relation_type]||'i-map',L('area.relation',a.relation_type))+
+                  (reg?'':chip('amber','i-warn','未登记为地区记录')),
+            title:a.name+'　'+L('area.relation',a.relation_type)});
+        }).join('')+'</div>'+rest(areas.length,'处地区')
+        :thinNote('这个势力目前没有与任何地区的直接联系'))+
+    '</div>'+
+
+    /* 内部群体：谁在这个势力里面、什么立场。行动和影响在浮层里。
+       立场是一整句（「要求先保住码头日结工的活计」），做不成胶囊，跟在名字后面折行。 */
+    '<div class="frule"></div>'+
+    '<div class="sect h-'+hue+'">'+
+      sectionH('i-people','内部群体')+
+      (grp.length
+        ?'<div style="margin-top:4px">'+grp.slice(0,SUM_MAX).map(g=>
+          frow({hue:'purple',shape:'crest',inner:'<span>'+esc(String(g.name||'?').slice(0,1))+'</span>',
+            name:g.name,val:g.position,
+            title:(g.name||'')+'　立场：'+(g.position||'未记录')}))
+          .join('')+'</div>'+rest(grp.length,'个群体')
+        :thinNote('这个势力没有登记与当前问题相关的内部群体'))+
+    '</div>'+
+
+    /* 原型这一节叫「最近动向」，取的就是已经显现出来的后果。地点和关联事件在浮层里。 */
+    '<div class="frule"></div>'+
+    '<div class="sect h-'+hue+'">'+
+      sectionH('i-eye','最近动向')+
+      (effNew.length
+        ?'<div style="margin-top:4px">'+effNew.slice(0,2).map(v=>
+          frow({hue:'teal',shape:'rd',inner:'<svg><use href="#i-eye"/></svg>',
+            name:P.timeHH(v.time)||v.time||'时间未记录',val:v.effect||'未记录后果',
+            title:(v.time||'')+'　'+(v.location||'')+'　'+(v.effect||'')}))
+          .join('')+'</div>'+
+          (effNew.length>2?'<p class="nodata" style="margin-top:7px">还有 '+(effNew.length-2)+' 条在完整档案里</p>':'')
+        :thinNote('这个势力本轮没有对外显现的公开后果'))+
+    '</div>'+
+
+    /* 通往完整档案。按钮上写清里面装着什么，而不是"展开更多"——
+       点开是一整份档案，不是这一节的下半截。 */
+    '<div style="padding:12px 18px 0">'+
+      '<button class="paction" id="dossierBtn" data-open-sheet style="margin:0;width:100%;justify-content:center;'+
+        'background:var(--sunken)" title="'+
+        esc('资源 '+res.length+' 项 · 对外关系 '+rel.length+' 条 · 地区 '+areas.length+' 处 · 内部群体 '+
+            grp.length+' 个 · 情报 '+know.length+' 条 · 公开后果 '+eff.length+' 条')+'">'+
+        '翻开完整档案 ⤢</button></div>'+
+
+    /* 中日文没有词间空格，浏览器可以在任意两字之间断行——右栏 344px 下这一行原来
+       折在「下次检 / 查」中间。给两个前缀各上一道 nowrap，断点就只能落在冒号后面。 */
+    '<div class="nowline">✧　<span style="white-space:nowrap">已推演到 '+esc(f.updated_at||'未记录')+
+      '</span>　·　<span style="white-space:nowrap">下次检查：</span>'+
+      esc(f.next_update||'待条件触发')+'　✧</div>';
+
+  $('#dossierBtn').addEventListener('click',openDossier);
+  wireLinks(el);
+}
+
+/* =============================================================================
+   完整档案浮层
+   1080px 宽，一条记录一个块，一行摆两块，不折叠、不翻页。
+   摘要卡里没地方放的十七个子字段全在这里：
+     resources  current_use / constraint / recent_change
+     relations  target_type / current_basis / recent_change / changed_at
+     areas      current_state / recent_change（外加由 relation_type 推的关系深浅）
+     internal_groups  name / position / current_action / effect
+     knowledge  fact / source / source_type / learned_at / status
+     visible_effects  location / related_event
+
+   字段名一律取两个字的普通名词：用途、限制、依据、现状、立场、行动、影响。
+   契约里那些名字带「当前」前缀（current_use / current_basis / current_state），
+   是拿来跟历史值区分的——界面本来就只显示当前值，把前缀照抄过来只剩公文腔。
+   ========================================================================== */
+function renderDossier(){
+  const f=curFaction();
+  const box=$('#dossierBody');
+  if(!f){box.innerHTML=emptyNote('本轮没有势力记录');return}
+  const hue=hueOf('f:'+f.name);
+  const fh=FACTION_HUE[f.status]||'indigo';
+  const focus=f.current_focus||{};
+  const areas=arr(f.areas),res=arr(f.resources),grp=arr(f.internal_groups);
+  const rel=arr(f.relations),know=arr(f.knowledge),eff=arr(f.visible_effects);
+  const defer=arr(focus.deferred_items);
+
+  const sec=(icon,title,body)=>'<section class="dsec h-'+hue+'">'+sectionH(icon,title)+body+'</section>';
+
+  box.innerHTML=
+    '<div class="fhead h-'+hue+'" style="padding:0 0 12px">'+
+      '<span class="fcrest" title="'+esc(crestBasis(f))+'">'+crestInner(f)+'</span>'+
+      '<span class="fmeta"><h3>'+esc(f.name)+
+        chip(fh,FACTION_ICON[f.status]||'i-spark',L('faction.status',f.status))+'</h3>'+
+        /* 这一段整个包进一个 span。.fmeta p 是 flex 容器，裸文本节点会各自变成
+           flex item 被单独压缩——390 档下「海盗代表答复停火文本时」被压成了
+           一列竖排的字。flex 里只留图标和这一个 span，文字就照常折行。 */
+        '<p><svg><use href="#i-spark"/></svg><span>'+
+          '<span style="white-space:nowrap">已推演到 '+esc(f.updated_at||'未记录')+'</span>　·　'+
+          '<span style="white-space:nowrap">下次检查：</span>'+
+          esc(f.next_update||'待条件触发')+'</span></p></span>'+
+    '</div>'+
+
+    /* 当前焦点只有一条记录，主句就是那个问题本身；行动和暂缓挂在它下面。 */
+    sec('i-flag','当前焦点',drec(
+      (focus.issue||focus.action||defer.length)?[{
+        head:focus.issue||'本轮没有记录最主要的问题',
+        lines:[
+          ['行动',focus.action||'本轮没有已决定或正在执行的行动'],
+          ['暂缓',defer.length
+            ?raw('<span class="chiprow">'+defer.map(d=>chip('amber','',d)).join('')+'</span>')
+            :'没有因资源或分歧而暂缓的事项'],
+        ],
+      }]:[],
+      '本轮没有记录当前焦点'))+
+
+    /* 资源的主句是数量——「可动用 82,150 金币」，类型做成胶囊跟在后面。
+       反过来把类型当主句，两条资源的开头就都是一个干巴巴的词。 */
+    sec('i-coin','资源储备',drec(
+      res.map(x=>({
+        head:x.quantity||'数量未记录',
+        chips:chip(RES_HUE[x.type]||'teal',RES_ICON[x.type]||'i-spark',L('resource.type',x.type)),
+        lines:[['用途',x.current_use||'未记录用途'],['限制',x.constraint||'未记录限制']],
+        hasChange:!!x.recent_change,change:x.recent_change||'本轮无变化',
+      })),
+      '本轮没有记录在案的资源'))+
+
+    /* relations[] 的对象可能是人物／任务／事件，格局图上没有它们的节点，
+       所以这一节是它们唯一排得全的地方。 */
+    sec('i-link','对外关系',drec(
+      rel.map(r=>({
+        head:r.target_name,
+        chips:chip('teal',TARGET_ICON[r.target_type||'other']||'i-spark',L('relation.target',r.target_type||'other'))+
+              chip(REL_HUE[r.relation_type]||'indigo','',L('relation.type',r.relation_type)),
+        lines:[['依据',r.current_basis||'未记录依据']],
+        hasChange:!!r.recent_change,
+        change:r.recent_change?r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):'本轮无变化',
+      })),
+      '本轮没有记录在案的对外关系'))+
+
+    sec('i-map','地区联系',drec(
+      areas.map(a=>{
+        const rank=AREA_RANK[a.relation_type]||0;
+        return {
+          head:a.name,
+          chips:chip(AREA_HUE[a.relation_type]||'teal',AREA_ICON[a.relation_type]||'i-map',L('area.relation',a.relation_type))+
+                (REGION_BY.get(a.name)?'':chip('amber','i-warn','未登记为地区记录')),
+          lines:[
+            ['现状',a.current_state||'未记录现状'],
+            ['深浅',raw(steps(rank,6,AREA_HUE[a.relation_type]||'teal','',
+              AREA_RANK_NOTE+'；当前第 '+rank+' 档，由 relation_type 推导，不是评分也不是百分比'))],
+          ],
+          hasChange:!!a.recent_change,change:a.recent_change||'本轮无变化',
+        };
+      }),
+      '这个势力目前没有与任何地区的直接联系'))+
+
+    sec('i-people','内部群体',drec(
+      grp.map(g=>({
+        head:g.name,
+        lines:[['立场',g.position||'未记录立场'],['行动',g.current_action||'未记录行动'],
+               ['影响',g.effect||'未记录影响']],
+      })),
+      '这个势力没有登记与当前问题相关的内部群体'))+
+
+    /* 情报的主句是那条事实本身，可信度紧跟着它——一条不可信的消息，
+       可信度跟内容分开摆就等于没说。来源和获知时间是佐证，放下面。 */
+    sec('i-ask','已掌握情报',drec(
+      know.map(k=>({
+        head:k.fact,
+        chips:chip(KST_HUE[k.status]||'indigo','',L('knowledge.status',k.status)),
+        lines:[
+          ['来源',raw(esc(k.source||'未记录来源')+
+            chip('teal',KSRC_ICON[k.source_type]||'i-ask',L('knowledge.source',k.source_type)))],
+          ['获知',raw('<span class="tm">'+esc(k.learned_at||'获知时间未记录')+'</span>')],
+        ],
+      })),
+      '本轮没有探到值得记下的消息'))+
+
+    sec('i-eye','已显现的公开后果',drec(
+      eff.slice().sort(WTime.byNewest('time')).map(v=>({
+        head:v.effect,
+        lines:[
+          ['时刻',raw('<span class="tm">'+esc(v.time||'时间未记录')+'</span>')],
+          ['地点',v.location||'地点未记录'],
+          ['关联',v.related_event
+            ?raw('<span class="linkrow" style="margin-top:0">'+taskLink(v.related_event,'event')+'</span>')
+            :'未关联事件'],
+        ],
+      })),
+      '这个势力本轮没有对外显现的公开后果'));
+
+  wireLinks(box);
+}
+function openDossier(){$('#dossier').hidden=false;renderDossier()}
+const closeDossier=()=>{$('#dossier').hidden=true};
+
+/* =============================================================================
+   索引：地区列表 / 热点事件 / 关系摘要
+   ========================================================================== */
+const IDX_PAGE=5;               // 窄屏竖着堆时一页放几条；宽屏按一排摆得下几格算
+const TABS=['地区','热点','势力关系'];
+
+/* 一排摆得下几格，一页就放几条——跟底部时间线同一套办法（见 wtlPageSize）。
+   写死 5 条的话，1300px 只排得下四格，第五条自己占第二排：右边空掉四分之三排，
+   面板还平白高一截。窄屏排成一到两列时本来就是竖着堆，没有这个问题，仍按 5 条一页。 */
+function idxPageSize(){
+  const el=$('#idxBody');if(!el)return IDX_PAGE;
+  const t=getComputedStyle(el).gridTemplateColumns;
+  const cols=t&&t!=='none'?t.split(' ').filter(Boolean).length:1;
+  return cols>=3?cols:IDX_PAGE;
+}
+function renderIdxNav(page,pages,onGo){
+  const el=$('#idxNav');
+  if(pages<=1){el.innerHTML='';return}
+  el.innerHTML=
+    '<button data-d="-1"'+(page===0?' disabled':'')+' aria-label="上一页"><svg><use href="#i-prev"/></svg></button>'+
+    '<i>'+(page+1)+' / '+pages+'</i>'+
+    '<button data-d="1"'+(page===pages-1?' disabled':'')+' aria-label="下一页"><svg><use href="#i-next"/></svg></button>';
+  $$('#idxNav button').forEach(b=>b.addEventListener('click',()=>onGo(page+Number(b.dataset.d))));
+}
+
+/** 热点：地区变化与势力公开后果里出现过的任务与事件，按牵动面归并。 */
+function hotspots(){
+  const m=new Map();
+  const put=(kind,name,where,fact,time)=>{
+    if(!name)return;
+    const k=kind+'|'+name;
+    if(!m.has(k))m.set(k,{kind,name,where:new Set(),facts:[],time:''});
+    const it=m.get(k);
+    if(where)it.where.add(where);
+    if(fact)it.facts.push(fact);
+    if(time&&(!it.time||(WTime.parse(time)||0)>(WTime.parse(it.time)||0)))it.time=time;
+  };
+  REGIONS.forEach(r=>arr(r.recent_changes).forEach(c=>{
+    put('event',c.related_event,r.name,c.fact,c.time);
+    put('task',c.related_task,r.name,c.fact,c.time);
+  }));
+  FACTIONS.forEach(f=>arr(f.visible_effects).forEach(v=>
+    put('event',v.related_event,v.location||f.name,v.effect,v.time)));
+  return [...m.values()].sort(WTime.byNewest('time'));
+}
+
+/** 关系摘要：所有势力的 relations 摊平，双方各记一次的合并成一条。 */
+function relSummary(){
+  const seen=new Set(),out=[];
+  FACTIONS.forEach(f=>arr(f.relations).forEach(r=>{
+    const k=[f.name,r.target_name].sort().join('~')+'|'+r.relation_type;
+    if(seen.has(k))return;
+    seen.add(k);
+    out.push({from:f.name,to:r.target_name,type:r.relation_type,target:r.target_type,
+      basis:r.current_basis,change:r.recent_change,at:r.changed_at});
+  }));
+  return out;
+}
+
+function renderIdx(){
+  $('#tabs').innerHTML=TABS.map((t,i)=>'<button class="'+(i===idxTab?'on':'')+'" data-i="'+i+'">'+t+'</button>').join('');
+  // 先定这一页签的最小格宽，再量一排放得下几个——顺序反了会拿上一个页签的宽度算
+  $('#idxBody').style.setProperty('--idxmin',idxTab===0?'230px':'300px');
+  const body=$('#idxBody'),per=idxPageSize();
+  let all=[],html='',pages=1;
+  // 一排摆得下 per 个，页数按 per 定，条目由 pageSlice 摊匀（五条分两页是 3+2 不是 4+1）
+  const pageOf=list=>{
+    const r=P.pageSlice(list,per,idxPage);
+    pages=r.pages;idxPage=r.page;
+    return r.items;
+  };
+
+  if(idxTab===0){
+    all=sortedRegions();
+    // 三个页签的副标题只解释"这份名单是怎么攒出来的"——那是屏幕上看不出来的事。
+    // 地区总数在下面「各地情势」里一条条列着，这儿不再报一遍。
+    $('#idxSub').textContent='';
+    html=pageOf(all).map(r=>{
+      const c=r.control||{},hue=CONTROL_HUE[c.status]||'indigo';
+      const rank=CONTROL_RANK[c.status]||0;
+      return '<button class="idx h-'+hue+'" data-r="'+esc(r.name)+'">'+
+        '<span class="idx-i" title="'+esc(sigilBasis(r))+'">'+sigilInner(r)+'</span>'+
+        '<span class="idx-n">'+esc(r.name)+'</span>'+
+        chip(hue,CONTROL_ICON[c.status]||'i-ask',L('control.status',c.status))+
+        steps(rank,5,hue,c.primary_faction||'无归属势力',
+          CONTROL_RANK_NOTE+'；当前第 '+rank+' 档，由 control.status 推导，不是评分也不是百分比')+
+      '</button>';
+    }).join('')||emptyNote('本轮没有地区记录');
+  }else if(idxTab===1){
+    all=hotspots();
+    $('#idxSub').textContent='地区变化与势力公开后果里牵到的任务和事件';
+    html=pageOf(all).map(h=>{
+      const hue=h.kind==='event'?'rose':'indigo';
+      return '<button class="idx h-'+hue+'" data-name="'+esc(h.name)+'" data-kind="'+h.kind+'">'+
+        '<span class="idx-i"><svg><use href="#'+(h.kind==='event'?'i-bell':'i-scroll')+'"/></svg></span>'+
+        '<span class="idx-n">'+esc(h.name)+'</span>'+
+        chip(hue,'',h.kind==='event'?'事件':'任务')+
+        '<p>'+esc([...h.where].join('、'))+'　·　'+esc(h.time||'时间未记录')+'<br>'+esc(h.facts[0]||'')+'</p>'+
+      '</button>';
+    }).join('')||emptyNote('本轮的地区变化没有关联到任务或事件');
+  }else{
+    all=relSummary();
+    $('#idxSub').textContent='双方各记一次的同一条关系已并成一条';
+    html=pageOf(all).map(r=>{
+      const hue=REL_HUE[r.type]||'indigo';
+      return '<button class="idx h-'+hue+'" data-fac2="'+esc(r.from)+'">'+
+        '<span class="idx-i"><svg><use href="#'+(TARGET_ICON[r.target]||'i-spark')+'"/></svg></span>'+
+        '<span class="idx-n">'+esc(r.from+' → '+r.to)+'</span>'+
+        chip(hue,'',L('relation.type',r.type))+
+        '<p>'+esc(r.basis||'未记录依据')+'　·　'+
+          esc(r.change?r.change+(r.at?'（'+r.at+'）':''):'本轮无变化')+'</p>'+
+      '</button>';
+    }).join('')||emptyNote('本轮没有势力关系记录');
+  }
+
+  body.innerHTML=html;
+  renderIdxNav(idxPage,pages,n=>{idxPage=n;renderIdx()});
+
+  $$('#tabs button').forEach(b=>b.addEventListener('click',()=>{idxTab=Number(b.dataset.i);idxPage=0;renderIdx()}));
+  $$('#idxBody .idx[data-r]').forEach(b=>b.addEventListener('click',()=>pickNode('r:'+b.dataset.r)));
+  $$('#idxBody .idx[data-fac2]').forEach(b=>b.addEventListener('click',()=>{
+    const i=FACTIONS.findIndex(f=>f.name===b.dataset.fac2);
+    if(i>=0)pickNode('f:'+FACTIONS[i].name);
+  }));
+  $$('#idxBody .idx[data-name]').forEach(b=>b.addEventListener('click',()=>{
+    P.goto('tasks', { focus: b.dataset.name });
+  }));
+}
+
+/* =============================================================================
+   底部通栏：世界演进时间线
+   由 faction.visible_effects 与 region.recent_changes 合流，都是已发生的事实。
+   ========================================================================== */
+const WTL_PAGE=5;
+/* auto-fill 摆得下几格，一页就放几条。固定 5 条时 1280 只排得下 4 格，
+   第 5 条独占第二排，右边空掉四分之三个通栏，看着像没做完。
+   空网格也会生成轨道，所以填内容之前就能量出列数。 */
+function wtlPageSize(){
+  const el=$('#wtl');if(!el)return WTL_PAGE;
+  const t=getComputedStyle(el).gridTemplateColumns;
+  const cols=t&&t!=='none'?t.split(' ').filter(Boolean).length:1;
+  return cols>=3?cols:WTL_PAGE;   // 单列／双列是堆叠，本来就没有空当
+}
+function wtlItems(){
+  const out=[];
+  FACTIONS.forEach(f=>arr(f.visible_effects).forEach(v=>out.push({
+    time:v.time,title:v.effect,who:f.name,kind:'faction',where:v.location,
+    link:v.related_event,linkKind:'event',hue:hueOf('f:'+f.name)})));
+  REGIONS.forEach(r=>arr(r.recent_changes).forEach(c=>out.push({
+    time:c.time,title:c.fact,who:r.name,kind:'region',where:r.name,
+    link:c.related_event||c.related_task,linkKind:c.related_event?'event':'task',
+    hue:hueOf('r:'+r.name)})));
+  return out.sort(WTime.byNewest('time'));
+}
+function renderWtl(){
+  const all=wtlItems(),size=wtlPageSize();
+  const pages=Math.max(1,Math.ceil(all.length/size));
+  wtlPage=Math.min(wtlPage,pages-1);
+  // 一页之内按时间正序摆回去，读起来才是一条时间线
+  const page=slice(all,size,wtlPage).slice().reverse();
+  const newest=all[0];
+  // 条数和排序在下面的翻页条上，这里只说这条线是由哪两路数据汇起来的
+  $('#wtlSub').textContent='势力已显现的公开后果，与各地区的近期变化，合在一条线上';
+
+  $('#wtl').innerHTML=page.length?page.map(x=>
+    '<button class="wti h-'+x.hue+(newest&&x===newest?' now':'')+'" '+
+      (x.link?'data-name="'+esc(x.link)+'"':'')+'>'+
+      '<span class="wt"><time>'+esc(P.timeHH(x.time)||x.time||'—')+'</time>'+
+        '<span class="wsrc"><svg><use href="#'+(x.kind==='faction'?'i-shield':'i-map')+'"/></svg>'+esc(x.who)+'</span></span>'+
+      '<b>'+esc(x.title||'未记录变化')+'</b>'+
+      (x.link?'<small><svg><use href="#'+(x.linkKind==='event'?'i-bell':'i-scroll')+'"/></svg>'+esc(x.link)+'</small>'
+             :'<small style="color:var(--ink4)"><svg><use href="#i-ask"/></svg>未关联任务或事件</small>')+
+    '</button>').join(''):emptyNote('本轮没有已发生的势力或地区变化');
+
+  renderPager($('#wtlPager'),{page:wtlPage,pages,total:all.length,unit:'条',
+    note:'按时间倒序',onGo:n=>{wtlPage=n;renderWtl()}});
+  $$('#wtl .wti[data-name]').forEach(b=>b.addEventListener('click',()=>{
+    P.goto('tasks', { focus: b.dataset.name });
+  }));
+}
+
+/* ---------- 启动 ---------- */
+function renderAll(){
+  buildHues();buildIndex();
+  renderGraph();renderEdgeFoot();renderStance();renderRegions();renderIdx();renderWtl();
+}
+P.initChrome('势力与地区');
+/* 首屏先把当前势力最相关的那个地区行展开：五行全收着的话，
+   「查看详情里还有条件和近期变化」这件事根本没人会发现。 */
+(function openFirstRow(){
+  const f=curFaction();
+  const hit=f&&arr(f.areas).map(a=>a.name).find(n=>REGIONS.some(r=>r.name===n));
+  const name=hit||(REGIONS[0]||{}).name;
+  if(name)rowOpen.add(name);
+})();
+renderAll();
+
+$('#graphToggle').addEventListener('click',e=>{
+  graphOpen=!graphOpen;
+  e.currentTarget.textContent=graphOpen?'收拢画面 ⤡':'放开画面 ⤢';
+  renderGraph();
+});
+$('#regionExpandAll').addEventListener('click',e=>{
+  if(rowOpen.size===REGIONS.length){rowOpen.clear();e.currentTarget.textContent='全部展开 ⌄'}
+  else{REGIONS.forEach(r=>rowOpen.add(r.name));e.currentTarget.textContent='全部收起 ⌃'}
+  renderRegions();
+});
+/* 完整档案浮层：点遮罩关、Esc 关、✕ 关，跟总览页那张全图浮层同一套约定 */
+$('#dossierClose').addEventListener('click',closeDossier);
+$('#dossier').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDossier()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDossier()});
+
+// 节点坐标是按像素算的，面板宽度变了必须重排
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{
+  // 名录和时间线一排放几条都是量出来的，宽度变了得重新算
+  renderGraph();renderWtl();renderIdx();
+  if(!$('#dossier').hidden)renderDossier();
+},160)});
+
+/* 压力测试钩子：契约对 areas / relations / present_factions 这些数组给了上限，
+   但没限制势力和地区的条数，所以布局必须在"节点很多"时也不叠字。
+   _tools/graph-stress.cjs 通过这个钩子灌一组假数据，不动 mock 文件。 */
+window.__stressGraph=function(nf,nr,d){
+  /* d 是每个对象各挂几条子记录，不传就顶到契约上限（最凶的一档）。
+     传了就能造"数量真实但比上限松"的一档，例如 __stressGraph(10,12,{rel:4,area:2,contest:1})
+     大致对应 40 条 relations。 */
+  d=d||{};
+  const nRel=d.rel||10,nArea=d.area||8,nContest=d.contest==null?5:d.contest,nPresent=d.present||8;
+  const REL=['alliance','cooperation','trade','rivalry','hostility','influence','contact','debt'];
+  const AR=['control','operate','garrison','influence','contested','transit'];
+  const RT=['funds','personnel','supplies','transport','information','sites','authority'];
+  const CT=['commerce','order','access','population','infrastructure','supply'];
+  FACTIONS=Array.from({length:nf},(_,i)=>({
+    name:'第'+(i+1)+'联合行会总议事厅',status:'active',updated_at:'霜月12日 22:00',
+    next_update:'下一次例会时',
+    current_focus:{issue:'压力测试用问题'+i,action:'压力测试用行动'+i,deferred_items:['暂缓一','暂缓二','暂缓三','暂缓四']},
+    areas:Array.from({length:nArea},(_,k)=>({name:'第'+((i+k)%nr+1)+'远境要塞城邦',relation_type:AR[k%6],
+      current_state:'压力测试事实',recent_change:k%2?'':'压力测试变化'})),
+    resources:Array.from({length:8},(_,k)=>({type:RT[k%7],quantity:'数量'+k,current_use:'占用'+k,constraint:'限制'+k,recent_change:''})),
+    internal_groups:Array.from({length:6},(_,k)=>({name:'内部群体'+k,position:'立场'+k,current_action:'行动'+k,effect:'影响'+k})),
+    /* 契约允许 target_type 是 person / task / event，格局图上没有这三类的节点。
+       每第四条造一个，好让"图上不画、档案里记"这条出口在压测里真的被走到。 */
+    relations:Array.from({length:nRel},(_,k)=>({
+      // 三类场外目标要都出现，不能只造出人物一种：换势力就换一类
+      target_type:k%4===3?['person','task','event'][(i+Math.floor(k/4))%3]:(k%3===2?'region':'faction'),
+      target_name:k%4===3?'场外对象'+k:(k%3===2?'第'+((i+k)%nr+1)+'远境要塞城邦':'第'+((i+k+1)%nf+1)+'联合行会总议事厅'),
+      relation_type:REL[k%8],current_basis:'依据'+k,recent_change:'',changed_at:''})),
+    knowledge:Array.from({length:10},(_,k)=>({fact:'情报'+k,source:'来源'+k,source_type:'reported',learned_at:'霜月12日 20:00',status:'uncertain'})),
+    visible_effects:Array.from({length:6},(_,k)=>({time:'霜月12日 2'+(k%10)+':00',location:'地点'+k,effect:'后果'+k,related_event:''})),
+  }));
+  REGIONS=Array.from({length:nr},(_,i)=>({
+    name:'第'+(i+1)+'远境要塞城邦',updated_at:'霜月12日 22:00',next_update:'下一次巡查时',
+    control:{status:['controlled','shared','contested','unclaimed','unclear'][i%5],
+      primary_faction:'第'+(i%nf+1)+'联合行会总议事厅',
+      contesting_factions:Array.from({length:nContest},(_,k)=>'第'+((i+k+1)%nf+1)+'联合行会总议事厅')},
+    present_factions:Array.from({length:nPresent},(_,k)=>'第'+((i+k)%nf+1)+'联合行会总议事厅'),
+    conditions:Array.from({length:6},(_,k)=>({category:CT[k%6],fact:'条件'+k,impact:'影响'+k})),
+    recent_changes:Array.from({length:6},(_,k)=>({time:'霜月12日 1'+(k%10)+':00',fact:'变化'+k,related_task:'',related_event:''})),
+  }));
+  selFaction=0;selEdge=-1;regionPage=0;idxPage=0;wtlPage=0;rowOpen.clear();
+  renderAll();
+  return {factions:FACTIONS.length,regions:REGIONS.length,edges:EDGES.length};
+};
+</script>
+</body>
+</html>
+
+

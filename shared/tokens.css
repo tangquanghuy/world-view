@@ -1,0 +1,95 @@
+﻿/* =============================================================================
+   设计令牌与页面底子。四个页面共用，改这里等于改全站。
+   取色依据是原型图区域取样，暖白色板来自 showcase-v08-world-console.pretty.html。
+
+   注意：本文件里的 url() 相对自身所在的 shared/ 目录解析，不是相对 HTML，
+   所以美术资产路径要写 ../assets/。
+   ========================================================================== */
+:root{
+  /* 正文走无衬线：声明 Noto Serif SC 在多数 Windows 上会一路回落到 STSong，
+     宋体小字号笔画过细、灰度低，是可读性的主要杀手。衬线只留给标题与大数字。 */
+  --ui:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif;
+  /* 字体按字符逐个回落：Georgia 接管西文与数字，中文交给华文中宋。
+     STSong 太细，只作为最后兜底。 */
+  --serif:"Noto Serif SC","Source Han Serif SC",Georgia,"Palatino Linotype",STZhongsong,"华文中宋","Songti SC",STSong,SimSun,serif;
+
+  /* 美术资产槽位。文件缺失时自动留白，不破图。 */
+  --art-bloom-tl:url("../assets/art/bloom-tl.png");
+  --art-bloom-br:url("../assets/art/bloom-br.png");
+  --art-compass:url("../assets/art/header-compass.png");
+  --art-castle:url("../assets/art/clock-castle.png");
+  --art-sidebar:url("../assets/art/sidebar-heroine.png");
+  /* 注意：上面这几条只能在本文件内部用。custom property 里的相对 url() 在 Chromium
+     里是按"用它的那张样式表"解析的，不是按声明它的这张——页面自己的 <style> 里写
+     var(--art-compass) 会解析到 世界引擎面板/../assets/，一路 404。
+     页面级的美术槽位（如势力格局的暗底地图）就近声明在各自页面里。 */
+
+  --paper:#fffefa; --card:#fffffc; --sunken:#f7f6f0;
+  --rule:rgba(120,112,96,.15);
+  --ink:#27364d; --ink2:#33415c; --ink3:#55606d; --ink4:#616974; --ink5:#6d747f;
+
+  --indigo:#5c7099; --indigo-ink:#3c5178; --indigo-soft:#eaeff7; --indigo-track:#d9e2ef;
+  --amber:#c8813f;  --amber-ink:#8f5518;  --amber-soft:#f8eddb;  --amber-track:#eeddc0;
+  --violet:#7f72b0; --violet-ink:#5a4d88; --violet-soft:#efecf8; --violet-track:#ded9ef;
+  --green:#6f9378;  --green-ink:#476a51;  --green-soft:#e9f1e9;  --green-track:#d7e5d9;
+  --rose:#cf6a52;   --rose-ink:#a04430;   --rose-soft:#faeae4;   --rose-track:#f1d6cb;
+  --purple:#786cab; --purple-ink:#554a83; --purple-soft:#eeecf6; --purple-track:#dcd7ec;
+  --teal:#5a8f94;   --teal-ink:#39676c;   --teal-soft:#e6f0f0;   --teal-track:#d1e3e4;
+  --gold:#bc8a3c; --gold-ink:#8a6218; --gold-soft:#f6edd9; --gold-glow:rgba(188,138,60,.38);
+
+  --hue:var(--indigo); --hue-ink:var(--indigo-ink); --hue-soft:var(--indigo-soft); --hue-track:var(--indigo-track);
+
+  --sh1:0 2px 8px rgba(72,66,52,.05);
+  --sh2:0 10px 30px rgba(72,66,52,.07);
+  --sh3:0 10px 26px rgba(72,66,52,.14);
+  --r-panel:18px; --r-card:14px; --r-chip:9px;
+}
+/* 给任意子树换主色，组件内部一律只写 var(--hue*) */
+.h-indigo{--hue:var(--indigo);--hue-ink:var(--indigo-ink);--hue-soft:var(--indigo-soft);--hue-track:var(--indigo-track)}
+.h-amber {--hue:var(--amber); --hue-ink:var(--amber-ink); --hue-soft:var(--amber-soft); --hue-track:var(--amber-track)}
+.h-violet{--hue:var(--violet);--hue-ink:var(--violet-ink);--hue-soft:var(--violet-soft);--hue-track:var(--violet-track)}
+.h-green {--hue:var(--green); --hue-ink:var(--green-ink); --hue-soft:var(--green-soft); --hue-track:var(--green-track)}
+.h-rose  {--hue:var(--rose);  --hue-ink:var(--rose-ink);  --hue-soft:var(--rose-soft);  --hue-track:var(--rose-track)}
+.h-purple{--hue:var(--purple);--hue-ink:var(--purple-ink);--hue-soft:var(--purple-soft);--hue-track:var(--purple-track)}
+.h-teal  {--hue:var(--teal);  --hue-ink:var(--teal-ink);  --hue-soft:var(--teal-soft);  --hue-track:var(--teal-track)}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+/* sprite 里的 <symbol> 不带 fill，缺这条的话所有图标一律渲染成纯黑，
+   容器上写的 color 完全不起作用。连线图那种自带 fill="none" 的不受影响。 */
+svg{fill:currentColor}
+
+body{
+  min-height:100dvh;
+  background-color:#eef0ea;
+  background-image:
+    radial-gradient(circle at 94% -2%,#f6e4da 0,transparent 30rem),
+    radial-gradient(circle at 0% 72%,#e3ece5 0,transparent 32rem),
+    radial-gradient(circle at 52% 108%,#f1ece2 0,transparent 34rem);
+  background-attachment:fixed;
+  color:var(--ink3);
+  font:15px/1.7 var(--ui);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+/* 四角植物装饰 */
+body::before,body::after{content:"";position:fixed;z-index:0;pointer-events:none;background-repeat:no-repeat;background-size:contain;opacity:.55}
+body::before{left:0;top:0;width:300px;height:300px;background-image:var(--art-bloom-tl)}
+body::after{right:0;bottom:0;width:340px;height:340px;background-image:var(--art-bloom-br)}
+
+.spark{position:absolute;z-index:1;pointer-events:none;color:#fff;font-size:13px;line-height:1;opacity:.65;text-shadow:0 0 8px var(--gold-glow);animation:twinkle 4.5s ease-in-out infinite}
+.spark::before{content:"✦"}
+.spark.gold{color:var(--gold)}
+.spark:nth-of-type(2n){animation-delay:-1.7s}
+.spark:nth-of-type(3n){animation-delay:-3.2s}
+@keyframes twinkle{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:.8;transform:scale(1.1)}}
+
+:focus-visible{outline:2.5px solid var(--gold);outline-offset:2px;border-radius:var(--r-chip)}
+
+@media(max-width:860px){
+  body::before,body::after{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+

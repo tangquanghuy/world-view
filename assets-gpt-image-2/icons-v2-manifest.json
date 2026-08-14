@@ -1,0 +1,780 @@
+{
+  "generator": "gpt-image-2",
+  "design": "evocative but semantically flexible ornamental marks",
+  "counts": {
+    "crest": 36,
+    "sigil": 41
+  },
+  "assets": [
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-001.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "2a67ec7e4c9e382fbbbd65260ce02b5e1e0dd73ef4e0bb276281be5a948b5123"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-002.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "e03908257a4dfd8dda7632167731d1fa3feebc63683dd82fe2b30d916fd5817e"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-003.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "74a7ff9acf86c02094d58cd0f5f59cc1c4ccce248dade43b4781f45ce1da592d"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-004.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "37d056b2d5d1ce78f90c42c390d81aa3895f7f9f23200a74ae64d7c683ccd653"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-005.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "8c042f8f03e0dbb02899720849fbd5256877dff0b326c2aa4a9ead7112e0a171"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-006.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "bcc618d2e36d90c4beb990bea5f190cd3000f9455730d30f9677e29a7ba3574f"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-007.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b49a376b9433d7ae5736b69a6afb5293fb62fe4ca5ad56bfb27eb6729b1c198d"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-008.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "08d415fe6397cd3e3d5f5f8738dbbc8909c58400c7a9b255683b472cd2ec1e32"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-009.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1cb48a2d90c6f5acae72c048c4cee1840fabd00050b4995ace161fa608f9c7f4"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-010.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "0bba4e5af8124e53949ae5e16d5dc93009e641583abdb15cc194eaad1b809e78"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-011.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b7c448c09f3553f34814f98ec4b6140a4553edb100178c684db427b8315ab7d7"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-012.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "4708f7b313192fb72feb64ecdabdf5aec8e8a98e5a055753f1428a2ba73d11ab"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-013.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "0bbabdd543e6cb3a4cdcb06191adc910c2fe6f7c8eb333d7f42741451e46e24f"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-014.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "a89429a5c0d11e6ef41d274a10721258e9f006d5251e41aa5fa6538faeff84ea"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-015.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b0909fa2cc184dc12a29d86776f05096d5047bff83ca92d9ef55b82031edbfec"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-016.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "7567e0bc08c9481ef714add262b1b383452ae9250d9106a16ab694acf1e6a2f2"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-017.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "8e6ec33e15a00e6d63aacc3009677e3a07c901867d49e1f4d6913219348aa180"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-018.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "70cf29d576b0cbc9f35997505c6be076b9477740189479beb92a38f6efea77b1"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-019.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "04ff5a2aac076e79be366784b22954a0345db677ec2abb5c2527ff52e2ecbe37"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-020.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "314942ead70f6ef04b98b1125b890f990a2a023f35331ffa7ea1a65d809f52e7"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-021.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1942e133c6ecc836cd4e4a7203d653c8d673de009e08895aea70b9b55db3c8e7"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-022.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "bd8bca27e706e378c99091990a1f9e428b71a3c0052ec3379ca2ba2440704882"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-023.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "8354996be9a2f8459694b519e016d3309900515bb34642ce5ba68e0c357a9c68"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-024.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "a7c3fb98ff266ec7b34014eecc28801656963c2126cef0a264fbbcb468484168"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-025.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "fb76a6ea48b42ba5d3232a13efcefe4f17faab9304da34c3d74e60e2c581b579"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-026.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "db2c9b5ed8041276e0711482c13a15023d9bd33f2bf83010e4590c518115733d"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-027.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1f3d4f3d0d4f2ea4dadc419d3e3511b7278470f4687ccaf6f8db07b2249a4d7f"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-028.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "c3a781a5875841863650dfc60ded16bac50410ef911f6b311211f73a5c5d22c6"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-029.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "59c8ad9995eea90375377fce2d8e01c8f45192f0931979a1c345dec0b04e24f4"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-030.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "fee616a44aacd74417b65e10097bc8c6d6de0090f6f3ff6df1ddbb1eee43476e"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-031.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "43fd7c497b128c8a21089fbe2c2eb93b9d26e3b127aaaf95cf925eb3ca21674d"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-032.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "daa7f78553c0c85872f54843de285815dfa8e657de14d531d9861fa7c9a64d8d"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-033.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b5f9d0f8c8ba010e887efd4f5078f1080f2683bc1f62916a73c3f9ded68d0335"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-034.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "c1b4813ea815e638881159843b745adce3cc27cdd9bf651fff024343c8010eca"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-035.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "de1e345d581995bad399427be7e5dd4968e185225239f49fa53dac3daa30774f"
+    },
+    {
+      "category": "crest",
+      "file": "icons-v2/crests/crest-v2-036.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "9a04e8839e5e01206c345828cd67310cd033003fc21b832f6ee7ddc40fde7782"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-001.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "71631d763daa0aa908a027fd48d02bd0ac2252c348fd8016b8a6de06cf986ff8"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-002.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "00a0d4a086a08d2974e0f2e576c070cd40403716a90731c72eef8d543fcffd2b"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-003.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "0db086fbad554f8ff4305eb00d40c4664c8249588a56bac9323fe9f601edfc5f"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-004.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "46d4b3cc69cc0547d80a075c69d9ea70e8d3de7a01cbc1b095f7c2e110aae90b"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-005.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "7332420bfab35321301b65d857d29798e3646bd92d090ed556f9e98a336dffeb"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-006.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "6630c6d4d7501ed6be0afb9fba7b2ab177ddbdf2855174bd233a21966f1bed38"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-007.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1d70a5a6afe51c6e0946413200d7463b09ca59744ce9edd0f526126527272c05"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-008.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b98697126e93bc14f90bed245d621d53dfed0b7167beab8ffd96839d87ead6e9"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-009.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "973190aacdf24ebe9b779d28c7c43aa2f322a601bd8c6fa1e54188b550099971"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-010.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "45825de9d46adc7890facff160c063158ce5443439339d1bc73de3aac8612733"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-011.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "479230b423c7f1168a02c53a4663d722cb1cb473fb76dedd85c488b5b03a9b61"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-012.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b612db1b8dbe27b9ee86b05487460b3cacf17aad41d90e74c3ab48a82c00f323"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-013.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "da9d85a4e588b180e79bd3fe4c8911f49f8599ac07b2659ffc8653f0bbc7bb82"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-014.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "a77687bfc23fefd4f17a216cdd66c4ab143e4420807990f44395964a63f779b5"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-015.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "05a5a65a99969ec3a4c38a6a1ac5ddf1af4ccaeccba53dd6ce195b6af9587290"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-016.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "b67d0030e34b057ac01d426f7bbb56b3b108e3c7a6aaa977d741f928166638c4"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-017.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1c5c7421fed8d30d66a71164178d327a4f465c59a2d6546f08d8133c58784a98"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-018.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "f5cc001adb265c2c41016bb28bca54924652ccfe843923cd6650ff2d4cbf14cd"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-019.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "38038490f5642c8712503f77ef1e1ecdb96ac1c6e441186f8512a520663a0e90"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-020.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "9b024f4b36c7172624dca99d60f2ea83bf2b0bcffc116e0cc85dd4b5705e650d"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-021.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "016fd2f5239657765d09c22ce1641cb7d77578616fbec77b7d137d3e436da854"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-022.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "fd1b7764c75a4221b6d7b25ed6d2e7e40398c8b98e8a5c71559d610a4b9fd618"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-023.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "9d5d38b3e5aa083d9d0d27a53d8a7b37d3049546f6f65bb7e459229c3daeb169"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-024.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "0a9da5c33bc3eb3bf291e2f8566c97dad1da589cbbb329fca5adfc1f2feab680"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-025.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "12633f218948c256579b5f7316969cf7dceda19e31e5ab8341c26ba28a60fd2b"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-026.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "6a589a5532b950985a8007c304228acf85c87bfe7b79c241ab22dfcfad0c7849"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-027.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "87bbbdb3c46a2c0746e311b8197b1268be4b19b790774d34e66ca4b88d5b6081"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-028.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "d11748c1536f58b0c7278383188ee58fe94efa63fc4d9ef70d0f22c33e36d138"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-029.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "721a8717b44f277de057c867cb1a59887ec60fac2c7bb098840143f4b25d7d05"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-030.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "3273e0bd49738cf8df7ed9c7999c7a1981fe77ad9aa2f58802e32987198dd35a"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-031.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "e1c099c0d8aae3e2788ce98dd5a783b9d6c86a3f0ae19e04d2db3b53f4f212de"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-032.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "db6239c53bc11c07b216857b482d4c245258b012146bff889bc8e4b0c7edc902"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-033.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "61b80a527b736e9ab269b7a8cf885ea5ba25f270e52a1809f17c7f9fdd1d1e8c"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-034.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "368c370efcef880a65ead807518afa9c11d2e2ec0fe3a85b0261b1ae07b61e62"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-035.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "5c76245bef1285c426ef6b9ca313e78695c92bfd6f53ca22a18982ddce9faab4"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-036.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "64dcc69c614ae4cae7ed3d0a8657060c42eafd58e716824004606874f95763e5"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-037.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "0e5da68e94a84bd5622a7da42b96877603b2bf60c3c42a4aa440c2a193c67485"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-038.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "8cb6315d37796ed80aa0f42eee3c64e8efaf0aaaa78272b086b6fc6c081a8572"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-039.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "737abf9a797325d3fdde0b5edeb73ea68068dea990cfdf63685917016f84de22"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-040.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "be8c63a6f82afc7255deb6f181acab38121b0e906f6e33a3cebca50a4af9240a"
+    },
+    {
+      "category": "sigil",
+      "file": "icons-v2/sigils/sigil-v2-041.png",
+      "size": [
+        88,
+        88
+      ],
+      "mode": "RGBA",
+      "sha256": "1c89b196fbe4155889261efc8dbcd6c01dcdaadcf70ea624e2ef33ab26484bc3"
+    }
+  ]
+}

@@ -1,0 +1,1100 @@
+{
+  "generator": "gpt-image-2",
+  "reference_image": "../assets/avatars/portrait-m-03.png",
+  "counts": {
+    "crest": 38,
+    "sigil": 51,
+    "avatar": 31,
+    "portrait": 16
+  },
+  "assets": [
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-001.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "ec143baf41b4ac4d"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-002.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "6a0daf215fa0d403"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-003.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "9f55c59211bd2ffa"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-004.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "329ff1de6ca5a782"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-005.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "68f75268c3c1ded3"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-006.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "532314259e1f0781"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-007.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "95717c9770186572"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-008.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "382bf71c01493a11"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-009.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "e69e7fa04e3eb69b"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-010.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "371ae0aabf6df877"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-011.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "0a6305b44080c68d"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-012.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7b4d6f9ced48be4e"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-013.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "06041b9abbfad0c0"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-014.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "3144edad454c898c"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-015.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "89b8e449637d48a2"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-016.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "acafd4293e8c96a9"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-017.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "6107b235c30e6b1d"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-018.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "abaf9cf9a8aa2766"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-019.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "83673b7f18bf3932"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-020.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "645c99800a302431"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-021.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "22cfb98caa0b3a96"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-022.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "8a0d456de3f10923"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-023.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "bf26e214ef6159ba"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-024.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "c967ccfef8534246"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-025.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "9aaffa969c6b0bf5"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-026.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7a81e3a9be767285"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-027.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "6c289b5aac71ad73"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-028.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "0d18b1f97edb42ed"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-029.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "29445dc829449f21"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-030.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "e0f5fee1dba6ce62"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-031.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "50eaaf324ed4247b"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-032.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d12a31ba9bafe89c"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-033.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "204c1b7b8b2af9f7"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-034.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "555f04ac248f42a1"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-035.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "9b5bf5d5063ffa37"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-036.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "64db3575d15e1306"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-037.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "70b2d16679c2476e"
+    },
+    {
+      "category": "crest",
+      "file": "icons/crests/crest-neutral-038.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "edc056f2d9cbfdcb"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-001.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7758e73c52fd477e"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-002.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7a6f6d15522538df"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-003.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "c672b5bf8f1c846e"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-004.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "e22b83a5b3e5ad7a"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-005.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "980f95e722fec642"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-006.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "06df838756c7c45e"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-007.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "26da8d560baf82ae"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-008.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "a3ea21f8b554fc0a"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-009.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d5dc7c13b402e5c5"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-010.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "5b25cb5657aa7b4d"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-011.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "53802c9ff75049ec"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-012.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "e6c103e9fb970f22"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-013.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "b09c859b30582647"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-014.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "177d1529a015fdc8"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-015.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "40b8d371992894db"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-016.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "07083c235b403ec6"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-017.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "acc82cff8617546b"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-018.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d1b91afe165ca735"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-019.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "1015e2e0929e34cc"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-020.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d7f5985dd23ccb51"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-021.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "a28aa7ea3d3fb9ff"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-022.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "65c730c9b56cb48d"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-023.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "f8e2aa89d370e9a3"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-024.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "01ddfb888a785b71"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-025.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "de068b3ec6d8981c"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-026.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7cd3e629900d11d1"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-027.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "7daf7b851342b8bb"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-028.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "40313d83674c539e"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-029.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "2f6482b1273f520d"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-030.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "697067120e329131"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-031.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d2c60d99a1d04d30"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-032.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "135012dc3dc847ca"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-033.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "30a197c1b8a7263d"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-034.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "2ff51bece21726be"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-035.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "5c1242479dece210"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-036.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "41aa4de0ce6bb747"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-037.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "3f17607e30cbbf85"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-038.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "ed3617226124a126"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-039.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "ca17cc44de1d77bb"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-040.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "918493a625c086ef"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-041.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "d60e8c4f5e3551c7"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-042.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "0a960bbe447860e9"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-043.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "1856386d03f1ba15"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-044.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "b14008df82e0c9fe"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-045.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "a273982934f70004"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-046.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "f7a56f83f280eebb"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-047.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "427968f740cb65b9"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-048.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "5aba9e2d010327f5"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-049.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "1955fca1dc6fcf62"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-050.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "469dda5cfe7cfc6a"
+    },
+    {
+      "category": "sigil",
+      "file": "icons/sigils/sigil-neutral-051.png",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA",
+      "sha256_16": "8cdca5275c547fc3"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-001.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "8125f231283e5160"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-002.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "8fddc7375af648be"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-003.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "449b30dc44b60cf0"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-004.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "5f01877a0baba270"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-005.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "703cc971d93cec0b"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-006.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "b62c4c8f976fc966"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-007.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "88dbf51f92e62596"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-008.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "59dce34c3bfa01a0"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-009.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "284eeaae93903504"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-010.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "643d225f5a11d690"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-011.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "051da0ed4e4d64f9"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-012.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "f5c862314ece5457"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-013.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "9bdebf0c862cea4e"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-014.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "93a9186b5976e275"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-015.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "68de50019f1299bb"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-016.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "71698e9ae9666e5e"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-017.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "3d477de32cc249fd"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-018.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "4fff0ff8c4c6d5d6"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-019.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "7550b6383a9b4c83"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-020.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "5acd7e929c2b092f"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-021.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "dbc23e4895a5af74"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-022.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "0165e60e14cabffc"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-023.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "238836a35bade74a"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-024.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "ba2d3165964f1671"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-025.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "552f7f5e19c58f30"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-026.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "1982ac6f93f5a2ae"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-027.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "24e51ab60b768deb"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-028.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "4c0b15ac42e1ed62"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-029.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "44c4ddfa13e1278d"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-030.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "bf315a0852012f94"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars/avatar-neutral-031.png",
+      "width": 104,
+      "height": 104,
+      "mode": "RGB",
+      "sha256_16": "cc3e81ce91e38ba3"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-001.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "36f3ab0ea9b88018"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-002.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "8be8d94da63fadb7"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-003.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "dbfc86843dc3a9f4"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-004.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "600bd05fd1f88a8c"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-005.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "98b9c3487c4629d6"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-006.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "8c2de9f473a7b93a"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-007.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "1b8043281603f5b9"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-008.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "76cba31553f22b4b"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-009.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "c64eed9d40a80db1"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-010.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "642a704df94598b2"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-011.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "473f7901e3b31ddc"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-012.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "d7b498d2ac1cb571"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-013.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "b783d0c09b3b2a03"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-014.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "0609f53f5f716f7d"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-015.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "538e133335b0b978"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits/portrait-neutral-016.png",
+      "width": 640,
+      "height": 902,
+      "mode": "RGB",
+      "sha256_16": "0a64f9323e409278"
+    }
+  ]
+}

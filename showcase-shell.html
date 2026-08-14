@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台世界引擎 · 橱窗壳</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f4efe6; }
+  #app { display: block; width: 100%; height: 100%; border: 0; }
+  #boot {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font: 14px/1.6 "Microsoft YaHei", sans-serif; color: #6b5b4a; padding: 24px; text-align: center;
+  }
+  #boot[hidden] { display: none; }
+  code { font-size: 12px; background: #efe6d8; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="boot">正在加载世界引擎面板…<br><small>若长时间无响应，请检查 <code>WE_PANEL_URL</code> 是否可访问。</small></div>
+<iframe id="app" title="后台世界引擎" hidden></iframe>
+<script>
+/**
+ * 异步助手橱窗用壳子（最终可压缩进方案的 showcaseHtml）。
+ *
+ * 用法：
+ * 1. 把下面 WE_PANEL_URL 改成你的 GitHub Pages 地址（指向本目录的 index.html）。
+ * 2. 把本文件整页（或压缩后）写入配置方案的 showcaseHtml。
+ *
+ * 为何需要壳子：
+ * - 橱窗 iframe 是 srcdoc、与酒馆页同源，能直接碰 window.top.AcuData。
+ * - GitHub Pages 是跨域页面，不能直接读 top.AcuData，必须由壳子做 postMessage 代理。
+ *
+ * 当前桥：
+ * - we-goto：子页切路由（已接）
+ * - we-query-view / we-watch-view：代理 AcuData（已接；面板侧真用上后即可热更新）
+ * 静态站无助手时子页继续走 WORLD_MOCK，互不影响。
+ */
+(function () {
+  'use strict';
+
+  // ★ 发布后改成你的 Pages 地址，末尾带 /
+  var WE_PANEL_URL = 'https://YOUR_USER.github.io/YOUR_REPO/';
+
+  var boot = document.getElementById('boot');
+  var app = document.getElementById('app');
+  var panelOrigin = '';
+  try { panelOrigin = new URL(WE_PANEL_URL).origin; } catch (_e) { panelOrigin = ''; }
+
+  var reqSeq = 0;
+  var pending = Object.create(null);
+  var watchers = Object.create(null);
+
+  function acuData() {
+    try {
+      return window.top && window.top.AcuData ? window.top.AcuData : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function reply(source, payload) {
+    try { source.postMessage(payload, panelOrigin || '*'); } catch (_e) { /* ignore */ }
+  }
+
+  async function handleQueryView(source, msg) {
+    var D = acuData();
+    if (!D) {
+      reply(source, { type: 'we-query-view-result', id: msg.id, ok: false, error: 'AcuData unavailable' });
+      return;
+    }
+    try {
+      await D.ready();
+      var result = await D.queryView(msg.viewId || 'bg_world_structured_v09', msg.params || {}, msg.options || {});
+      reply(source, { type: 'we-query-view-result', id: msg.id, ok: true, result: result });
+    } catch (err) {
+      reply(source, { type: 'we-query-view-result', id: msg.id, ok: false, error: String(err && err.message || err) });
+    }
+  }
+
+  async function handleWatchView(source, msg) {
+    var D = acuData();
+    var wid = msg.watchId || ('w' + (++reqSeq));
+    if (!D) {
+      reply(source, { type: 'we-watch-view-result', watchId: wid, ok: false, error: 'AcuData unavailable' });
+      return;
+    }
+    try {
+      await D.ready();
+      if (watchers[wid] && typeof watchers[wid] === 'function') watchers[wid]();
+      watchers[wid] = await D.watchView(msg.viewId || 'bg_world_structured_v09', msg.params || {}, function (result) {
+        reply(source, { type: 'we-watch-view-result', watchId: wid, ok: true, result: result });
+      }, msg.options || {});
+      reply(source, { type: 'we-watch-view-ready', watchId: wid, ok: true });
+    } catch (err) {
+      reply(source, { type: 'we-watch-view-result', watchId: wid, ok: false, error: String(err && err.message || err) });
+    }
+  }
+
+  window.addEventListener('message', function (e) {
+    if (panelOrigin && e.origin !== panelOrigin) return;
+    var msg = e.data;
+    if (!msg || typeof msg !== 'object') return;
+
+    if (msg.type === 'we-goto') {
+      // 壳子里的面板是整站 index，路由消息转给其子窗（若 index 在 iframe 内）
+      try {
+        var win = app.contentWindow;
+        if (win) win.postMessage(msg, panelOrigin || '*');
+      } catch (_e) { /* ignore */ }
+      return;
+    }
+    if (msg.type === 'we-query-view') {
+      handleQueryView(e.source, msg);
+      return;
+    }
+    if (msg.type === 'we-watch-view') {
+      handleWatchView(e.source, msg);
+      return;
+    }
+    if (msg.type === 'we-unwatch-view' && msg.watchId && watchers[msg.watchId]) {
+      try { watchers[msg.watchId](); } catch (_e) { /* ignore */ }
+      delete watchers[msg.watchId];
+    }
+  });
+
+  if (!WE_PANEL_URL || /YOUR_USER|YOUR_REPO/.test(WE_PANEL_URL)) {
+    boot.innerHTML = '请先把壳子里的 <code>WE_PANEL_URL</code> 改成 GitHub Pages 地址。<br><small>例如 https://name.github.io/world-engine-panel/</small>';
+    return;
+  }
+
+  app.src = WE_PANEL_URL;
+  app.removeAttribute('hidden');
+  app.addEventListener('load', function () { boot.hidden = true; });
+})();
+</script>
+</body>
+</html>

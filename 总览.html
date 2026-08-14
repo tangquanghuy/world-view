@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台世界引擎 · 总览</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/console.css">
+<style>
+/* =============================================================================
+   总览页 · 对照 示意图总览.png 整屏复刻
+   通用令牌与外壳在 shared/tokens.css + shared/console.css，这里只放本页组件。
+   ========================================================================== */
+
+/* ---------- 侧栏世界状态卡 ---------- */
+.side-state{
+  display:grid;gap:5px;padding:13px 14px;
+  border-radius:var(--r-panel);background:var(--paper);box-shadow:var(--sh1);text-align:center;
+}
+.side-state .k{justify-content:center}
+.side-state b{color:var(--ink2);font:700 22px/1.2 var(--serif)}
+.side-state p{margin:0;color:var(--ink4);font:14px/1.6 var(--ui)}
+.side-state .pill{height:34px;margin-top:4px;padding:0 14px;font-size:14px}
+
+/* 时间尺本体在 shared/console.css，这里只调本页的上下留白 */
+.ruler{margin:10px 18px 0}
+
+/* ---------- NPC 当前活动卡 ---------- */
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;padding:6px 18px 0}
+.act{
+  position:relative;display:flex;flex-direction:column;min-width:0;
+  padding:12px;border:0;border-radius:var(--r-card);background:var(--card);box-shadow:var(--sh1);
+  font:inherit;color:inherit;text-align:left;cursor:pointer;
+  transition:box-shadow .26s ease,transform .26s ease;
+}
+.act:hover{transform:translateY(-2px);box-shadow:var(--sh3)}
+.act.on{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 20px var(--gold-glow)}
+.act-top{display:grid;grid-template-columns:40px minmax(0,1fr) 22px;align-items:center;gap:9px}
+.act-top .av{width:40px;height:40px}
+.act-name{min-width:0}
+.act-name b{display:flex;align-items:center;gap:6px;min-width:0;color:var(--ink2);font:600 16px/1.3 var(--ui)}
+/* 候选人物和固定人物是两张不同的表，字段也不同，名字旁边要标出来 */
+.act-name .cand{flex:0 0 auto;padding:1px 6px;border-radius:5px;background:var(--hue-soft);color:var(--hue-ink);font:600 13px/1.4 var(--ui)}
+/* 在场状态用一个小圆点 + 文字，占位比胶囊小，但含义不丢 */
+.act-pres{display:flex;align-items:center;gap:5px;color:var(--ink4);font:13px/1.4 var(--ui)}
+.act-pres::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--hue)}
+.act-pres.far::before{background:transparent;box-shadow:inset 0 0 0 2px var(--ink5)}
+.act-mark{display:grid;place-items:center;width:22px;height:22px;color:var(--hue)}
+.act-mark svg{width:20px;height:20px}
+.act-do{margin:10px 0 0;color:var(--ink2);font:14px/1.6 var(--ui);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.act-line{display:flex;align-items:center;gap:5px;margin-top:6px;min-width:0;color:var(--ink4);font:14px/1.5 var(--ui)}
+.act-line svg{flex:0 0 auto;width:14px;height:14px;color:var(--hue);opacity:.8}
+.act-line span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 收起态：同一行的卡等高，余量顶在时间条上方，让各卡的进度条排成一线。
+   展开态：日程接在时间条后面，余量若还留在这儿就成了卡片中间的一道空档，
+   所以改成余量落到卡片末尾——短卡就短一截，不在腰上开个天窗。 */
+.act-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:10px}
+.acts.open .act-foot{margin-top:0}
+.act-when{flex:0 0 auto;color:var(--hue-ink);font:600 13px/1.4 var(--ui);font-variant-numeric:tabular-nums}
+.act-foot .bar{flex:1 1 auto;height:7px}
+/* 没有预计结束时间时进度不可计算，画成虚线槽而不是画一条 0% 的实条 */
+.act-foot .bar.unknown{background:transparent;box-shadow:inset 0 0 0 1px var(--hue-track);border-radius:4px}
+
+/* 展开后的日程。schedule 是"近期已完成或已安排"的行动，当前行动不在里面。 */
+.sched{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);display:grid;gap:8px}
+.sched-row{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 9px}
+.sched-t{color:var(--ink4);font:13px/1.5 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sched-b{min-width:0}
+.sched-b b{display:block;color:var(--ink2);font:400 14px/1.55 var(--ui);overflow-wrap:anywhere}
+.sched-b small{display:block;color:var(--ink4);font:13px/1.5 var(--ui);overflow-wrap:anywhere}
+.sched-b .chip{margin-top:3px;padding:1px 8px;font-size:13px}
+/* 现实条件：类别做成左侧定宽小标签，事实和影响分两级 */
+.conds{display:grid;gap:7px}
+.cond{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:9px;align-items:start}
+.cond-k{padding:1px 7px;border-radius:5px;background:var(--hue-soft);color:var(--hue-ink);font:600 13px/1.5 var(--ui);white-space:nowrap}
+.cond-b{min-width:0}
+.cond-b b{display:block;color:var(--ink2);font:400 14px/1.55 var(--ui);overflow-wrap:anywhere}
+.cond-b small{display:block;color:var(--ink4);font:13px/1.5 var(--ui);overflow-wrap:anywhere}
+.cond-b .rev{color:var(--hue-ink)}
+
+/* ---------- 开关 ---------- */
+.switch{display:inline-flex;align-items:center;gap:8px;margin-left:auto;border:0;background:transparent;color:var(--ink4);font:14px var(--ui);white-space:nowrap;cursor:pointer}
+.switch i{position:relative;width:38px;height:21px;border-radius:11px;background:var(--rule);transition:background .22s ease}
+.switch i::after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:var(--sh1);transition:translate .22s ease}
+.switch[aria-pressed="true"]{color:var(--indigo-ink)}
+.switch[aria-pressed="true"] i{background:var(--indigo)}
+.switch[aria-pressed="true"] i::after{translate:17px 0}
+/* 窄面板里标题和开关挤在一行会把两边都折成两三行，让开关整条落到标题下面。
+   只放开带开关的那个面板头，别的面板头照旧一行到底。 */
+@container (max-width:420px){
+  .phead.has-switch{flex-wrap:wrap}
+  .phead.has-switch .switch{width:100%;margin:2px 0 0;justify-content:space-between}
+}
+
+/* ---------- 底部两栏 ---------- */
+/* 两块等高：关系图内容比变化列表短，align-items:start 会在左边留一大块白 */
+.duo{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.duo>.panel{display:flex;flex-direction:column}
+/* 两块面板等高，关系图这边内容短就会多出一截。余量不再摊成上下两块空白，
+   而是由 egoFit() 量出来直接加到图的高度上，让星图整体撑开。 */
+.duo .ego{flex:0 0 auto}
+.duo .ego-foot{margin-top:auto}
+
+/* ---------- 谁跟谁在打交道（关系星图） ----------
+   原型是"中心一个人 + 四周头像 + 连线挂关系"的星图，主视图照它复刻：
+   画选中人物的自我网络，七个人和五个组织的全图走 「全部关系」浮层。 */
+.ego{position:relative;margin:2px 6px 0}
+.eg .cand{display:none}
+.ego svg.wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.eg{
+  position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;
+  display:grid;justify-items:center;gap:4px;width:112px;
+  border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;
+}
+.eg b{max-width:100%;color:var(--ink2);font:600 14px/1.3 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eg small{max-width:100%;color:var(--ink5);font:13px/1.3 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eg[disabled]{cursor:default}
+/* 主视图里坐标对齐的是头像圆心而不是整块的盒心：连线要接在圆心连线上，
+   名字挂在圆下面不参与定位。浮层节点多、靠整体居中，仍用盒心对齐。 */
+.ego .eg{translate:-50% 0}
+.ego .eg>:first-child{margin-top:calc(var(--av,58px) / -2)}
+.ego .eg.core>:first-child{margin-top:calc(var(--av-core,66px) / -2)}
+.ego .eg .av,.ego .eg .pav{width:var(--av,58px);height:var(--av,58px);box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--hue)}
+/* 盾形是靠 clip-path 裁的，描边只能走 border-box 渐变；这里比列表里的重一档，
+   不然放大到 58px 后边缘会虚掉，跟旁边描了圈的圆头像不是一个分量。 */
+.ego .eg .pav.crest{
+  padding:10px;border-width:2px;
+  background:linear-gradient(var(--hue-soft),var(--hue-soft)) padding-box,
+             linear-gradient(var(--hue),var(--hue)) border-box;
+}
+/* 装真纹章的那一枚走深底，理由和 shared/console.css 里那条一样：素材是纯白像素，
+   浅底上看不见。这条得在页面里重写一遍——上面那句 .ego .eg .pav.crest 的
+   权重（0,3,0）压过 shared 里的 img.pav.crest（0,2,1），只改 shared 不生效。 */
+.ego .eg img.pav.crest{
+  background:
+    radial-gradient(circle at 32% 20%,color-mix(in srgb,var(--hue) 52%,#38456b) 0%,transparent 68%) padding-box,
+    linear-gradient(158deg,#2b3455 0%,#1e2740 55%,#151c2f 100%) padding-box,
+    linear-gradient(rgba(228,193,136,.78),rgba(228,193,136,.78)) border-box;
+}
+.ego .eg .pav.crest.ph{padding-top:8px;font-size:19px}
+.ego .eg.core .av,.ego .eg.core .pav{width:var(--av-core,66px);height:var(--av-core,66px);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--gold)}
+.full .eg .av,.full .eg .pav{width:42px;height:42px}
+.full .eg .pav.crest{padding:8px}
+.full .eg.core .av,.full .eg.core .pav{width:56px;height:56px;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--gold)}
+/* 连线上的关系标签：原型是无底框的彩色短标签，用纸色描边代替底色，压住连线又不切断它 */
+.wire-tag{
+  position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;
+  display:flex;align-items:center;gap:4px;
+  color:var(--hue-ink);font:600 13px/1.5 var(--ui);white-space:nowrap;
+  text-shadow:0 0 4px var(--paper),0 0 4px var(--paper),0 0 8px var(--paper);
+}
+.wire-tag svg{width:14px;height:14px;color:var(--hue)}
+.wire-tag em{font-style:normal;font-variant-numeric:tabular-nums}
+.wire-tag em.up{color:var(--green-ink)}
+.wire-tag em.down{color:var(--rose-ink)}
+.wire-tag em.flat{color:var(--ink4)}
+
+/* 关系明细：图上只留名字和关系词，好感基数、当前依据、变化时间这些字段
+   收在这里，默认折起来，展开后按"字段名带图标上色 / 字段值深墨"的统一规格排。 */
+.ego-list{margin:0 18px;border-top:1px solid var(--rule)}
+.ego-list[hidden]{display:none}
+.erow{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;padding:9px 0}
+.erow+.erow{border-top:1px solid var(--rule)}
+.erow-i{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;color:var(--hue-ink);background:var(--hue-soft)}
+.erow-i svg{width:15px;height:15px}
+.erow-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 7px;margin:0}
+.erow-h i{color:var(--hue);font:600 14px/1.5 var(--ui);font-style:normal}
+.erow-h b{color:var(--ink2);font:600 14px/1.5 var(--ui)}
+.erow-h .me{color:var(--ink5);font:400 14px/1.5 var(--ui)}
+.erow-h .t{color:var(--hue-ink);font:600 13px/1.6 var(--ui)}
+.erow-h .f{margin-left:auto;color:var(--ink4);font:13px/1.6 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
+.erow-h .f em{font-style:normal}
+.erow-h .f em.up{color:var(--green-ink)}
+.erow-h .f em.down{color:var(--rose-ink)}
+.erow-f{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 8px;margin:3px 0 0}
+.erow-f .k{flex:0 0 auto}
+.erow-f .v{flex:1 1 180px;margin-top:0;font-size:14px}
+/* 原型的页脚是一条细线加一枚居中胶囊按钮，照抄；线压在底部，
+   上面多出来的空高留给图，两块面板等高时也不会显得是漏排了什么。 */
+.ego-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;
+  margin:0 18px;padding:12px 0 14px;border-top:1px solid var(--rule)}
+.ego-list:not([hidden])+.ego-foot{border-top:0}
+
+/* 「全部关系」浮层的外壳（.sheet / .sheet-box / .sheet-close）已经提进
+   shared/console.css，势力与地区页的完整档案也用同一套。这里只留图本身的样式。 */
+/* 高度由 renderFull() 按节点数算，节点少就矮下来，不留一块固定空场 */
+.full{position:relative;margin:0 20px 18px}
+.full svg.wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+/* ---------- 近来发生了什么 ---------- */
+.chg{display:grid;grid-template-columns:26px minmax(0,1fr) max-content;align-items:start;gap:10px;padding:9px 0}
+.chg+.chg{border-top:1px solid var(--rule)}
+.chg-i{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;color:var(--hue-ink);background:var(--hue-soft)}
+.chg-i svg{width:16px;height:16px}
+.chg-b{min-width:0}
+.chg-b p{margin:0;color:var(--ink2);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
+.chg-b small{display:flex;align-items:center;gap:4px;margin-top:2px;color:var(--hue-ink);font:13px/1.45 var(--ui);overflow-wrap:anywhere}
+.chg-b small svg{flex:0 0 auto;width:12px;height:12px;opacity:.7}
+.chg-t{color:var(--ink4);font:13px/1.7 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- 任务进展 ---------- */
+.tp{
+  display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;width:100%;
+  padding:10px 0;border:0;border-bottom:1px solid var(--rule);
+  background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;
+}
+.tp:last-child{border-bottom:0}
+.tp:hover .tp-name{color:var(--hue-ink)}
+.tp-i{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;color:var(--hue-ink);background:var(--hue-soft)}
+.tp-i svg{width:19px;height:19px}
+.tp-b{display:block;min-width:0}
+.tp-h{display:flex;align-items:baseline;gap:7px}
+.tp-cat{flex:0 0 auto}
+.tp-name{min-width:0;flex:1 1 auto;color:var(--ink2);font:600 15px/1.4 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .18s ease}
+.tp-pct{flex:0 0 auto;color:var(--ink2);font:600 17px/1.2 var(--serif);font-variant-numeric:tabular-nums}
+.tp-cat{color:var(--hue-ink);font:600 13px/1.4 var(--ui)}
+.tp-b p{margin:2px 0 7px;color:var(--ink4);font:14px/1.5 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp .bar{height:7px}
+
+@media(max-width:1440px){ .acts{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:1180px){ .duo{grid-template-columns:minmax(0,1fr)} }
+@media(max-width:700px){ .acts{grid-template-columns:minmax(0,1fr)} }
+</style>
+</head>
+<body>
+
+<script src="shared/icons.js"></script>
+
+<header class="header">
+  <div class="brand">
+    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-text">
+      <h1>后台世界引擎</h1>
+      <p>当玩家不在场时，世界依然在呼吸</p>
+    </div>
+  </div>
+
+  <div class="hbox">
+    <div>
+      <small>世界时间</small>
+      <span class="clock-date" id="wDate">—</span>
+    </div>
+    <b class="clock-time" id="wClock">--:--</b>
+  </div>
+
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <nav class="nav" id="nav"></nav>
+    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+    <div class="side-state h-teal" id="sideState"></div>
+  </aside>
+
+  <div class="main">
+    <div class="col">
+
+      <section class="panel">
+        <header class="phead has-switch">
+          <span class="pmark h-violet"><svg><use href="#i-flow"/></svg></span>
+          <div><h2>人物动态</h2></div>
+          <button class="switch" id="keyOnly" aria-pressed="false"
+                  title="只留下当前行动挂在某条任务或事件上的人，日常起居收起来">只看有事在身<i></i></button>
+        </header>
+        <div class="ruler" id="ruler"></div>
+        <div class="acts" id="acts"></div>
+        <div class="pager" id="actPager"></div>
+        <div style="padding:10px 18px 14px;text-align:center">
+          <button class="paction" id="expandAll" style="margin:0">展开每人的近况 ▾</button>
+        </div>
+      </section>
+
+      <div class="duo">
+        <section class="panel">
+          <header class="phead">
+            <span class="pmark h-rose"><svg><use href="#i-heart"/></svg></span>
+            <div><h2>关系变动</h2></div>
+          </header>
+          <div class="ego" id="ego"></div>
+          <div class="ego-list" id="egoList" hidden></div>
+          <div class="ego-foot">
+            <button class="paction" id="egoMore" style="margin:0" aria-expanded="false">关系明细 ▾</button>
+            <button class="paction" id="openFull" data-open-sheet style="margin:0">全部关系 ›</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <header class="phead">
+            <span class="pmark h-amber"><svg><use href="#i-list"/></svg></span>
+            <div><h2>近期变化</h2></div>
+          </header>
+          <div class="pbody" style="padding-top:2px" id="changes"></div>
+          <div class="pager" id="chgPager"></div>
+        </section>
+      </div>
+
+    </div>
+
+    <div class="col">
+
+      <section class="panel">
+        <header class="phead">
+          <span class="pmark h-amber"><svg><use href="#i-bell"/></svg></span>
+          <div><h2>活跃事件</h2></div>
+          <button class="paction" type="button" onclick="P.goto('tasks')">查看全部 ›</button>
+        </header>
+        <div class="pbody" style="padding-top:2px" id="events"></div>
+        <div class="pager" id="evPager"></div>
+      </section>
+
+      <!-- 这里原来是「世界概况」面板，329px，八个数：
+           上半四格「活跃人物 6 / 在办任务 3 / 地区状态 有争夺 / 世界氛围 紧张」，
+           下半四行「冲突类事件 1 起 / 受阻任务 1 条 / 在册势力 4 个 / 观察中的候选人物 1 人」。
+           整块删了，理由见 README「不要把世界摘成仪表盘」。
+           它想说的那句话，侧栏的「世界状态」已经用一句人话说了。 -->
+
+      <section class="panel">
+        <header class="phead">
+          <span class="pmark h-indigo"><svg><use href="#i-scroll"/></svg></span>
+          <div><h2>任务进展</h2></div>
+          <button class="paction" type="button" onclick="P.goto('tasks')">查看全部 ›</button>
+        </header>
+        <div class="pbody" style="padding-top:0" id="tasks"></div>
+        <div class="pager" id="tpPager"></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-box">
+    <button class="sheet-close" id="sheetClose" aria-label="关闭">✕</button>
+    <header class="phead">
+      <span class="pmark h-rose"><svg><use href="#i-heart"/></svg></span>
+      <div><h2>全部关系</h2></div>
+    </header>
+    <div class="full" id="full"></div>
+  </div>
+</div>
+
+<i class="spark" style="left:5%;top:16%"></i>
+<i class="spark gold" style="left:47%;top:7%"></i>
+<i class="spark" style="right:6%;top:34%"></i>
+<i class="spark" style="left:22%;bottom:9%"></i>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="mock/world-state-v09.js"></script>
+<script src="shared/vocab.js"></script>
+<script src="shared/wtime.js"></script>
+<script src="shared/panel.js"></script>
+<script>
+const {$,$$,arr,esc,L,DATA,avatarTag,fieldKey,hueCycler,mode,progressOf,renderPager,timeHH,toast}=P;
+
+/* ---------- 枚举 → 视觉 ----------
+   每一组都对着契约里的一条枚举写，缺项时回落到中性色／通用图标，不硬编码具体名字。 */
+const PRESENCE_HUE={foreground:'rose',nearby:'amber',offscreen:'indigo',dormant:'violet',retired:'purple'};
+const ACT_ICON={working:'i-hourglass',travelling:'i-walk',meeting:'i-chat',investigating:'i-eye',
+                resting:'i-rest',waiting:'i-clock',recovering:'i-heart',idle:'i-moon',other:'i-spark'};
+const CHANGE_HUE={task:'indigo',event:'rose',region:'teal',relation:'violet',effect:'amber'};
+const CHANGE_ICON={task:'i-scroll',event:'i-bell',region:'i-map',relation:'i-heart',effect:'i-spark'};
+const SOURCE_ICON={npc:'i-people',faction:'i-shield',task:'i-scroll',event:'i-bell',region:'i-map'};
+const CAT_ICON={main_task:'i-flag',side_task:'i-scroll',character_task:'i-people',
+                faction_project:'i-shield',personal_task:'i-heart',other:'i-spark'};
+const EVENT_HUE={conflict:'rose',disaster:'amber',infrastructure:'indigo',investigation:'violet',
+                 politics:'purple',social:'violet',trade:'teal',accident:'amber',discovery:'teal',rumor:'violet'};
+const EVENT_ICON={conflict:'i-swords',disaster:'i-fire',infrastructure:'i-arch',investigation:'i-eye',
+                  politics:'i-crown',trade:'i-coin',accident:'i-warn',discovery:'i-spark',social:'i-chat',rumor:'i-chat'};
+const REL_HUE={alliance:'green',cooperation:'teal',trade:'amber',employment:'indigo',member:'indigo',
+               service:'indigo',contact:'violet',friendship:'green',family:'green',
+               rivalry:'amber',hostility:'rose',debt:'purple',influence:'violet'};
+const TARGET_ICON={faction:'i-shield',region:'i-map',task:'i-scroll',event:'i-bell',other:'i-spark'};
+
+const NPCS=arr(DATA.npcs);
+const CANDIDATES=arr(DATA.candidates);
+const PEOPLE=[...NPCS,...CANDIDATES];
+const CAND=new Set(CANDIDATES.map(c=>c.name));
+
+/* 固定人物用 presence（视线外/邻近/前台/休眠/已退场），
+   候选人物没有这个字段，契约给的是 status（观察中/可启用/休眠/已弃用）。
+   两张表混在一起铺卡时必须分开取，否则候选人物一律显示"未记录"。 */
+function standing(p){
+  return CAND.has(p.name)
+    ?{label:L('candidate.status',p.status),hue:'purple',far:['dormant','retired'].includes(p.status),cand:true}
+    :{label:L('npc.presence',p.presence),hue:PRESENCE_HUE[p.presence]||'indigo',
+      far:['offscreen','dormant','retired'].includes(p.presence),cand:false};
+}
+/** 是否计入"活跃人物"。两张表的休眠／退场语义一致，判定合并在这里。 */
+const isLive=p=>!standing(p).far||standing(p).label==='视线外';
+const WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
+const NOW=WTime.parse(WORLD_TIME);
+
+const taskHue=hueCycler();          // 同一委托方一个颜色
+arr(DATA.tasks).forEach(t=>taskHue(t.source||''));
+const byName=n=>PEOPLE.find(p=>p.name===n);
+
+/* 世界时间带年份（王历312年霜月12日 22:00），日程只有「霜月12日 20:30」。
+   两者拿去比较时年份不同会差出一整个量级，所以比较前先把年份剥掉。 */
+const stripYear=s=>String(s||'').replace(/^[^\d]*\d+\s*年\s*[·・]?\s*/,'');
+const T=s=>WTime.parse(stripYear(s));
+const NOW_T=T(WORLD_TIME);
+
+/* ---------- 时间尺 ----------
+   刻度取自本批数据实际覆盖的时间跨度，不是写死的钟点。 */
+function allTimes(){
+  const out=[];
+  for(const p of PEOPLE){
+    const c=p.current_state||{};
+    out.push(c.started_at,c.expected_end);
+    for(const s of arr(p.schedule))out.push(s.start_time,s.end_time);
+  }
+  out.push(WORLD_TIME);
+  return out.map(T).filter(v=>v!==null);
+}
+function hourOf(t){const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?Number(m[1]):null}
+const dayIcon=h=>h===null?'i-spark':h<5?'i-moon':h<10?'i-sun':h<16?'i-sun':h<19?'i-dusk':'i-moon';
+/** 「霜月12日 20:30」→ 日期部分，用来判断刻度是否跨天 */
+const dayOf=s=>{const m=String(s||'').match(/([^\d\s]{0,4}月\s*\d+\s*日)/);return m?m[1]:''};
+
+function renderRuler(){
+  const vs=allTimes();
+  const el=$('#ruler');
+  if(!vs.length){el.innerHTML='<span class="tick" style="--x:50%"><small>本批数据没有可解析的时间</small></span>';return}
+  const lo=Math.min(...vs),hi=Math.max(...vs);
+  const span=hi-lo||1;
+
+  // 把所有出现过的时刻按刻度位置去重，均匀取 4 个当作标尺
+  const uniq=[...new Set(
+    PEOPLE.flatMap(p=>[p.current_state?.started_at,p.current_state?.expected_end,
+      ...arr(p.schedule).flatMap(s=>[s.start_time,s.end_time])]).concat(WORLD_TIME)
+      .map(s=>String(s||'').trim()).filter(s=>T(s)!==null)
+  )].sort((a,b)=>T(a)-T(b));
+  // 窄屏放不下四组「图标 + 时间 + 日期」，减到两组，「现在」始终保留
+  const want=Math.min(el.clientWidth<560?2:4,uniq.length);
+  let picks=[];
+  for(let i=0;i<want;i++)picks.push(uniq[Math.round(i*(uniq.length-1)/Math.max(1,want-1))]);
+
+  const at=v=>8+((v-lo)/span)*82;      // 8%–90%，右端留给箭头
+  // 「现在」是读这条尺子的基准，离它太近的普通刻度让位，否则两组数字会叠在一起
+  if(NOW_T!==null)picks=picks.filter(s=>Math.abs(at(T(s))-at(NOW_T))>7);
+  let lastDay='';
+  const ticks=picks.map(s=>{
+    const h=hourOf(s),d=dayOf(s);
+    const label=d&&d!==lastDay?d:'';
+    lastDay=d||lastDay;
+    return '<span class="tick" style="--x:'+at(T(s)).toFixed(2)+'%" title="'+esc(s)+'">'+
+      '<svg><use href="#'+dayIcon(h)+'"/></svg>'+
+      '<b>'+esc(timeHH(s)||s)+'</b>'+
+      (label?'<small>'+esc(label)+'</small>':'')+
+      '<i></i></span>';
+  }).join('');
+
+  // 世界当前时间单独标出来。它未必落在任何一个刻度上，但它是读这条尺子的基准。
+  const nowMark=NOW_T===null?'':
+    '<span class="tick now" style="--x:'+at(Math.max(lo,Math.min(hi,NOW_T))).toFixed(2)+'%" title="'+esc(WORLD_TIME)+'">'+
+      '<b>'+esc(timeHH(WORLD_TIME))+'</b><small>现在</small><i></i></span>';
+
+  el.innerHTML=ticks+nowMark;
+}
+
+/* ---------- NPC 当前活动 ----------
+   一页摆两行，行数固定、列数随版面走：宽屏三列就是 6 人，1440 以下两列 4 人，
+   700 以下单列封在 4（单列一页两格翻起来太碎）。多出来的翻页。
+
+   原来是写死的 9（照原型的三列九格）。三行在这一页太重：人物动态本来就是最高的
+   一块，撑到 808px，第三行还常常只站一个人——七个人就是 3+3+1，末行两格空着。
+   行数比格数好使，因为它跟着断点自动对齐，不会在两列档变成 4+4+1。 */
+const ACT_ROWS=2;
+function actPageSize(){
+  const el=$('#acts');if(!el)return 6;
+  const t=getComputedStyle(el).gridTemplateColumns;
+  const cols=t&&t!=='none'?t.split(' ').filter(Boolean).length:3;
+  return cols<=1?4:cols*ACT_ROWS;
+}
+/* 开局聚焦关系最多的人。取第一个 NPC 常常只有一条边，关系图一上来就是空的。 */
+const busiest=PEOPLE.slice().sort((a,b)=>egoNeighbors(b).length-egoNeighbors(a).length)[0];
+let actPage=0,keyOnly=false,expanded=false,focusName=busiest?.name||NPCS[0]?.name||'';
+
+function actList(){
+  const ps=PEOPLE.slice().sort(WTime.byNewest('updated_at'));
+  if(!keyOnly)return ps;
+  // 「重要」= 当前行动确实挂在某条任务或事件上，不是主观判断
+  return ps.filter(p=>(p.current_state||{}).related_task||(p.current_state||{}).related_event);
+}
+
+/** 当前行动的推进比例。缺 started_at 或 expected_end 时返回 null，界面上画成空槽而不是 0%。 */
+function actProgress(c){
+  const a=T(c.started_at),b=T(c.expected_end);
+  if(a===null||b===null||b<=a||NOW_T===null)return null;
+  return Math.max(0,Math.min(100,Math.round(((NOW_T-a)/(b-a))*100)));
+}
+
+function schedRow(s){
+  const when=[timeHH(s.start_time)||s.start_time,timeHH(s.end_time)||s.end_time].filter(Boolean).join('–')||'时间未记录';
+  const full=[s.start_time,s.end_time].filter(Boolean).join(' → ')||'时间未记录';
+  const tail=[s.location,s.result].filter(Boolean).join('　·　');
+  return '<div class="sched-row">'+
+    '<span class="sched-t" title="'+esc(full)+'">'+esc(when)+'</span>'+
+    '<span class="sched-b"><b>'+esc(s.action||'未记录行动')+'</b>'+
+      (tail?'<small>'+esc(tail)+'</small>':'')+
+      '<span class="chip line">'+esc(L('schedule.status',s.status))+'</span>'+
+    '</span></div>';
+}
+
+function actCard(p){
+  const c=p.current_state||{};
+  const st=standing(p);
+  const pct=actProgress(c);
+  const when=[timeHH(c.started_at),timeHH(c.expected_end)].filter(Boolean).join('–')||'时间未记录';
+  const link=c.related_task||c.related_event;
+  return '<button class="act h-'+st.hue+(p.name===focusName?' on':'')+'" data-n="'+esc(p.name)+'">'+
+    '<div class="act-top">'+avatarTag(p.name)+
+      '<span class="act-name"><b>'+esc(p.name)+(st.cand?'<span class="cand">候选</span>':'')+'</b>'+
+        '<span class="act-pres'+(st.far?' far':'')+'">'+esc(st.label)+'</span></span>'+
+      '<span class="act-mark" title="'+esc(L('state.status',c.status))+'"><svg><use href="#'+(ACT_ICON[c.status]||'i-spark')+'"/></svg></span>'+
+    '</div>'+
+    // 行动文本钳两行、地点与关联项省略号截断，完整原文一律进 title，不做静默截断
+    '<p class="act-do" title="'+esc(c.action||'未记录当前行动')+'">'+esc(c.action||'未记录当前行动')+'</p>'+
+    '<div class="act-line"><svg><use href="#i-pin"/></svg><span title="'+esc(c.location||'地点未记录')+'">'+esc(c.location||'地点未记录')+'</span></div>'+
+    (link?'<div class="act-line"><svg><use href="#'+(c.related_task?'i-scroll':'i-bell')+'"/></svg><span title="'+
+      esc((c.related_task?'关联任务　':'关联事件　')+link)+'">'+esc(link)+'</span></div>':'')+
+    '<span class="chip" style="margin-top:9px">'+esc(L('state.status',c.status))+'</span>'+
+    // 卡面上只放 HH:MM，完整的「霜月12日 20:30」进 title——跨天时钟点本身是有歧义的
+    '<div class="act-foot" title="'+esc([c.started_at,c.expected_end].filter(Boolean).join(' → ')||'时间未记录')+'">'+
+      '<span class="act-when">'+esc(when)+'</span>'+
+      '<span class="bar'+(pct===null?' unknown':'')+'" style="--p:'+(pct??0)+'%" title="'+
+        (pct===null?'没有预计结束时间，算不出进行到哪儿了':'这段行动已过去 '+pct+'%')+'"><i></i></span>'+
+    '</div>'+
+    (expanded?'<div class="sched">'+
+      [['i-eye','可观察状态',c.observable_state],
+       ['i-spark','已推演到',p.updated_at],
+       ['i-bell','下次检查',p.next_update]]
+        .filter(r=>r[2]).map(r=>'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2])+'</b></div>').join('')+
+      /* 现实条件直接决定这个人下一步能不能动，跟"在做什么"是一对。
+         放进展开区而不是卡面：卡面是扫读面，四五条限制铺上去就糊了。 */
+      (arr(p.conditions).length
+        ?fieldKey('i-lock','现实条件')+
+         '<div class="conds">'+p.conditions.map(x=>
+           '<div class="cond"><span class="cond-k">'+esc(L('condition.category',x.category))+'</span>'+
+           '<span class="cond-b"><b>'+esc(x.fact)+'</b>'+
+             (x.impact?'<small>'+esc(x.impact)+'</small>':'')+
+             (x.review_condition?'<small class="rev">解除条件：'+esc(x.review_condition)+'</small>':'')+
+           '</span></div>').join('')+'</div>'
+        :'')+
+      fieldKey('i-clock','近期日程')+
+      (arr(p.schedule).length?arr(p.schedule).map(schedRow).join(''):'<p class="nodata">当前行动之外没有记录在案的日程</p>')+
+    '</div>':'')+
+  '</button>';
+}
+
+function renderActs(){
+  const all=actList();
+  const per=actPageSize();
+  const pages=Math.max(1,Math.ceil(all.length/per));
+  actPage=Math.min(actPage,pages-1);
+  const from=actPage*per;
+  const page=all.slice(from,from+per);
+
+  $('#acts').classList.toggle('open',expanded);
+  $('#acts').innerHTML=page.length
+    ?page.map(actCard).join('')
+    :'<p class="nodata">眼下没有人的行动挂在任务或事件上</p>';
+
+  renderPager($('#actPager'),{page:actPage,pages,total:all.length,unit:'人',
+    note:'按推演时间倒序',onGo:n=>{actPage=n;renderActs()}});
+
+  $$('.act').forEach(el=>el.addEventListener('click',()=>{
+    focusName=el.dataset.n;renderActs();renderEgo();
+  }));
+}
+
+/* ---------- 谁跟谁在打交道（关系星图） ----------
+   照原型复刻：中心一个人，四周若干带描边的头像，连线带箭头，线上挂"图标 + 关系词 + 变动"。
+   节点位置走固定槽位表而不是等角度分布——两三条关系时等角度会摊成一条水平线，
+   跟原型的 2-1-2 完全不是一回事。槽位不够（超过 6 个邻居）才退回等角度。 */
+const REL_ICON={member:'i-shield',employment:'i-coin',family:'i-heart',friendship:'i-heart',
+                cooperation:'i-hand',trade:'i-cart',alliance:'i-link',rivalry:'i-flag',
+                hostility:'i-swords',debt:'i-box',service:'i-hourglass',contact:'i-chat',influence:'i-spark'};
+/* 头像直径与"连线要让开的半径"。窄面板上节点缩一档，否则线上的标签会压到头像。 */
+const AV={wide:{av:58,core:66,rn:33,rc:37},narrow:{av:50,core:58,rn:29,rc:33}};
+const SLOTS=[[],['R'],['L','R'],['L','R','BR'],['L','R','BL','BR'],
+             ['L','R','BL','BR','TR'],['L','R','BL','BR','TL','TR']];
+const SLOT_X={L:.13,R:.87,BL:.19,BR:.81,TL:.19,TR:.81};
+
+function nodeMark(r){
+  if(r.target_type==='person')return avatarTag(r.target_name);
+  const f=r.target_type==='faction'?P.crestFile(arr(DATA.factions).find(x=>x.name===r.target_name))
+        :r.target_type==='region'?P.sigilFile(arr(DATA.regions).find(x=>x.name===r.target_name)):'';
+  if(f)return '<img class="pav crest" src="'+f+'" alt="">';
+  return '<span class="pav crest ph">'+esc(String(r.target_name||'?').slice(0,1))+'</span>';
+}
+const changeTag=n=>n>0?'<em class="up">+'+n+'</em>':n<0?'<em class="down">'+n+'</em>':'<em class="flat">±0</em>';
+
+/* 一条边上两个方向各记各的关系词、依据和本轮变化。图上只画得下关系词和好感变动，
+   依据和变化原文收进 title——线画成实线还是虚线（本轮动没动过）也由这段说清，
+   所以图下面不再另写一行图例。 */
+function edgeTip(me,n){
+  return [['out',n.out],['in',n.in]].filter(d=>d[1]).map(([dir,r])=>
+    (dir==='out'?me.name+' → '+n.name:n.name+' → '+me.name)+'　'+L('relation.type',r.relation_type)+
+    (r.current_basis?'：'+r.current_basis:'')+
+    (r.recent_change?'\n　本轮变化：'+r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):'')
+  ).join('\n');
+}
+
+/* 邻居 = 我指向别人的关系 + 别人指向我的关系。原型里四支箭头全指向中心，
+   画的正是后一种；只取 me.relations 会漏掉一半的边，图也就永远稀。 */
+function egoNeighbors(me){
+  const m=new Map();
+  for(const r of arr(me.relations))m.set(r.target_name,{name:r.target_name,type:r.target_type,out:r,in:null});
+  for(const p of PEOPLE){
+    if(p.name===me.name)continue;
+    for(const r of arr(p.relations)){
+      if(r.target_name!==me.name||r.target_type!=='person')continue;
+      const cur=m.get(p.name);
+      if(cur)cur.in=r;else m.set(p.name,{name:p.name,type:'person',out:null,in:r});
+    }
+  }
+  return [...m.values()].map(n=>{
+    const rel=n.out||n.in;
+    return Object.assign(n,{rel,hue:REL_HUE[rel.relation_type]||'indigo',
+      moved:!!(n.out&&(n.out.recent_change||n.out.favorability_change))||
+            !!(n.in&&(n.in.recent_change||n.in.favorability_change))});
+  }).sort((a,b)=>(b.moved?1:0)-(a.moved?1:0)||(a.type==='person'?-1:1)-(b.type==='person'?-1:1));
+}
+
+/** 箭头：给定终点和单位方向，画一个实心三角 */
+function arrowHead(x,y,ux,uy,col){
+  const s=9,w=4.8,bx=x-ux*s,by=y-uy*s;
+  return '<path d="M'+x.toFixed(1)+' '+y.toFixed(1)+
+    'L'+(bx-uy*w).toFixed(1)+' '+(by+ux*w).toFixed(1)+
+    'L'+(bx+uy*w).toFixed(1)+' '+(by-ux*w).toFixed(1)+'Z" fill="'+col+'"/>';
+}
+
+/* 左右两块面板等高，关系图这边内容短，余量原来摊成图上下两块空白。
+   改成：先把图压到自然高度，量出面板还空多少，再把余量（最多 120px）加回图上，
+   所有纵坐标按同一个系数放大——星图整体撑开，构图比例不变。 */
+function egoFit(natural){
+  const box=$('#ego'),panel=box.closest('.panel');
+  box.style.height=natural+'px';
+  if(!panel)return natural;
+  let used=2;                                   // .ego 自己的 2px 上边距
+  for(const el of panel.children)if(el!==box)used+=el.offsetHeight;
+  const room=Math.round(panel.clientHeight-used);
+  return Math.max(natural,Math.min(natural+120,room));
+}
+
+function renderEgo(){
+  const me=byName(focusName);
+  const box=$('#ego');
+  if(!me){box.innerHTML='<div class="nodata mid">未选中人物</div>';$('#egoList').innerHTML='';return}
+  const ns=egoNeighbors(me);
+
+  if(!ns.length){
+    box.style.height=egoFit(150)+'px';
+    box.innerHTML='<div class="nodata mid">'+esc(me.name)+'目前没有记录在案的直接关系</div>';
+    $('#egoList').innerHTML='';return;
+  }
+
+  const W=box.clientWidth||430;
+  const av=W>=400?AV.wide:AV.narrow;
+  box.style.setProperty('--av',av.av+'px');
+  box.style.setProperty('--av-core',av.core+'px');
+  const keys=SLOTS[ns.length]||null;
+  const hasT=!!keys&&keys.some(k=>k[0]==='T'),hasB=!!keys&&keys.some(k=>k[0]==='B');
+  const H0=!keys?320:hasT?300:hasB?224:142;
+  const H=egoFit(H0),k=H/H0;
+  const cx=W/2,cy=(!keys?H0/2:hasT?150:hasB?72:68)*k;
+  box.style.height=H+'px';
+  // 名字连头像占 112px 宽，节点中心离两边各留 60px，否则最外侧的名字会顶出面板
+  const X=f=>Math.min(W-60,Math.max(60,f*W));
+  const SY={L:cy,R:cy,BL:(H0-58)*k,BR:(H0-58)*k,TL:44*k,TR:44*k};
+  const pos=keys
+    ?keys.map(k2=>({x:X(SLOT_X[k2]),y:SY[k2]}))
+    :ns.map((_,i)=>{const a=(-90+360/ns.length*i)*Math.PI/180;
+        return {x:X(.5+Math.cos(a)*.37),y:cy+Math.sin(a)*(H/2-56)}});
+
+  const wires=[],tags=[];
+  ns.forEach((n,i)=>{
+    const p=pos[i],col='var(--'+n.hue+')';
+    const dx=p.x-cx,dy=p.y-cy,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
+    const a={x:cx+ux*av.rc,y:cy+uy*av.rc},b={x:p.x-ux*av.rn,y:p.y-uy*av.rn};
+    wires.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+
+      '" stroke="'+col+'" stroke-width="'+(n.moved?2.4:1.5)+'" stroke-linecap="round"'+
+      (n.moved?'':' stroke-dasharray="5 6"')+' opacity="'+(n.moved?.9:.55)+'"/>');
+    if(n.out)wires.push(arrowHead(b.x,b.y,ux,uy,col));       // 我 → 对方
+    if(n.in) wires.push(arrowHead(a.x,a.y,-ux,-uy,col));     // 对方 → 我
+
+    /* 标签避让：横向的边把标签抬到线上方，斜向的边推到远离中心的那一侧，
+       跟原型一样落在空处，不压节点也不压线。 */
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    const off=Math.abs(uy)<.3?{x:0,y:-20}:{x:(uy>0?-uy:uy)*22,y:(uy>0?ux:-ux)*22};
+    const fav=n.type==='person';
+    const word=L('relation.type',n.rel.relation_type);
+    /* 两个头像之间放不下"关系词 + 变动"时只留图标和数字——原型里的 ♥+10 就是这么写的，
+       完整措辞挪进 title，不丢字段。 */
+    const room=Math.hypot(b.x-a.x,b.y-a.y)+(Math.abs(uy)<.3?0:60);
+    const tight=fav&&20+word.length*13+34>room-6;   // 没有数字可留时再挤也得写字
+    tags.push('<span class="wire-tag h-'+n.hue+'" style="--x:'+(mx+off.x).toFixed(1)+'px;--y:'+(my+off.y).toFixed(1)+'px"'+
+      ' title="'+esc(edgeTip(me,n))+'">'+
+      '<svg><use href="#'+(REL_ICON[n.rel.relation_type]||'i-link')+'"/></svg>'+
+      (tight?'':esc(word))+
+      (fav?changeTag(n.rel.favorability_change||0):'')+'</span>');
+  });
+
+  const marks=ns.map((n,i)=>{
+    const p=pos[i],known=n.type==='person'&&byName(n.name);
+    return '<button class="eg h-'+n.hue+'" style="--x:'+p.x.toFixed(1)+'px;--y:'+p.y.toFixed(1)+'px"'+
+      (known?' data-n="'+esc(n.name)+'"':' disabled')+
+      ' title="'+esc(n.name+'（'+L('relation.target',n.type)+'）\n'+edgeTip(me,n))+'">'+
+      nodeMark({target_type:n.type,target_name:n.name})+'<b>'+esc(n.name)+'</b></button>';
+  }).join('');
+
+  box.innerHTML='<svg class="wires">'+wires.join('')+'</svg>'+
+    '<button class="eg core" disabled style="--x:'+cx+'px;--y:'+cy+'px" title="'+esc(standing(me).label)+'">'+
+      avatarTag(me.name)+'<b>'+esc(me.name)+'</b></button>'+
+    tags.join('')+marks;
+
+  renderEgoList(me,ns);
+  $$('.eg[data-n]',box).forEach(el=>el.addEventListener('click',()=>{
+    if(byName(el.dataset.n)){focusName=el.dataset.n;renderActs();renderEgo()}
+    else toast(el.dataset.n+' 不在本轮人物记录里');
+  }));
+}
+
+/* 图上只留名字和关系词，好感基数、当前依据、变化时间这些字段收在明细里。
+   两个方向各记各的分数和依据，所以一条边可能出两行。 */
+function renderEgoList(me,ns){
+  const rows=[];
+  for(const n of ns)for(const [dir,r] of [['out',n.out],['in',n.in]]){
+    if(!r)continue;
+    const hue=REL_HUE[r.relation_type]||'indigo';
+    const person=n.type==='person';
+    rows.push('<div class="erow h-'+hue+'">'+
+      '<span class="erow-i"><svg><use href="#'+(REL_ICON[r.relation_type]||'i-link')+'"/></svg></span>'+
+      '<div><p class="erow-h" title="'+esc(dir==='out'?me.name+' 记录的对 '+n.name+' 的关系'
+                                                      :n.name+' 记录的对 '+me.name+' 的关系')+'">'+
+          // 两个方向各记各的分数，只画个箭头分不清哪行是谁记的，索性写全
+          (dir==='out'?'<span class="me">'+esc(me.name)+'</span><i>→</i><b>'+esc(n.name)+'</b>'
+                     :'<b>'+esc(n.name)+'</b><i>→</i><span class="me">'+esc(me.name)+'</span>')+
+          '<span class="t">'+esc(L('relation.type',r.relation_type))+'</span>'+
+          '<span class="t" style="color:var(--ink5)">'+esc(L('relation.target',n.type))+'</span>'+
+          (person?'<span class="f">好感 '+(r.favorability??0)+' '+changeTag(r.favorability_change||0)+'</span>':'')+
+        '</p>'+
+        '<p class="erow-f">'+fieldKey('i-link','当前依据')+'<span class="v">'+esc(r.current_basis||'未记录')+'</span></p>'+
+        (r.recent_change
+          ?'<p class="erow-f">'+fieldKey('i-spark','本轮变化')+'<span class="v">'+esc(r.recent_change)+
+            (r.changed_at?'<span style="color:var(--ink5)">　'+esc(r.changed_at)+'</span>':'')+'</span></p>'
+          :'')+
+      '</div></div>');
+  }
+  $('#egoList').innerHTML=rows.join('');
+}
+
+/* ---------- 全部关系（全图浮层） ----------
+   人物排内圈，势力／地区排外圈；外圈节点放在它连到的人物的角度均值上，
+   连线尽量短、少交叉。半径按节点数撑开，不靠运气避让。 */
+function renderFull(){
+  const box=$('#full');
+  const inner=PEOPLE.filter(p=>arr(p.relations).length);
+  const outerNames=[...new Set(inner.flatMap(p=>arr(p.relations).filter(r=>r.target_type!=='person').map(r=>r.target_name)))];
+  /* 两圈节点连名字要 760px 才摆得开。手机上硬塞会把十几个头像挤成一摞，
+     名字层层压在一起谁也读不出来——宁可让浮层横向滚动，图保持原样。 */
+  box.style.width='';
+  const W=Math.max(box.clientWidth||1000,760);
+  // 高度跟着节点数走：节点少时矮下来，别在中间留一块空场
+  const H=Math.max(340,Math.min(560,110+(inner.length+outerNames.length)*34)),cx=W/2,cy=H/2;
+  box.style.width=W+'px';
+  box.style.height=H+'px';
+
+  const angleOf=new Map();
+  inner.forEach((p,i)=>angleOf.set(p.name,(-90+(360/inner.length)*i)*Math.PI/180));
+
+  /* 内圈扁一点、外圈撑满：两个椭圆的纵向半径差得够大，组织才不会正好落在
+     它连着的那个人头上。差得不够时后面的错位循环只能把它甩到图的另一头。 */
+  const irx=Math.min(cx-190,236),iry=112;
+  const orx=cx-100,ory=cy-62;
+
+  const pos=new Map();
+  inner.forEach(p=>{const a=angleOf.get(p.name);pos.set(p.name,{x:cx+Math.cos(a)*irx,y:cy+Math.sin(a)*iry,kind:'person'})});
+  outerNames.forEach(name=>{
+    const as=inner.filter(p=>arr(p.relations).some(r=>r.target_name===name)).map(p=>angleOf.get(p.name));
+    // 角度取均值要走向量，直接平均会在 ±180° 处折回中心
+    const mx=as.reduce((s,a)=>s+Math.cos(a),0)/as.length,my=as.reduce((s,a)=>s+Math.sin(a),0)/as.length;
+    const a=Math.atan2(my,mx);
+    pos.set(name,{x:cx+Math.cos(a)*orx,y:cy+Math.sin(a)*ory,kind:'org'});
+  });
+  /* 外圈节点沿圆周错开，直到跟已放好的节点都拉开距离。
+     人物节点也要算进碰撞集：只跟外圈比，组织就会正好压在它连的那个人身上。 */
+  const used=inner.map(p=>Object.assign({},pos.get(p.name)));
+  outerNames.forEach(name=>{
+    const p=pos.get(name);
+    for(let i=0;i<40&&used.some(u=>Math.hypot(u.x-p.x,u.y-p.y)<118);i++){
+      const a=Math.atan2((p.y-cy)/ory,(p.x-cx)/orx)+0.22;
+      p.x=cx+Math.cos(a)*orx;p.y=cy+Math.sin(a)*ory;
+    }
+    used.push({x:p.x,y:p.y});
+  });
+
+  const seen=new Set(),wires=[],tags=[];
+  for(const p of inner)for(const r of arr(p.relations)){
+    const a=pos.get(p.name),b=pos.get(r.target_name);
+    if(!a||!b)continue;
+    const key=[p.name,r.target_name].sort().join('|')+r.relation_type;
+    if(seen.has(key))continue;                      // 互相记录的同一条关系只画一次
+    seen.add(key);
+    const hue=REL_HUE[r.relation_type]||'indigo',col='var(--'+hue+')';
+    const quiet=!r.recent_change&&!r.favorability_change;
+    // 主视图的连线规矩照搬过来：两端让开头像，箭头指向关系的记录方
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
+    const s={x:a.x+ux*30,y:a.y+uy*30},e={x:b.x-ux*30,y:b.y-uy*30};
+    wires.push('<line x1="'+s.x.toFixed(1)+'" y1="'+s.y.toFixed(1)+'" x2="'+e.x.toFixed(1)+'" y2="'+e.y.toFixed(1)+
+      '" stroke="'+col+'" stroke-width="'+(quiet?1.4:2.4)+'" stroke-linecap="round"'+
+      (quiet?' stroke-dasharray="5 5"':'')+' opacity="'+(quiet?.45:.85)+'"/>');
+    wires.push(arrowHead(e.x,e.y,ux,uy,col));
+    let nx=-uy,ny=ux;if(ny>0){nx=uy;ny=-ux}          // 标签挑连线上方那一侧，别压在线上
+    tags.push('<span class="wire-tag h-'+hue+'" style="--x:'+((s.x+e.x)/2+nx*13).toFixed(1)+
+      'px;--y:'+((s.y+e.y)/2+ny*13).toFixed(1)+'px" title="'+
+      esc(p.name+' → '+r.target_name+'　'+L('relation.type',r.relation_type)+
+          (r.current_basis?'：'+r.current_basis:'')+
+          (r.recent_change?'\n　本轮变化：'+r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):''))+'">'+
+      '<svg><use href="#'+(REL_ICON[r.relation_type]||'i-link')+'"/></svg>'+
+      esc(L('relation.type',r.relation_type))+
+      (r.target_type==='person'?changeTag(r.favorability_change||0):'')+'</span>');
+  }
+
+  const marks=[...pos].map(([name,p])=>{
+    const person=p.kind==='person';
+    const who=byName(name);
+    const sub=person&&who?standing(who).label:person?'未在册':
+      (arr(DATA.factions).some(f=>f.name===name)?'势力':arr(DATA.regions).some(r=>r.name===name)?'地区':'其他');
+    const mark=person?avatarTag(name)
+      :nodeMark({target_type:arr(DATA.factions).some(f=>f.name===name)?'faction':'region',target_name:name});
+    return '<button class="eg'+(name===focusName?' core':'')+'" style="--x:'+p.x.toFixed(1)+'px;--y:'+p.y.toFixed(1)+'px"'+
+      (person?' data-n="'+esc(name)+'"':' disabled')+'>'+
+      mark+'<b>'+esc(name)+'</b><small>'+esc(sub)+'</small></button>';
+  }).join('');
+
+  box.innerHTML='<svg class="wires">'+wires.join('')+'</svg>'+tags.join('')+marks;
+
+  $$('.eg[data-n]',box).forEach(el=>el.addEventListener('click',()=>{
+    focusName=el.dataset.n;$('#sheet').hidden=true;renderActs();renderEgo();
+  }));
+}
+
+/* ---------- 近来发生了什么 ----------
+   change_updates 是后台专门为"世界总览"产出的已发生事实索引，这一页是它的正主。 */
+let CHG_PAGE=5;
+let chgPage=0;
+function renderChanges(){
+  const all=arr(DATA.changes).slice().sort(WTime.byNewest('time'));
+  const pages=Math.max(1,Math.ceil(all.length/CHG_PAGE));
+  chgPage=Math.min(chgPage,pages-1);
+  const page=all.slice(chgPage*CHG_PAGE,chgPage*CHG_PAGE+CHG_PAGE);
+
+  $('#changes').innerHTML=page.length?page.map(c=>{
+    const hue=CHANGE_HUE[c.kind]||'indigo';
+    const who=esc(c.source_name||'未记录')+(c.target_name?' → '+esc(c.target_name):'');
+    return '<div class="chg h-'+hue+'">'+
+      '<span class="chg-i" title="'+esc(L('change.kind',c.kind))+'"><svg><use href="#'+(CHANGE_ICON[c.kind]||'i-spark')+'"/></svg></span>'+
+      '<div class="chg-b"><p>'+esc(c.summary||'未记录变化内容')+'</p>'+
+        '<small><svg><use href="#'+(SOURCE_ICON[c.source_type]||'i-spark')+'"/></svg>'+who+'</small></div>'+
+      '<span class="chg-t" title="'+esc(c.time)+'">'+esc(timeHH(c.time)||c.time)+'</span>'+
+    '</div>';
+  }).join(''):'<p class="nodata">本轮没有记录在案的变化</p>';
+
+  renderPager($('#chgPager'),{page:chgPage,pages,total:all.length,unit:'条',
+    note:'按发生时间倒序',onGo:n=>{chgPage=n;renderChanges()}});
+}
+
+/* ---------- 活跃事件 ----------
+   一页 4 条：卡片从两栏改成通栏之后矮了三成（185/211/164 → 143/166/166），
+   原来摆三张的高度现在摆得下四张。本轮四条事件正好一页排完，不再翻出一个
+   只站一张卡的第二页。多于四条时 pageSlice 会把条目摊匀（五条是 3+2）。 */
+const EV_PAGE=4;
+let evPage=0;
+function renderEvents(){
+  const all=arr(DATA.events).slice().sort(WTime.byNewest('updated_at'));
+  const {items:page,pages,page:pg}=P.pageSlice(all,EV_PAGE,evPage);
+  evPage=pg;
+
+  $('#events').innerHTML=page.map(e=>{
+    const hue=EVENT_HUE[e.category]||'violet';
+    /* 卡片原来挂 data-toast，点了弹一句「事件名：当前局势」——那两句就印在卡上，
+       等于点了个响。改成跟隔壁任务进展一样跳到任务与事件页并选中它。 */
+    return '<button class="ev h-'+hue+'" data-n="'+esc(e.name)+'">'+
+      '<div class="ev-top">'+
+        '<span class="ev-mark"><svg><use href="#'+(EVENT_ICON[e.category]||'i-spark')+'"/></svg></span>'+
+        '<b>'+esc(e.name)+'</b>'+
+        '<span class="chip">'+esc(L('event.status',e.status))+'</span></div>'+
+      '<p>'+esc(e.current_state||e.trigger||'未记录当前局势')+'</p>'+
+      '<div class="ev-foot">'+
+        '<span class="ev-tag">'+esc(L('event.category',e.category))+'</span>'+
+        (arr(e.locations).length?'<span class="at"><svg><use href="#i-pin"/></svg><span>'+esc(arr(e.locations).join('、'))+'</span></span>':'')+
+        (e.next_update?'<span class="next"><svg><use href="#i-bell"/></svg><span><i>下次检查</i>'+esc(e.next_update)+'</span></span>':'')+
+      '</div></button>';
+  }).join('')||'<p class="nodata">本轮没有事件记录</p>';
+
+  renderPager($('#evPager'),{page:evPage,pages,total:all.length,unit:'条',
+    note:'按更新时间倒序',onGo:n=>{evPage=n;renderEvents()}});
+
+  $$('#events .ev').forEach(el=>el.addEventListener('click',()=>{
+    P.goto('tasks', { focus: el.dataset.n });
+  }));
+}
+
+/* ---------- 世界状态 ----------
+   侧栏那张小卡，整个控制台唯一一处"概括"。它是一句话，点名了具体的东西：
+   「2 起事件尚未收束，另有 1 个地区在争夺中」——读起来是旁白，不是仪表。
+   同一份判断原来还铺成了一个 329px 的「世界概况」面板（八个数字加一圈光晕），
+   那个删了，见 README「不要把世界摘成仪表盘」。 */
+function renderSummary(){
+  const evs=arr(DATA.events),rs=arr(DATA.regions);
+  const contested=rs.filter(r=>r.control?.status==='contested').length;
+  const openEv=evs.filter(e=>['active','waiting'].includes(e.status)).length;
+  const mood=openEv>=2?['紧张','rose']:openEv===1?['不安','amber']:['平静','green'];
+
+  $('#sideState').innerHTML=fieldKey('i-lantern','世界状态')+
+    '<b>'+mood[0]+'</b>'+
+    '<p>'+(openEv?openEv+' 起事件尚未收束，'+(contested?'另有 '+contested+' 个地区在争夺中。':'地区控制暂时稳定。')
+                :'没有未收束的事件，一切如常运转。')+'</p>'+
+    /* 原来这行底下还有一枚「查看详情」，弹「世界设定页尚未接入」。
+       这块本来就是从本轮记录里数出来的两句话，没有"详情"这一层。 */
+    '';
+  $('#sideState').className='side-state h-'+mood[1];
+}
+
+/* ---------- 任务进展 ---------- */
+const TP_PAGE=3;
+let tpPage=0;
+function renderTasks(){
+  const all=arr(DATA.tasks).slice().sort(WTime.byNewest('updated_at'));
+  const pages=Math.max(1,Math.ceil(all.length/TP_PAGE));
+  tpPage=Math.min(tpPage,pages-1);
+  const page=all.slice(tpPage*TP_PAGE,tpPage*TP_PAGE+TP_PAGE);
+
+  $('#tasks').innerHTML=page.map(t=>{
+    const hue=taskHue(t.source||'');
+    const pct=progressOf(t);
+    const cur=arr(t.stages).find(s=>['current','blocked'].includes(s.status));
+    const stages=arr(t.stages),done=stages.filter(s=>s.status==='completed').length;
+    // 任务名和阶段摘要都是省略号截断，完整原文进 title；百分比的口径也挂在这里，
+    // 不必在面板标题下另写一行「进度＝已完成阶段占比」
+    const tip=t.name+'\n'+(cur?cur.name+'　·　'+(cur.summary||''):t.objective||'未记录任务目标')+
+      '\n进度＝已完成阶段占比（'+stages.length+' 个阶段完成 '+done+' 个）';
+    return '<button class="tp h-'+hue+'" data-n="'+esc(t.name)+'" title="'+esc(tip)+'">'+
+      '<span class="tp-i"><svg><use href="#'+(CAT_ICON[t.category]||'i-scroll')+'"/></svg></span>'+
+      '<span class="tp-b">'+
+        '<span class="tp-h"><span class="tp-cat">'+esc(L('task.category',t.category))+'</span>'+
+          '<span class="tp-name">'+esc(t.name)+'</span>'+
+          '<span class="tp-pct">'+pct+'%</span></span>'+
+        '<p>'+esc(cur?cur.name+'　·　'+(cur.summary||''):t.objective||'未记录任务目标')+'</p>'+
+        '<span class="bar" style="--p:'+pct+'%"><i></i></span>'+
+      '</span></button>';
+  }).join('')||'<p class="nodata">本轮没有任务记录</p>';
+
+  renderPager($('#tpPager'),{page:tpPage,pages,total:all.length,unit:'条',
+    note:'按更新时间倒序',onGo:n=>{tpPage=n;renderTasks()}});
+
+  $$('.tp').forEach(el=>el.addEventListener('click',()=>{
+    P.goto('tasks', { focus: el.dataset.n });
+  }));
+}
+
+/* ---------- 两栏配平 ----------
+   右栏是定宽的，屏幕一宽左栏内容就横着铺开、竖着变短，右栏纹丝不动，页面底下会空出一条。
+   补空的东西必须是真内容，不能是把星图拉稀或者给面板灌内边距。左栏手上有两样可用：
+   关系明细（一次约 250px，粗调）和近期变化的每页条数（一条约 46px，细调）。
+   先粗后细，两者就不会互相顶——明细摊开后剩下的零头才交给条数去补。 */
+let egoAuto=true;                                 // 用户手动开合过就不再自动管
+/* 窄屏两栏是上下堆的，这时候比高度没有意义（比了会把条数越削越少）。 */
+function side(){
+  const c=P.$$('.main > .col');
+  return c.length>1&&c[0].offsetTop===c[1].offsetTop?c:null;
+}
+function fillEgoList(){
+  if(!egoAuto||!$('#egoList').hidden)return;
+  const c=side();
+  if(!c||c[1].offsetHeight-c[0].offsetHeight<200)return;
+  $('#egoList').hidden=false;
+  $('#egoMore').setAttribute('aria-expanded','true');
+  $('#egoMore').textContent='收起明细 ▴';
+  renderEgo();
+}
+function fitChgPage(){
+  const c=side(),rows=P.$$('#changes > *');
+  if(!c||!rows.length)return;
+  const unit=rows.reduce((s,e)=>s+e.offsetHeight,0)/rows.length;
+  const room=c[1].offsetHeight-c[0].offsetHeight;
+  if(Math.abs(room)<unit)return;                  // 差不到一条，别来回抖
+  const next=Math.max(4,Math.min(12,CHG_PAGE+Math.round(room/unit)));
+  if(next===CHG_PAGE)return;
+  CHG_PAGE=next;renderChanges();renderEgo();
+}
+const balance=()=>{fillEgoList();fitChgPage()};
+
+/* ---------- 启动 ---------- */
+P.initChrome('世界演进');
+renderRuler();
+renderActs();
+// 关系图要量右边那块面板有多高才知道自己能撑多大，所以放在变化列表之后渲染
+renderChanges();
+renderEvents();
+renderSummary();
+renderTasks();
+renderEgo();
+// 头像和字体到位后面板高度还会再变一次，补一遍量高
+requestAnimationFrame(()=>{renderEgo();balance()});
+
+$('#keyOnly').addEventListener('click',e=>{
+  keyOnly=!keyOnly;actPage=0;
+  e.currentTarget.setAttribute('aria-pressed',String(keyOnly));
+  renderActs();
+});
+$('#expandAll').addEventListener('click',e=>{
+  expanded=!expanded;
+  e.currentTarget.textContent=expanded?'收起近况 ▴':'展开每人的近况 ▾';
+  renderActs();
+});
+$('#egoMore').addEventListener('click',e=>{
+  const on=$('#egoList').hidden;
+  egoAuto=false;                     // 手动开合过之后配平就别再动它
+  $('#egoList').hidden=!on;
+  e.currentTarget.setAttribute('aria-expanded',String(on));
+  e.currentTarget.textContent=on?'收起明细 ▴':'关系明细 ▾';
+  renderEgo();                       // 明细展开后面板变高，图能撑多大要重新量
+});
+$('#openFull').addEventListener('click',()=>{$('#sheet').hidden=false;renderFull()});
+$('#sheetClose').addEventListener('click',()=>{$('#sheet').hidden=true});
+$('#sheet').addEventListener('click',e=>{if(e.target===e.currentTarget)$('#sheet').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#sheet').hidden=true});
+/* 面板宽度变了要重排：关系图和时间尺的坐标都是按像素算的；
+   人物动态一页几个是「两行 × 当前列数」，跨过 1440 / 700 两个断点也要重算。 */
+addEventListener('resize',()=>{renderRuler();renderActs();renderEgo();balance();if(!$('#sheet').hidden)renderFull()});
+</script>
+</body>
+</html>

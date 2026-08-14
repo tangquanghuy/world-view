@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台世界引擎</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f4efe6; }
+  #frame { display: block; width: 100%; height: 100%; border: 0; background: #f4efe6; }
+</style>
+</head>
+<body>
+<iframe id="frame" title="后台世界引擎面板"></iframe>
+<script>
+/**
+ * 静态站单入口：四页仍是独立 HTML（方便截图/体检工具），对外只暴露一个 URL。
+ * 路由：#/overview | #/characters | #/factions | #/tasks
+ * 子页通过 window.parent.WE_SPA.navigate 或 postMessage({type:'we-goto'}) 切页。
+ */
+(function () {
+  'use strict';
+
+  const ROUTES = {
+    overview: '总览.html',
+    characters: '角色档案.html',
+    factions: '势力与地区.html',
+    tasks: '任务与事件.html',
+  };
+  const DEFAULT = 'overview';
+  const frame = document.getElementById('frame');
+  let current = '';
+
+  function parseRoute() {
+    const raw = String(location.hash || '').replace(/^#\/?/, '').trim();
+    const id = raw.split(/[?#]/)[0] || DEFAULT;
+    return ROUTES[id] ? id : DEFAULT;
+  }
+
+  function navigate(id, opts) {
+    const route = ROUTES[id] ? id : DEFAULT;
+    if (opts && opts.focus != null) {
+      try { sessionStorage.setItem('focusTask', String(opts.focus)); } catch (_e) { /* ignore */ }
+    }
+    const next = '#/' + route;
+    if (location.hash === next) sync(true);
+    else location.hash = next;
+  }
+
+  function sync(force) {
+    const id = parseRoute();
+    const file = ROUTES[id];
+    if (!force && id === current && frame.getAttribute('src')) return;
+    current = id;
+    // 相对当前 index.html；GitHub Pages 挂在子目录时也能工作
+    frame.src = new URL(file, location.href).href;
+  }
+
+  window.WE_SPA = { navigate: navigate, routes: ROUTES };
+
+  window.addEventListener('message', function (e) {
+    const data = e && e.data;
+    if (!data || data.type !== 'we-goto') return;
+    navigate(data.route, data.opts || {});
+  });
+
+  window.addEventListener('hashchange', function () { sync(false); });
+  if (!location.hash) location.replace('#/' + DEFAULT);
+  else sync(true);
+})();
+</script>
+</body>
+</html>

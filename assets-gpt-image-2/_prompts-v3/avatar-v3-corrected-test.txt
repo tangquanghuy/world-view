@@ -1,0 +1,18 @@
+﻿Create a clean production character-avatar sheet containing exactly 8 different original fantasy character busts in a strict 4 columns by 2 rows grid, one isolated centered bust per equal invisible square cell.
+
+ART DIRECTION — NORMAL PEOPLE IN A STAINED-GLASS-INSPIRED STORYBOOK COMPOSITION, NOT PEOPLE MADE OF GLASS:
+The characters must have ordinary matte skin, natural hair, opaque woven cloth, leather, and normal fantasy clothing. Render them as polished 2D anime story-cutscene illustrations with clean fine line art, soft cel shading, simplified facial identity, and elegant flat color grouping. Borrow only the compositional qualities of medieval stained-glass narrative art: jewel-tone palette harmony, graceful outlined silhouettes, restrained ornamental curves, clear large color masses, and a faint sense of transmitted colored light. The stained-glass influence belongs to the overall graphic design and palette only.
+
+ABSOLUTELY NO glass material on the characters. No glass skin, no glass hair, no crystal clothing, no mosaic body, no lead came lines crossing faces or garments, no polygon facets, no cracks, no reflective shards, no translucent anatomy, no metallic contour network, no stained-glass window frames, no circular halos, and no glowing glass panels behind each person.
+
+CHARACTERS:
+Eight visibly unrelated people. Vary age impression, body build, head shape, hairstyle, hair color, collar, shoulder silhouette, clothing structure, and palette. Use sapphire, garnet, moss, amber, plum, muted turquoise, ivory, charcoal, and dusty rose across different characters. Allowed views only: left profile, right profile, three-quarter left, three-quarter right, or front-facing with identifying facial features hidden by fringe, veil, high collar, scarf, or soft hat shadow. Never rear view and never back-facing. No detailed recognizable eyes, nose, or mouth. No repeated hooded-cloak template.
+
+CLOTHING:
+Original broadly European-fantasy or wholly fictional layered garments: fitted coats, short capelets, broad collars, scarves, soft brim hats, panelled jackets, simple mantles and wrap layers. Role-neutral; no weapons, tools, uniforms, insignia, text, famous likeness, or recognizable existing game character.
+
+EXCLUDE EAST-ASIAN PERIOD STYLING:
+No hanfu, qipao, Chinese crossed robe collars, cloud motifs, Chinese knots, jade pendants, tassel crowns, hair sticks, ink-wash motifs, dragon or phoenix imagery. No kimono, obi, samurai styling, shrine garments, or traditional East-Asian hats.
+
+BACKGROUND AND LAYOUT:
+Plain warm ivory background in every cell with only an extremely subtle soft jewel-color wash near the shoulders. No scenery, no window architecture, no decorative frame, no panel border, no labels, no text, no interaction between cells. Generous padding and consistent bust scale. Must remain readable when reduced to 104 by 104 pixels.

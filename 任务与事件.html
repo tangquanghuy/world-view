@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台世界引擎 · 任务与剧本</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/console.css">
+<style>
+/* =============================================================================
+   任务与事件页 · 对照 任务与事件.png 整屏复刻
+   通用令牌与外壳在 shared/tokens.css + shared/console.css，这里只放本页组件。
+   ========================================================================== */
+
+/* ---------- 任务卡 ---------- */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:2px 18px 16px}
+.tcard{
+  position:relative;display:flex;flex-direction:column;gap:0;min-width:0;
+  padding:15px;border-radius:var(--r-card);background:var(--card);box-shadow:var(--sh1);
+  cursor:pointer;text-align:left;border:0;font:inherit;color:inherit;
+  transition:box-shadow .26s ease,transform .26s ease;
+}
+.tcard:hover{transform:translateY(-2px);box-shadow:var(--sh3)}
+.tcard.on{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 22px var(--gold-glow)}
+.tcard.on::after{content:"✦";position:absolute;right:13px;bottom:11px;color:var(--gold);font-size:15px;line-height:1}
+.tcard h3{margin:10px 0 0;color:var(--ink2);font:600 19px/1.35 var(--serif);overflow-wrap:anywhere}
+.tsrc{margin:6px 0 0;color:var(--ink5);font:14px/1.5 var(--ui)}
+.tstatus{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:10px}
+.tobj{margin:10px 0 0;color:var(--ink3);font:14px/1.7 var(--ui);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.tcard .avs{margin-top:11px}
+.tcard .prow{margin-top:11px}
+/* 底栏一行：小标签 + 值。原型这里也只有一行（预计耗时 2天14小时），
+   多铺几行会把卡片下半截糊成灰块。完整的期限／下次检查／最近演进在详情面板里。 */
+.tfoot{
+  display:flex;align-items:baseline;gap:8px;
+  margin-top:auto;padding-top:11px;border-top:1px solid var(--rule);
+  color:var(--ink3);font:14px/1.55 var(--ui);
+}
+.tfoot-k{display:flex;align-items:center;gap:4px;flex:0 0 auto;color:var(--hue-ink);font-weight:600;font-size:13px}
+.tfoot-k svg{flex:0 0 auto;width:13px;height:13px;opacity:.85}
+.tfoot-v{min-width:0;flex:1 1 auto;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tflag{
+  flex:0 0 auto;padding:2px 8px;border-radius:var(--r-chip);
+  background:var(--amber-soft);color:var(--amber-ink);font:600 14px/1.35 var(--ui);white-space:nowrap;
+}
+
+/* ---------- 链路详情 ---------- */
+.flow-wrap{position:relative;overflow-x:auto;padding:13px 18px 6px}
+.flow{position:relative;min-height:var(--fh,190px)}
+.flow svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+/* 节点 176px 宽：里面的文字统一提到 14px 后，158px 一行只剩十个字，
+   摘要两行截断会把话切在半截上。改宽度必须同步改 JS 里的 CW。 */
+.fnode{
+  position:absolute;left:var(--x);top:var(--y);width:176px;
+  display:grid;gap:5px;padding:13px;border-radius:var(--r-card);
+  background:var(--card);box-shadow:var(--sh1);
+}
+.fnode b{color:var(--ink2);font:600 15px/1.4 var(--ui)}
+.fnode .st{color:var(--hue-ink);font:600 14px/1.35 var(--ui)}
+
+.fnode p{margin:2px 0 0;color:var(--ink3);font:14px/1.65 var(--ui);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fnode .mini{display:flex;gap:5px;margin-top:5px}
+.fnode .mini .av,.fnode .mini .av-more{width:26px;height:26px;font-size:12px}
+.fnode.done{box-shadow:var(--sh1),inset 0 0 0 1px var(--green-track)}
+.fnode.now{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 20px var(--gold-glow)}
+.fnode .badge{position:absolute;right:9px;bottom:8px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%}
+.fnode .badge svg{width:13px;height:13px}
+.fnode.done .badge{background:var(--green-soft);color:var(--green-ink)}
+.fnode.now .badge{background:var(--gold-soft);color:var(--gold-ink)}
+
+/* ---------- 任务／事件契约块 ---------- */
+.contract{margin:4px 18px 12px;padding:12px 14px;border-radius:var(--r-card);background:var(--sunken)}
+.outcome{margin-bottom:11px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+.outcome .v{font-weight:600}
+.contract-block{margin-top:11px;padding-top:11px;border-top:1px solid var(--rule)}
+.contract-block .k{color:var(--amber-ink)}
+.contract-block ul{margin:7px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+.contract-block li{
+  position:relative;padding-left:16px;
+  color:var(--amber-ink);font:14px/1.65 var(--ui);overflow-wrap:anywhere;
+}
+.contract-block li::before{content:'';position:absolute;left:4px;top:.6em;width:5px;height:5px;border-radius:50%;background:currentColor}
+.contract-parts{margin-top:11px;padding-top:11px;border-top:1px solid var(--rule)}
+
+/* ---------- 事件详情：与任务链共用这块面板 ----------
+   事件没有阶段图，取而代之的是"已经发生的公开后果"这条时间线。 */
+.evdetail{padding:14px 18px 4px}
+.ed-lead{margin:0;color:var(--ink3);font:15px/1.75 var(--ui)}
+.ed-h{display:flex;align-items:center;gap:6px;margin:16px 0 0;color:var(--hue-ink);font:600 14px/1.4 var(--ui);letter-spacing:.04em}
+.ed-h svg{flex:0 0 auto;width:15px;height:15px;opacity:.85}
+.evdetail .ed-h:first-child{margin-top:0}
+/* 后果条目每条就一句话。原来一条占满 960px 的一整行，右边空着大半条，
+   两条就把面板拉高一截。改成按 300px 一格铺开，宽面板里横着排，390 下退回单列。 */
+.effects{margin:9px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:9px}
+.effect{
+  position:relative;padding:9px 12px 9px 15px;border-radius:var(--r-card);
+  background:var(--sunken);overflow:hidden;
+}
+.effect::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--hue)}
+.effect b{display:block;color:var(--ink2);font:400 14px/1.65 var(--ui);overflow-wrap:anywhere}
+.effect small{display:block;margin-top:3px;color:var(--ink4);font:14px/1.45 var(--ui)}
+.rel{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.rel button{
+  padding:5px 12px;border:1px solid var(--hue-track);border-radius:var(--r-chip);
+  background:var(--paper);color:var(--hue-ink);font:14px/1.4 var(--ui);cursor:pointer;
+  transition:background .18s ease;
+}
+.rel button:hover{background:var(--hue-soft)}
+.rel button.missing{border-style:dashed;color:var(--ink5);cursor:default}
+
+/* 长文本区块限宽。一行铺满 960px 是四十好几个汉字，眼睛回不到下一行的行首。
+   当前 mock 的句子短，看不出差别；接真实产出后这才是常态。 */
+.ed-lead{max-width:40em}
+.contract-block ul{max-width:44em}
+
+@media(max-width:1440px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:560px){ .cards{grid-template-columns:minmax(0,1fr)} }
+</style>
+</head>
+<body>
+
+<script src="shared/icons.js"></script>
+
+<header class="header">
+  <div class="brand">
+    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-text">
+      <h1>后台世界引擎</h1>
+      <p>当玩家不在场时，世界依然在呼吸</p>
+    </div>
+  </div>
+
+  <div class="hbox">
+    <div>
+      <small>世界时间</small>
+      <span class="clock-date" id="wDate">—</span>
+    </div>
+    <b class="clock-time" id="wClock">--:--</b>
+  </div>
+
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <!-- 导航由 P.initChrome 渲染，跟另外三页同一份 NAV 表。
+         这一页原来把六项写死在这儿，六项全点不动——包括三个真实存在的页面。
+         根子是这页最早按原型复刻时还没有 shared 层，自己搭了一套外壳。 -->
+    <nav class="nav" id="nav"></nav>
+    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+  </aside>
+
+  <div class="main">
+    <div class="col">
+
+      <!-- 这里原来是「任务进展」横条：一个标题加四个计数（进行中 3 / 待跟进 2 /
+           可推进 3 / 已完成阶段 7）。原型上这排数是 18/7/5/23，撑得住一整条。
+           照搬到真实数据上全是个位数，而且前三个在下面的任务卡上一眼就能数出来。
+           整条删了，页面标题由侧栏的选中项承担。 -->
+
+      <section class="panel">
+        <header class="phead">
+          <span class="pmark h-rose"><svg><use href="#i-flow"/></svg></span>
+          <div><h2>近期动向</h2><span class="sub" id="tlSub"></span></div>
+          <!-- 原来这里有「查看完整时间线 ›」，删了：这条轴上的任务和事件本页下面
+               就在完整分页展示，跨实体的世界演进流在总览页，没有第三个"更完整"的地方 -->
+        </header>
+        <div class="tl" id="timeline"></div>
+        <div class="cards" id="cards"></div>
+        <div class="pager" id="taskPager"></div>
+      </section>
+
+      <section class="panel">
+        <header class="phead">
+          <span class="pmark h-indigo"><svg><use href="#i-scroll"/></svg></span>
+          <div><h2 id="detailTitle">任务详情</h2><span class="sub" id="detailSub"></span></div>
+        </header>
+        <div class="flow-wrap" id="flowWrap"><div class="flow" id="flow"></div></div>
+        <div class="evdetail" id="evDetail" hidden></div>
+        <div class="contract" id="contract"></div>
+        <div class="nowline" id="nowLine"></div>
+      </section>
+
+    </div>
+
+    <div class="col">
+
+      <section class="panel">
+        <header class="phead">
+          <span class="pmark h-amber"><svg><use href="#i-bell"/></svg></span>
+          <div><h2>活跃事件</h2></div>
+          <!-- 「查看全部 ›」删了：全部事件就在这个面板里翻页，出口指回自己 -->
+        </header>
+        <div class="pbody" id="events"></div>
+        <div class="pager" id="evPager"></div>
+      </section>
+
+      <!-- 原来这是「世界概况」面板，337px：三个计数（活跃任务 / 涉及地点 / 牵涉势力）
+           加四条自己发明的等级（风险等级 / 世界氛围 / 民众情绪 / 资源状况）。
+           契约里没有这四个字段，是前端拿本轮记录套 if 算出来的，见 README。
+           整块删了，只留下面这一条——它是全场最早的一次待检查时间，
+           单条的 next_update 在各自卡片上，但"下一件事什么时候发生"得跨任务和
+           事件一起看，是这一页唯一真正看不见的信息。 -->
+      <div class="wstate" id="wState" hidden></div>
+
+    </div>
+  </div>
+</div>
+
+<i class="spark" style="left:5%;top:16%"></i>
+<i class="spark gold" style="left:47%;top:7%"></i>
+<i class="spark" style="right:6%;top:34%"></i>
+<i class="spark" style="left:22%;bottom:9%"></i>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="mock/world-state-v09.js"></script>
+<script src="shared/vocab.js"></script>
+<script src="shared/wtime.js"></script>
+<script src="shared/panel.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const arr=v=>Array.isArray(v)?v:[];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* 中文标签统一走 shared/vocab.js，那里的每一组都对应契约里的一条枚举约束。
+   必须带组名：同一个字符串在不同组里含义不同，例如 planned 是日程状态而不是阶段状态。 */
+const L=(group,value)=>V.label(group,value,'未记录');
+
+const EVENT_HUE={conflict:'rose',disaster:'amber',infrastructure:'indigo',investigation:'violet',politics:'purple',social:'violet',trade:'teal'};
+const EVENT_ICON={conflict:'i-ship',disaster:'i-fire',infrastructure:'i-arch'};
+const STAGE_PHASE={completed:'done',current:'active',blocked:'key',available:'idle',waiting:'idle',cancelled:'idle'};
+
+const DATA=(window.WORLD_MOCK||{}).background_world||{};
+// 详情面板给任务和事件共用，选中项要连类型一起记，否则翻页后下标会串到另一个列表
+let sel={kind:'task',i:0};
+
+/* 色相按委托方分配，不按 category。
+   契约把 category 收敛成 character_task / faction_project 这几类，五条任务只会落进两三种，
+   拿它上色等于全页只剩两个颜色；而 source 是实际委托方，既有区分度又有意义：
+   同一个公会发出的两条委托共用一色，本身就是有用的信息。 */
+const HUES=['indigo','amber','violet','teal','green','purple','rose'];
+const SOURCE_HUE=new Map();
+arr(DATA.tasks).forEach(t=>{const k=t.source||'';if(!SOURCE_HUE.has(k))SOURCE_HUE.set(k,HUES[SOURCE_HUE.size%HUES.length])});
+function hueOf(t){return SOURCE_HUE.get(t.source||'')||'indigo'}
+function timeHH(t){const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?m[1].padStart(2,'0')+':'+m[2]:''}
+/* 时间戳保留完整日期，不截成 HH:mm */
+function fullTime(t){const s=String(t||'').trim();return s||''}
+/* 参与者的形状本身就是类型：人物是圆头像，势力和团体是盾形纹章。
+   这样 participant.type 不必再用「（人物·…）」这种文字占位，把版面让给真正有用的角色名。 */
+const isPerson=p=>(p&&p.type||'person')==='person';
+function avatarTag(p,cls='av'){return P.avatarTag(p,cls)}
+function avatarRow(list,max=3,cls='av'){
+  const p=arr(list);
+  return p.slice(0,max).map(x=>avatarTag(x,cls)).join('')+(p.length>max?'<span class="av-more">+'+(p.length-max)+'</span>':'');
+}
+/* 参与者名单：一人一格，头像／纹章 + 名字 + 在本任务里的角色。
+   角色（role）才是这里唯一值得读的信息，所以给它独立一行，不再挤进括号。 */
+function participantList(list){
+  const ps=arr(list);
+  if(!ps.length)return '<p class="nodata parts-empty">未记录参与者</p>';
+  return '<div class="parts">'+ps.map(p=>
+    '<div class="part">'+avatarTag(p,'pav')+
+      '<span class="pinfo"><b>'+esc(p.name||'未记录')+'</b>'+
+      '<small>'+esc(p.role||L('participant.type',p.type))+'</small></span>'+
+    '</div>').join('')+'</div>';
+}
+function progressOf(t){const s=arr(t.stages),d=s.filter(x=>x.status==='completed').length;return s.length?Math.round(d/s.length*100):(t.status==='completed'?100:0)}
+
+
+/* ---------- 时间轴 ----------
+   横条最多摆得下 6 个节点。原来按数组顺序取前 6 个，取到哪些看运气；
+   改成按时间挑最近的 6 个，再按时间正序摆回去，读起来才是一条时间线。 */
+const TL_MAX=6;
+function timelineItems(){
+  const a=[];
+  arr(DATA.tasks).forEach(t=>{
+    const s=arr(t.stages).find(x=>['current','blocked'].includes(x.status))
+          ||arr(t.stages).find(x=>x.status==='available')
+          ||arr(t.stages).at(-1);
+    // 时间轴混排任务阶段和事件，两者状态枚举不同，得各自记住自己属于哪一组
+    if(s)a.push({name:s.name,status:s.status,group:'stage.status',time:s.time,hue:hueOf(t),owner:t.name});
+  });
+  arr(DATA.events).forEach(e=>{
+    a.push({name:e.name,status:e.status,group:'event.status',time:e.started_at,hue:EVENT_HUE[e.category]||'purple',owner:e.name});
+  });
+  return a.sort(WTime.byNewest('time')).slice(0,TL_MAX).reverse();
+}
+function renderTimeline(){
+  const items=timelineItems();
+  const total=arr(DATA.tasks).length+arr(DATA.events).length;
+  // 摆不下的要说出来，不能让人以为这就是全部。
+  // 摆得下的时候这句话就没有信息了，副标题空着即可。
+  $('#tlSub').textContent=total>TL_MAX?'取最近 '+TL_MAX+' 个（共 '+total+' 条）':'';
+  const stops=items.map((x,i)=>'var(--'+x.hue+') '+Math.round(i/(items.length-1||1)*100)+'%').join(',');
+  const tl=$('#timeline');
+  tl.style.setProperty('--tl-stops','linear-gradient(90deg,'+stops+')');
+  tl.style.setProperty('--tl-stops-v','linear-gradient(180deg,'+stops+')');
+  tl.innerHTML=items.map(x=>
+    '<button class="tl-node h-'+x.hue+'" data-n="'+esc(x.owner)+'" data-p="'+(STAGE_PHASE[x.status]||'idle')+'" title="'+esc(x.owner+' · '+L(x.group,x.status))+'">'+
+      '<span class="tl-name">'+esc(x.name)+'</span>'+
+      '<span class="tl-dot"></span>'+
+      '<span class="tl-time">'+esc(fullTime(x.time)||'条件触发')+'</span>'+
+    '</button>'
+  ).join('');
+  /* 节点原来是六个 <button>，带 title、有 hover，点了什么都不发生。
+     它们本来就一一对应下面的某条任务或事件（x.owner 就是那条记录的名字）。 */
+  document.querySelectorAll('#timeline .tl-node').forEach(el=>el.addEventListener('click',()=>{
+    if(focusByName(el.dataset.n)){renderCards();renderEvents();renderDetail()}
+  }));
+}
+
+/* 按名字选中一条任务或事件，并把它所在的那一页翻出来。
+   时间轴节点和跨页跳转都走这一条路：别处的页面只知道名字，不知道下标——
+   下标是本页按 updated_at 排完才有的东西。 */
+function focusByName(name){
+  if(!name)return false;
+  const ti=sortedTasks().findIndex(t=>t.name===name);
+  if(ti>=0){sel={kind:'task',i:ti};taskPage=Math.floor(ti/PAGE_SIZE);return true}
+  const ei=sortedEvents().findIndex(e=>e.name===name);
+  if(ei>=0){sel={kind:'event',i:ei};evPage=Math.floor(ei/PAGE_SIZE);return true}
+  return false;
+}
+
+/* ---------- 任务卡 ----------
+   版面是四张卡一屏，但不能再用 slice(0,4) 按数组位置切：
+   那样切掉哪条完全看运气，之前就把唯一一条受阻任务切没了，而且不留痕迹。
+   改成按 updated_at 倒序排，一页四条，早的翻页看，一条都不丢。
+   过期数据的真正清理在数据层做（世界书里存着，每轮都回填进上下文要花 token），
+   见 数据层待办.md，页面这边只负责不隐瞒。 */
+const PAGE_SIZE=4;
+let taskPage=0;
+function sortedTasks(){return arr(DATA.tasks).slice().sort(WTime.byNewest('updated_at'))}
+
+/* 卡片是扫读面，详情面板是细读面。
+   原型的任务卡底部只有一行「预计耗时」，我一度把 deadline / next_update / blockers /
+   updated_at 四项全铺上去，卡片下半截成了一片 13px 灰字，反而什么都读不进去。
+   现在卡上只留一条最该看的时间和一枚阻塞角标，四项完整内容在详情面板里逐条列出，
+   点开就有——是分层，不是删减。 */
+function taskCard(t,i,on){
+  const p=progressOf(t),hue=hueOf(t);
+  const blockers=arr(t.blockers);
+  // 有硬期限就看期限，没有就看下一个检查点；两者都缺才说"待条件触发"
+  const when=t.deadline?['i-hourglass','期限',t.deadline]
+            :t.next_update?['i-bell','下次检查',t.next_update]
+            :['i-spark','进度','待条件触发'];
+  return '<button class="tcard h-'+hue+(on?' on':'')+'" data-i="'+i+'">'+
+    '<span class="chip">'+esc(L('task.category',t.category))+'</span>'+
+    '<h3>'+esc(t.name)+'</h3>'+
+    '<div class="tsrc">委托方：'+esc(t.source||'未记录')+'</div>'+
+    // 阻塞角标跟状态并排。放到底栏会跟时间抢那一行的宽度，把时间挤成「霜月13日 12…」
+    '<div class="tstatus">'+
+      '<span class="chip line">'+esc(L('task.status',t.status))+'</span>'+
+      (blockers.length?'<span class="tflag" title="'+esc(blockers.join('、'))+'">受阻 '+blockers.length+'</span>':'')+
+    '</div>'+
+    '<p class="tobj">'+esc(t.objective||'未记录任务目标')+'</p>'+
+    '<div class="avs">'+avatarRow(t.participants)+'</div>'+
+    '<div class="prow"><b class="pct">'+p+'%</b><span class="bar" style="--p:'+p+'%"><i></i></span></div>'+
+    '<div class="tfoot" title="'+esc(when[2])+'">'+
+      '<span class="tfoot-k"><svg><use href="#'+when[0]+'"/></svg>'+when[1]+'</span>'+
+      '<span class="tfoot-v">'+esc(when[2])+'</span>'+
+    '</div>'+
+  '</button>';
+}
+function renderCards(){
+  const all=sortedTasks();
+  const pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));
+  taskPage=Math.min(taskPage,pages-1);
+  const from=taskPage*PAGE_SIZE;
+  const page=all.slice(from,from+PAGE_SIZE);
+
+  $('#cards').innerHTML=page.length
+    // data-i 存的是全局下标，翻页后详情仍能选中正确的一条
+    ?page.map((t,k)=>taskCard(t,from+k,sel.kind==='task'&&sel.i===from+k)).join('')
+    :'<div class="nodata">本轮没有任务记录</div>';
+
+  // 条数留着：它说的是被翻页藏起来的那几条。排序方向不写，两侧按钮已经是「更近／更早」。
+  $('#taskPager').innerHTML=all.length>PAGE_SIZE
+    ?'<button class="pg" data-d="-1"'+(taskPage===0?' disabled':'')+'>← 更近</button>'+
+     '<span class="pg-n">第 '+(taskPage+1)+' / '+pages+' 页　共 '+all.length+' 条</span>'+
+     '<button class="pg" data-d="1"'+(taskPage>=pages-1?' disabled':'')+'>更早 →</button>'
+    :'';
+  document.querySelectorAll('#taskPager .pg').forEach(el=>el.addEventListener('click',()=>{
+    taskPage+=Number(el.dataset.d);renderCards();
+  }));
+  document.querySelectorAll('.tcard').forEach(el=>el.addEventListener('click',()=>{
+    sel={kind:'task',i:Number(el.dataset.i)};renderCards();renderEvents();renderDetail();
+  }));
+}
+
+/* ---------- 链路详情：按 parent_stage 还原真实 DAG ---------- */
+function buildGraph(stages){
+  const byName=new Map(stages.map((s,i)=>[s.name,i]));
+  const parent=stages.map(s=>byName.has(s.parent_stage)?byName.get(s.parent_stage):-1);
+  const depth=stages.map(()=>0);
+  for(let pass=0;pass<stages.length;pass++)
+    stages.forEach((_,i)=>{if(parent[i]>=0)depth[i]=Math.max(depth[i],depth[parent[i]]+1)});
+  const cols=new Map();
+  depth.forEach((d,i)=>{if(!cols.has(d))cols.set(d,[]);cols.get(d).push(i)});
+  return{parent,depth,cols};
+}
+/* 详情面板由任务链和事件共用，按当前选中的是哪一类分流 */
+function renderDetail(){
+  if(sel.kind==='event')renderEventDetail();
+  else renderTaskDetail();
+}
+function renderTaskDetail(){
+  const t=sortedTasks()[sel.i]||sortedTasks()[0];
+  if(!t){$('#flow').innerHTML='';return}
+  $('#flowWrap').hidden=false;$('#evDetail').hidden=true;
+  const hue=hueOf(t);
+  $('#detailTitle').textContent='任务详情 · '+t.name;
+  $('#detailSub').textContent=L('task.category',t.category)+' · '+L('task.status',t.status)+' · 委托方 '+(t.source||'未记录');
+
+  const stages=arr(t.stages);
+  const{parent,depth,cols}=buildGraph(stages);
+  const CW=176,GX=64,GY=16;   // CW 必须和 .fnode 的 width 一致，否则连线和容器宽度会算错
+  const maxDepth=Math.max(...depth);
+  const W=(maxDepth+1)*CW+maxDepth*GX;
+  const flow=$('#flow');
+
+  /* 第一遍：只插入节点并按列定 x，高度交给内容决定 */
+  flow.style.width=W+'px';
+  flow.innerHTML=stages.map((s,i)=>{
+    const cls=s.status==='completed'?'done':['current','blocked'].includes(s.status)?'now':'';
+    const mark=s.status==='completed'?'i-check':['current','blocked'].includes(s.status)?'i-spark':'';
+    const badge=mark?'<span class="badge"><svg><use href="#'+mark+'"/></svg></span>':'';
+    return '<article class="fnode h-'+hue+' '+cls+'" style="--x:'+depth[i]*(CW+GX)+'px;--y:0px">'+
+      '<b>'+esc(s.name||'未命名阶段')+'</b>'+
+      '<span class="st">'+esc(L('stage.status',s.status))+'</span>'+
+      (s.time?'<span class="tm">'+esc(s.time)+'</span>':'')+
+      '<p>'+esc(s.summary||'摘要未记录')+'</p>'+
+      '<div class="mini">'+avatarRow(t.participants,3,'av')+'</div>'+
+      badge+
+    '</article>';
+  }).join('');
+
+  /* 第二遍：量出真实高度后再定 y，避免节点被容器裁切 */
+  const els=[...flow.querySelectorAll('.fnode')];
+  const h=els.map(el=>el.offsetHeight);
+  const colH=new Map();
+  cols.forEach((list,d)=>colH.set(d,list.reduce((a,i)=>a+h[i],0)+(list.length-1)*GY));
+  const H=Math.max(...colH.values());
+  const pos=[];
+  cols.forEach((list,d)=>{
+    let y=(H-colH.get(d))/2;
+    list.forEach(i=>{pos[i]={x:d*(CW+GX),y};y+=h[i]+GY});
+  });
+  els.forEach((el,i)=>el.style.setProperty('--y',pos[i].y+'px'));
+  flow.style.setProperty('--fh',H+'px');
+
+  const edges=stages.map((s,i)=>{
+    if(parent[i]<0)return '';
+    const a=pos[parent[i]],b=pos[i];
+    const x1=a.x+CW,y1=a.y+h[parent[i]]/2,x2=b.x,y2=b.y+h[i]/2,mx=(x1+x2)/2;
+    return '<path d="M'+x1+' '+y1+' C'+mx+' '+y1+','+mx+' '+y2+','+x2+' '+y2+'" fill="none" stroke="var(--'+hue+')" stroke-width="1.8" opacity=".62" marker-end="url(#ah-'+hue+')"/>';
+  }).join('');
+  flow.insertAdjacentHTML('afterbegin',
+    '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'+
+    '<defs><marker id="ah-'+hue+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'+
+    '<path d="M0 0L8 4L0 8Z" fill="var(--'+hue+')" opacity=".62"/></marker></defs>'+edges+'</svg>');
+
+  /* 任务契约：条件类三项、时限类三项各成一组，参与者是名单，排版需求不同，分块。
+     卡片上只摆得下一条时间，这里必须把 deadline / next_update / updated_at 全给出来。 */
+  const blockers=arr(t.blockers);
+  $('#contract').className='contract h-'+hue;
+  $('#contract').innerHTML=
+    outcomeBlock(t.outcome)+
+    '<div class="kv">'+[
+      ['i-check','完成条件',t.completion_condition],
+      ['i-warn','失败条件',t.failure_condition],
+      ['i-pin','涉及地点',arr(t.locations).join('、')],
+      ['i-hourglass','期限',t.deadline],
+      ['i-bell','下次检查',t.next_update],
+      ['i-spark','最近演进',t.updated_at]
+    ].map(termRow).join('')+'</div>'+
+    // 条数不写：阻塞项就列在下面，数得出来。卡片上那枚「受阻 N」要留，
+    // 因为卡片上根本没列内容，那个数字说的是看不见的东西。
+    (blockers.length
+      ?'<div class="contract-block">'+fieldKey('i-warn','当前阻塞')+
+        '<ul>'+blockers.map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul></div>'
+      :'')+
+    '<div class="contract-parts">'+fieldKey('i-people','参与者')+participantList(t.participants)+'</div>';
+
+  // 阶段状态在金色高亮的那张卡上已经写着，这里只报「走到哪儿了」，不再复述一遍
+  const cur=stages.find(s=>['current','blocked'].includes(s.status));
+  $('#nowLine').textContent=t.outcome
+    ?'✧　任务已结束：'+L('task.status',t.status)+'　✧'
+    :'✧　当前进行到：'+(cur?cur.name:'未记录')+'　✧';
+}
+
+/* 字段名一律「图标 + 彩色小标签」，值用深墨色正文。
+   之前标签和值都是灰字、字号只差 1px，六项挤在一起就是一片没有落点的文字墙。 */
+const fieldKey=(icon,text)=>'<small class="k"><svg><use href="#'+icon+'"/></svg>'+esc(text)+'</small>';
+const termRow=r=>'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2]||'未记录')+'</b></div>';
+
+/* outcome 只在任务／事件终止后才有值，当前 mock 里全为空。
+   没有它页面上就没有任何地方交代"这件事最后怎么了"，所以照样留出位置。 */
+function outcomeBlock(v){
+  return v?'<div class="outcome">'+fieldKey('i-flag','结果')+'<b class="v">'+esc(v)+'</b></div>':'';
+}
+
+/* 事件详情。visible_effects 是玩家能观察到的公开后果，related_tasks 是它牵动的任务，
+   这两项此前在页面上完全没有出口，只能在数据里看得到。 */
+function renderEventDetail(){
+  const e=sortedEvents()[sel.i];
+  if(!e)return;
+  const hue=EVENT_HUE[e.category]||'purple';
+  $('#flowWrap').hidden=true;
+  $('#evDetail').hidden=false;
+  $('#evDetail').className='evdetail h-'+hue;   // 小标题的图标和颜色跟着事件类别走
+  $('#detailTitle').textContent='事件详情 · '+e.name;
+  $('#detailSub').textContent=L('event.category',e.category)+' · '+L('event.status',e.status)+' · 更新于 '+(e.updated_at||'未记录');
+
+  const effects=arr(e.visible_effects);
+  // related_tasks 存的是任务名，对得上就能点进去，对不上也照实列出来，不吞
+  const byName=new Map(sortedTasks().map((t,i)=>[t.name,i]));
+  const rel=arr(e.related_tasks);
+
+  const edH=(icon,text)=>'<h3 class="ed-h"><svg><use href="#'+icon+'"/></svg>'+esc(text)+'</h3>';
+  $('#evDetail').innerHTML=
+    '<p class="ed-lead">'+esc(e.current_state||'当前事态未记录')+'</p>'+
+    edH('i-spark','起因')+
+    '<p class="ed-lead">'+esc(e.trigger||'触发条件未记录')+'</p>'+
+    edH('i-eye','已显现的影响')+
+    (effects.length
+      ?'<ul class="effects h-'+hue+'">'+effects.map(v=>
+        '<li class="effect"><b>'+esc(v.effect||'未记录')+'</b>'+
+        '<small>'+esc([v.time,v.location].filter(Boolean).join('　·　')||'时间地点未记录')+'</small></li>').join('')+'</ul>'
+      :'<p class="nodata parts-empty">尚无对外显现的后果</p>')+
+    edH('i-link','牵动的任务')+
+    (rel.length
+      ?'<div class="rel h-'+hue+'">'+rel.map(n=>byName.has(n)
+        ?'<button data-t="'+byName.get(n)+'">'+esc(n)+' ›</button>'
+        :'<button class="missing" disabled>'+esc(n)+'（未在任务列表中）</button>').join('')+'</div>'
+      :'<p class="nodata parts-empty">暂未牵动已登记的任务</p>');
+
+  document.querySelectorAll('#evDetail .rel button[data-t]').forEach(el=>el.addEventListener('click',()=>{
+    const i=Number(el.dataset.t);
+    sel={kind:'task',i};taskPage=Math.floor(i/PAGE_SIZE);   // 跳回任务时把它所在那页翻出来
+    renderCards();renderEvents();renderDetail();
+  }));
+
+  $('#contract').className='contract h-'+hue;
+  $('#contract').innerHTML=
+    outcomeBlock(e.outcome)+
+    '<div class="kv">'+[
+      ['i-pin','涉及地点',arr(e.locations).join('、')],
+      ['i-hourglass','预计结束',e.expected_end],
+      ['i-bell','下次检查',e.next_update]
+    ].map(termRow).join('')+'</div>'+
+    '<div class="contract-parts">'+fieldKey('i-people','参与者')+participantList(e.participants)+'</div>';
+
+  $('#nowLine').textContent='✧　事件起始：'+(e.started_at||'未记录')+'　✧';
+}
+
+/* ---------- 活跃事件 ---------- */
+function severity(e){
+  if(e.status==='active')return['sev-high','高危','rose'];
+  if(e.status==='contained')return['sev-mid','中危','amber'];
+  return['sev-low','低危','indigo'];
+}
+let evPage=0;
+function sortedEvents(){return arr(DATA.events).slice().sort(WTime.byNewest('updated_at'))}
+function renderEvents(){
+  const all=sortedEvents();
+  const pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));
+  evPage=Math.min(evPage,pages-1);
+  const from=evPage*PAGE_SIZE;
+
+  $('#events').innerHTML=all.length?all.slice(from,from+PAGE_SIZE).map((e,k)=>{
+    const i=from+k;
+    const hue=EVENT_HUE[e.category]||'purple';
+    const[,sevText,sevHue]=severity(e);
+    const icon=EVENT_ICON[e.category]||'i-scroll';
+    const on=sel.kind==='event'&&sel.i===i;
+    // 同样只留一行摘要，updated_at / expected_end / trigger / visible_effects
+    // 这些在详情面板里（点卡片展开）
+    return '<button class="ev h-'+hue+(on?' on':'')+'" data-i="'+i+'">'+
+      '<div class="ev-top">'+
+        '<span class="ev-mark"><svg><use href="#'+icon+'"/></svg></span>'+
+        '<b>'+esc(e.name)+'</b><span class="chip h-'+sevHue+'">'+sevText+'</span></div>'+
+      '<p>'+esc(e.current_state||e.trigger||'未记录当前事态')+'</p>'+
+      // 三项元信息各带图标：一个彩色小标签 + 两条带图标的灰行，
+      // 比三行同色文字叠在一起容易分辨得多
+      '<div class="ev-foot">'+
+        '<span class="ev-tag">'+esc(L('event.category',e.category))+' · '+esc(L('event.status',e.status))+'</span>'+
+        '<span class="at" title="'+esc(arr(e.locations).join('、'))+'">'+
+          '<svg><use href="#i-pin"/></svg><span>'+esc(arr(e.locations).join('、')||'地点未记录')+'</span></span>'+
+        '<span class="next" title="'+esc(e.next_update||'')+'">'+
+          '<svg><use href="#i-bell"/></svg><span><i>下次检查</i>'+esc(e.next_update||'条件触发')+'</span></span>'+
+      '</div>'+
+    '</button>';
+  }).join(''):'<p class="nodata">本轮没有活跃事件</p>';
+
+  $('#evPager').innerHTML=all.length>PAGE_SIZE
+    ?'<button class="pg" data-d="-1"'+(evPage===0?' disabled':'')+'>← 更近</button>'+
+     '<span class="pg-n">第 '+(evPage+1)+' / '+pages+' 页　共 '+all.length+' 条</span>'+
+     '<button class="pg" data-d="1"'+(evPage>=pages-1?' disabled':'')+'>更早 →</button>'
+    :'';
+  document.querySelectorAll('#evPager .pg').forEach(el=>el.addEventListener('click',()=>{
+    evPage+=Number(el.dataset.d);renderEvents();
+  }));
+  document.querySelectorAll('.ev[data-i]').forEach(el=>el.addEventListener('click',()=>{
+    sel={kind:'event',i:Number(el.dataset.i)};renderCards();renderEvents();renderDetail();
+  }));
+}
+
+/* ---------- 下一次检查 ----------
+   原型在右栏底下有一条收尾横条，写的是「世界状态：动态演进中」——只要还有一条任务
+   就恒为真，等于没说。换成摆全场最早的一次待检查时间：单条的 next_update 在各自卡片上，
+   但「下一件事什么时候发生」得跨任务和事件一起看，是这一页唯一看不见的信息。 */
+function renderSummary(){
+  const ts=arr(DATA.tasks).filter(t=>!['completed','failed','cancelled'].includes(t.status));
+  const evs=arr(DATA.events);
+  const nexts=[...ts.map(t=>t.next_update),...evs.map(e=>e.next_update)].filter(Boolean);
+  const soon=nexts.map(s=>[WTime.parse(s),s]).filter(x=>x[0]!==null).sort((a,b)=>a[0]-b[0])[0];
+  const bar=$('#wState');
+  bar.hidden=!soon;
+  if(soon){
+    bar.textContent='下一次检查 · '+soon[1];
+    bar.title='全部任务与事件里最早的一个 next_update，共 '+nexts.length+' 项待检查';
+  }
+}
+
+/* ---------- 启动 ---------- */
+P.initChrome('任务与剧本');
+
+/* 另外三页共有五处「点一条任务／事件跳到这一页」，它们把名字放进 sessionStorage
+   再跳过来。这一页原来根本不读这个键：从势力页点一个任务过去，落地是默认选中的
+   第一条，点击的目标静默丢了，而且看不出丢了。 */
+(function takeFocus(){
+  const want=sessionStorage.getItem('focusTask');
+  if(!want)return;
+  sessionStorage.removeItem('focusTask');    // 只认这一次，别让它黏在后续的访问上
+  if(!focusByName(want))P.toast('本轮记录里没有「'+want+'」');
+})();
+
+renderTimeline();renderCards();renderDetail();renderEvents();renderSummary();
+</script>
+</body>
+</html>

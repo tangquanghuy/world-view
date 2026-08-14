@@ -1,0 +1,618 @@
+{
+  "accepted_avatar_sheets": [
+    "_raw-v3/avatars/avatar-v3-corrected-test.png",
+    "_raw-v3/avatars/avatar-v3-corrected-2.png",
+    "_raw-v3/avatars/avatar-v3-corrected-3.png",
+    "_raw-v3/avatars/avatar-v3-corrected-4.png"
+  ],
+  "rejected_glass-person_sheets": [
+    "_raw-v3/avatars/avatar-v3-sheet-1.png",
+    "_raw-v3/avatars/avatar-v3-sheet-2.png",
+    "_raw-v3/avatars/avatar-v3-sheet-3.png",
+    "_raw-v3/avatars/avatar-v3-sheet-4.png"
+  ],
+  "new_avatar_count": 32,
+  "new_portrait_count": 18,
+  "assets": [
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-09.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "3728fb6ab899e99cbe860633080882bd1d9cd3eafd1874eb3a84ceaefd9005f1",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-10.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "9dfe7d3b0a567bd293578b60b8c3c6b190b2e146fd8025b30866b44d12caee7d",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-11.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "a6be12d804a34bfb11ba3e6474fe9b225ee99fa4024b5d53aefe1ca8cd8c2b57",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-12.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "81f883c4e452da5df49919b3c3ed1d448b83e1ebed63dae3211772b1db75ff6a",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-13.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "5ad9130f413c2d50286761b0cc689cfaa5fe351ff679788591767ce708f23ec5",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-14.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "9128e9b10b5b9c107b369a12f3a479e1c52386ccd7bb791eee72eb732679b51b",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-15.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "bacca558a93247d2e260907b032352d525aafc4b431c777604af66ee45418529",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-16.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-test.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "51e0a7dc6fe74013d6c28668c623bc08fb3a000e36a0ece5c71bf62d903ab7ad",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-17.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "8de04edfa5ff3a945b020c6f4a7952108d840723a3e7d201de0b3f88ff48b9b3",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-18.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "e69ea45a4442a8564d2d76c551a3b6a4a4551f2242114399dc4c5d3c5b36004e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-19.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "238c3fdaa17c61093fdd5207c011ecbad5e97d14c1e73107a777b686444ece09",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-20.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "b2e777ea3dc80e44c834498dc55d85bc2ea45f375bdad0de70c31c21376572ac",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-21.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "87992fe76b83890acd35e8a18cedb9a394c9f06fd0337faee21603656e54a8eb",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-22.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "b441979b194306c00481f27c1f7135e3e10f107f4d4b608f00ef7d371f06795a",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-23.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "7192b4735ce56f69b2fa22e3821b07e88c6743ed6fbd53c2d7b78460a3407204",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-24.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-2.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "cf673858ccadae2c4d8e40d74a801b351a5e44295484dd873c665495631be370",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-25.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "51728b8bb381fecbe71cc8e6587791dc74f77b242851d2793e8ec736140d7dc5",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-26.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "8511697aceb8ff27232ba19f48232c8e0f30e0c2dceadd41b78fe4889d9eccef",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-27.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "88a6740fb5f441637715f29a7ec875956bfdf06435fd486b6b1679c19219c8b8",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-28.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "32fa064edd01e6b3bc2d49e85ea6508c01527187f8998489e9cc21db2899ce68",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-29.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "91bb3aa557949e1435a920f6fe682f433cfdfc31f401e855dbc841b9a660fc4b",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-30.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "7a1d1bc2eebe57db92296d185d4f7fbdff62434cc5fc8097a9148830950dde49",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-31.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "5c6b0ee2e14a138bcb70ee0dea5a66f811985eb618f07b01be40b5001518d931",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-32.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-3.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "70d44405a775e1abfeab741862773bb3ba70f86fa2d35ec827a9a6ee0d958b7e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-33.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "e5682c32d59000237e4af1d283a4aed1f23105ee46ab16a3ad8d73ac1120de7b",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-34.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "f6623b05de5d19ced532e4ef72f606b86f27be18420017bb0947f0e27c630be2",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-35.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "119a6d94ba20c3e9c6b326dfa4828d86bf2f53c8ac1058d9392b07fbc0cf2f2e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-36.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "6436e6cb0edf360537f6916221ba8229674bc691784efb3c387b729838e4fc15",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-37.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "9fab34cf487b3e72fd3054b1033029f609e25d7d131cc6194f380c0b5e434dd8",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-38.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "6d899c335e7a5d144cbf3b80ad84b30ccd0c8d23192e55b971009358c2c8ca3e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-39.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "7945d60c3c22215df1007331fea472a99a9cb13eeefa0fcca6c75f9f1e0b3192",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "avatar",
+      "file": "avatars-v2/avatar-v2-40.png",
+      "source": "_raw-v3/avatars/avatar-v3-corrected-4.png",
+      "size": [
+        104,
+        104
+      ],
+      "mode": "RGB",
+      "sha256": "c944aab80ccf8fcabbac66c500694663cb0d450bd0b78ae5e899f443080865b0",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-23.png",
+      "source": "_raw-v3/portraits/portrait-v3-23.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "a317dbbe546e995635cbd77e6048941f097aefac68fc9d7f1a1617867c2e3c23",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-24.png",
+      "source": "_raw-v3/portraits/portrait-v3-24.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "242709e945c5957d3e1baaaed85b3f2142400b6d3b6ec4e86fb88766a3297448",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-25.png",
+      "source": "_raw-v3/portraits/portrait-v3-25.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "bfbff79774214a7c9241b74604fd2ab25334f70b4730462abb68b864b9f9719e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-26.png",
+      "source": "_raw-v3/portraits/portrait-v3-26.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "5d187f3c1a338c66f2b3901c74c72c0ce42357f60e5f809c09125d3ff7bd4cb9",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-27.png",
+      "source": "_raw-v3/portraits/portrait-v3-27.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "0503a800261b19fa2e9f44fb1701079e262deb7644a275702c01e71e65f5b9d2",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-28.png",
+      "source": "_raw-v3/portraits/portrait-v3-28.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "134a964f44c4391858617a5cb29b95589898a330a27ef551d886aed19cff5484",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-29.png",
+      "source": "_raw-v3/portraits/portrait-v3-29.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "edab937c9baa60e37f32b459e2721e4b80eae18423ed0f6d5ed5c49db963c9f6",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-30.png",
+      "source": "_raw-v3/portraits/portrait-v3-30.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "447674cc1ccaecb48b90476418366800c2225821b7f5b625d4639e7fc023cee9",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-31.png",
+      "source": "_raw-v3/portraits/portrait-v3-31.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "ad70ef8489ee3cdb8b9bfb85ea1e34e03af034303c2cfee0f4801e445d345252",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-32.png",
+      "source": "_raw-v3/portraits/portrait-v3-32.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "0f096a48d9777a607273a7768300189bf4faa1fb554e131cb546d06d53598cb2",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-33.png",
+      "source": "_raw-v3/portraits/portrait-v3-33.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "68911975e2b9ff073d5a682ed47096cb77ac4b156312ada91a3f61e3db1b2c5d",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-34.png",
+      "source": "_raw-v3/portraits/portrait-v3-34.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "b0eb4c823af9a30f56360ea9605db28b1e2a1a430088e86d21c28ab94c99327d",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-35.png",
+      "source": "_raw-v3/portraits/portrait-v3-35.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "17ab69b4e7d822360c171ef34a7685387d79a255cfd8072deecd0254defc6e12",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-36.png",
+      "source": "_raw-v3/portraits/portrait-v3-36.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "6e12ff0b0ea6795fa94b98c287efcbd96b8bce026af3f07606affd607e0eabb8",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-37.png",
+      "source": "_raw-v3/portraits/portrait-v3-37.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "69cedb90462e134f12c695ea30467f3bce8b3a9d386a78966883620627df9bf8",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-38.png",
+      "source": "_raw-v3/portraits/portrait-v3-38.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "34fe029c2fbfd55eef84d6eb973a865526c74f8202cc8d5634789f2dbc7fbd25",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-39.png",
+      "source": "_raw-v3/portraits/portrait-v3-39.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "d79c6dba52284aa2c3d39f80325e9b230594213f1ca3ab41612353677b37bc9e",
+      "style": "normal-person jewel-tone narrative illustration"
+    },
+    {
+      "category": "portrait",
+      "file": "portraits-v2/portrait-v2-40.png",
+      "source": "_raw-v3/portraits/portrait-v3-40.png",
+      "size": [
+        640,
+        902
+      ],
+      "mode": "RGB",
+      "sha256": "b5ea1902fe5bf85e1a76849dabc9684cccd578c260c47450acae5e13d2f561f8",
+      "style": "normal-person jewel-tone narrative illustration"
+    }
+  ]
+}
