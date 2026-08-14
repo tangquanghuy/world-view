@@ -32,14 +32,14 @@
  *
  * 当前桥：
  * - we-goto：子页切路由（已接）
- * - we-query-view / we-watch-view：代理 AcuData（已接；面板侧真用上后即可热更新）
- * 静态站无助手时子页继续走 WORLD_MOCK，互不影响。
+ * - we-query-view / we-watch-view：代理 AcuData
+ * 静态站不再内置 mock；只有收到 bg_world_structured_v09 的真实数据后才渲染。
  */
 (function () {
   'use strict';
 
   // ★ 发布后改成你的 Pages 地址，末尾带 /
-  var WE_PANEL_URL = 'https://YOUR_USER.github.io/YOUR_REPO/';
+  var WE_PANEL_URL = 'https://tangquanghuy.github.io/world-view/';
 
   var boot = document.getElementById('boot');
   var app = document.getElementById('app');
@@ -47,7 +47,6 @@
   try { panelOrigin = new URL(WE_PANEL_URL).origin; } catch (_e) { panelOrigin = ''; }
 
   var reqSeq = 0;
-  var pending = Object.create(null);
   var watchers = Object.create(null);
 
   function acuData() {
@@ -128,7 +127,9 @@
     return;
   }
 
-  app.src = WE_PANEL_URL;
+  var panelUrl = new URL(WE_PANEL_URL);
+  panelUrl.searchParams.set('acuBridge', '1');
+  app.src = panelUrl.href;
   app.removeAttribute('hidden');
   app.addEventListener('load', function () { boot.hidden = true; });
 })();

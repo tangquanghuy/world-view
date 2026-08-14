@@ -212,7 +212,6 @@
 <i class="spark" style="left:22%;bottom:9%"></i>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="mock/world-state-v09.js"></script>
 <script src="shared/vocab.js"></script>
 <script src="shared/wtime.js"></script>
 <script src="shared/panel.js"></script>
@@ -229,7 +228,7 @@ const EVENT_HUE={conflict:'rose',disaster:'amber',infrastructure:'indigo',invest
 const EVENT_ICON={conflict:'i-ship',disaster:'i-fire',infrastructure:'i-arch'};
 const STAGE_PHASE={completed:'done',current:'active',blocked:'key',available:'idle',waiting:'idle',cancelled:'idle'};
 
-const DATA=(window.WORLD_MOCK||{}).background_world||{};
+const DATA=P.DATA;
 // 详情面板给任务和事件共用，选中项要连类型一起记，否则翻页后下标会串到另一个列表
 let sel={kind:'task',i:0};
 

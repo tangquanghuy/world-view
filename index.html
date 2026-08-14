@@ -7,15 +7,28 @@
 <style>
   html, body { margin: 0; height: 100%; background: #f4efe6; }
   #frame { display: block; width: 100%; height: 100%; border: 0; background: #f4efe6; }
+  #frame[hidden] { display: none; }
+  #status {
+    position: fixed; inset: 0; display: grid; place-items: center; padding: 28px;
+    color: #695d50; background: #f4efe6; text-align: center;
+    font: 14px/1.7 "Microsoft YaHei", sans-serif;
+  }
+  #status[hidden] { display: none; }
+  #status strong { display: block; margin-bottom: 6px; color: #39322c; font-size: 17px; }
+  #status small { display: block; max-width: 620px; color: #8b7c6d; }
 </style>
 </head>
 <body>
-<iframe id="frame" title="后台世界引擎面板"></iframe>
+<div id="status"><div><strong>正在连接异步助手数据…</strong><small>等待后台世界引擎结构化视图。</small></div></div>
+<iframe id="frame" title="后台世界引擎面板" hidden></iframe>
 <script>
 /**
  * 静态站单入口：四页仍是独立 HTML（方便截图/体检工具），对外只暴露一个 URL。
  * 路由：#/overview | #/characters | #/factions | #/tasks
  * 子页通过 window.parent.WE_SPA.navigate 或 postMessage({type:'we-goto'}) 切页。
+ *
+ * 数据不再使用 mock。橱窗壳在 URL 上加 ?acuBridge=1，并通过 postMessage 代理
+ * window.top.AcuData.watchView。首次收到真实数据后才挂载页面；数据库提交后重载当前页。
  */
 (function () {
   'use strict';
@@ -27,8 +40,72 @@
     tasks: '任务与事件.html',
   };
   const DEFAULT = 'overview';
+  const VIEW_ID = 'bg_world_structured_v09';
+  const WATCH_ID = 'bg-world-panel';
+  const bridgeEnabled = new URLSearchParams(location.search).get('acuBridge') === '1';
   const frame = document.getElementById('frame');
+  const status = document.getElementById('status');
   let current = '';
+  let hasData = false;
+  let bridgeTimer = 0;
+
+  function setStatus(title, detail) {
+    status.innerHTML = '<div><strong>' + title + '</strong><small>' + (detail || '') + '</small></div>';
+    status.hidden = false;
+    frame.hidden = true;
+  }
+
+  function extractWorld(result) {
+    const data = result && result.data;
+    const world = data && data.background_world;
+    if (!world || typeof world !== 'object') throw new Error('视图缺少 data.background_world');
+
+    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions'];
+    for (const key of sections) if (!Array.isArray(world[key])) world[key] = [];
+
+    // 结构化视图必须保留原始英文键；中文 alias 会让现有页面所有字段失配。
+    const meta = world.world[0];
+    if (meta && !Object.prototype.hasOwnProperty.call(meta, 'world_time')
+      && Object.prototype.hasOwnProperty.call(meta, '当前世界时间')) {
+      throw new Error('bg_world_structured_v09 仍在输出中文字段别名');
+    }
+    return world;
+  }
+
+  function acceptData(result) {
+    const world = extractWorld(result);
+    window.WE_WORLD_DATA = world;
+    const first = !hasData;
+    hasData = true;
+    clearTimeout(bridgeTimer);
+    status.hidden = true;
+    frame.hidden = false;
+    // 页面在启动时把各分区缓存成常量；数据库变化后重载当前子页，确保所有模块一致更新。
+    sync(!first || !frame.getAttribute('src'));
+  }
+
+  function startBridge() {
+    if (!bridgeEnabled || window.parent === window) {
+      setStatus(
+        '需要从异步助手橱窗打开',
+        '此站点不再包含示例数据。请导入配套配置方案，然后在异步助手的“橱窗”中打开。',
+      );
+      return;
+    }
+    bridgeTimer = setTimeout(function () {
+      if (!hasData) setStatus(
+        '未收到后台世界数据',
+        '请确认当前方案包含 bg_world_structured_v09，且异步助手数据库桥已加载。',
+      );
+    }, 8000);
+    window.parent.postMessage({
+      type: 'we-watch-view',
+      watchId: WATCH_ID,
+      viewId: VIEW_ID,
+      params: {},
+      options: {},
+    }, '*');
+  }
 
   function parseRoute() {
     const raw = String(location.hash || '').replace(/^#\/?/, '').trim();
@@ -47,6 +124,7 @@
   }
 
   function sync(force) {
+    if (!hasData) return;
     const id = parseRoute();
     const file = ROUTES[id];
     if (!force && id === current && frame.getAttribute('src')) return;
@@ -59,13 +137,27 @@
 
   window.addEventListener('message', function (e) {
     const data = e && e.data;
-    if (!data || data.type !== 'we-goto') return;
-    navigate(data.route, data.opts || {});
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'we-goto') {
+      navigate(data.route, data.opts || {});
+      return;
+    }
+    if (e.source === window.parent && data.type === 'we-watch-view-result') {
+      if (!data.ok) {
+        setStatus('读取后台世界数据失败', data.error || 'AcuData.watchView 返回错误。');
+        return;
+      }
+      try {
+        acceptData(data.result);
+      } catch (err) {
+        setStatus('后台世界数据格式不匹配', String(err && err.message || err));
+      }
+    }
   });
 
   window.addEventListener('hashchange', function () { sync(false); });
-  if (!location.hash) location.replace('#/' + DEFAULT);
-  else sync(true);
+  if (!location.hash) history.replaceState(null, '', '#/' + DEFAULT);
+  startBridge();
 })();
 </script>
 </body>

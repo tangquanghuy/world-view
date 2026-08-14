@@ -1,0 +1,8 @@
+/.agent-logs-neutral/
+/_backup/
+/_staging/
+/_shots/
+/mock/
+/*.bak-*
+/后台世界引擎-*.json
+

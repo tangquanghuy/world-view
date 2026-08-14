@@ -739,14 +739,13 @@
 <i class="spark" style="left:22%;bottom:9%"></i>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="mock/world-state-v09.js"></script>
 <script src="shared/vocab.js"></script>
 <script src="shared/wtime.js"></script>
 <script src="shared/panel.js"></script>
 <script>
 const {$,$$,arr,esc,L,fieldKey,termRow,kvGrid,renderPager,toast,crestFile,sigilFile,hueCycler,mode}=P;
 
-/* 数据源固定是 mock/world-state-v09.js。压力测试会把 FACTIONS / REGIONS 换掉，
+/* 真实数据由 index.html 从 AcuData 视图注入。压力测试会把 FACTIONS / REGIONS 换掉，
    所以这里用 let，不直接引用 P.DATA。 */
 let FACTIONS=arr(P.DATA.factions);
 let REGIONS=arr(P.DATA.regions);

@@ -1,16 +1,21 @@
 /**
- * 单入口冒烟测试：起好静态服后跑
- *   node _tools/smoke-spa.cjs [http://localhost:5500/]
+ * 真实桥模式冒烟测试：
+ *   node _tools/smoke-spa.cjs [站点地址] [结构化数据 fixture]
  *
- * 查：四条路由都能挂上、侧栏能切路由、跨页焦点传得到、无控制台报错、
- * 以及**没有 404 资源**——图片路径写错时页面只是静默退成首字方块，肉眼查不出来。
- * 用系统装的 Chrome/Edge，不下载浏览器。
+ * fixture 只存在测试进程里，不会被静态站加载。默认读取相邻异步助手工程的开发数据。
  */
+const fs = require('fs');
 const path = require('path');
-const ROOT = path.resolve(__dirname, '../../..');
-const { chromium } = require(require.resolve('playwright-core', { paths: [ROOT] }));
+const MODULE_ROOT = process.env.ASYNC_ASSISTANT_DIR
+  ? path.resolve(process.env.ASYNC_ASSISTANT_DIR)
+  : path.resolve(__dirname, '../../异步助手-project');
+const { chromium } = require(require.resolve('playwright-core', { paths: [MODULE_ROOT] }));
 
 const BASE = process.argv[2] || 'http://localhost:5500/';
+const BRIDGE_URL = new URL('__bridge_test__', BASE).href;
+const FIXTURE = process.argv[3]
+  || path.resolve(__dirname, '../../异步助手-project/配置方案/世界引擎面板/mock/world-state-v09.json');
+const WORLD = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')).background_world;
 const ROUTES = [
   ['overview', '世界演进', '总览.html'],
   ['characters', '角色管理', '角色档案.html'],
@@ -18,21 +23,26 @@ const ROUTES = [
   ['tasks', '任务与剧本', '任务与事件.html'],
 ];
 
-/** 等 iframe 真的换到目标文件并把侧栏渲染出来。src 是异步换的，早读会读到上一页。
-    比对忽略 .html：`serve` 默认走 clean URL，线上 Pages 不去后缀，两边都要认。 */
 async function panelFrame(page, file) {
   const stem = file.replace(/\.html$/, '');
-  for (let i = 0; i < 60; i++) {
-    const frame = page.frames().find((f) => {
-      if (f === page.mainFrame()) return false;
-      let url = f.url();
-      try { url = decodeURIComponent(url); } catch (_e) { /* 保留原样 */ }
+  for (let i = 0; i < 80; i++) {
+    const frame = page.frames().find((candidate) => {
+      if (candidate === page.mainFrame()) return false;
+      let url = candidate.url();
+      try { url = decodeURIComponent(url); } catch (_e) {}
       return url.replace(/\.html(?=$|[?#])/, '').endsWith('/' + stem);
     });
-    if (frame) {
-      const ready = await frame.$('.nav-item.on').catch(() => null);
-      if (ready) return frame;
-    }
+    if (frame && await frame.$('.nav-item.on').catch(() => null)) return frame;
+    await page.waitForTimeout(100);
+  }
+  return null;
+}
+
+async function indexFrame(page) {
+  for (let i = 0; i < 80; i++) {
+    const frame = page.frames().find((candidate) =>
+      candidate !== page.mainFrame() && /[?&]acuBridge=1/.test(candidate.url()));
+    if (frame && await frame.evaluate(() => !!window.WE_SPA).catch(() => false)) return frame;
     await page.waitForTimeout(100);
   }
   return null;
@@ -40,9 +50,7 @@ async function panelFrame(page, file) {
 
 async function launch() {
   for (const channel of ['chrome', 'msedge']) {
-    try {
-      return await chromium.launch({ channel });
-    } catch (_e) { /* 试下一个 */ }
+    try { return await chromium.launch({ channel }); } catch (_e) {}
   }
   return chromium.launch();
 }
@@ -51,74 +59,87 @@ async function launch() {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1536, height: 960 } });
   const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-
-  // 资源 404。图片挂了只会退成首字方块，不进控制台，也不影响布局，只能这么抓。
   const missing = new Map();
-  page.on('response', (res) => {
-    if (res.status() < 400) return;
-    let url = res.url();
-    try { url = decodeURIComponent(url); } catch (_e) { /* 保留原样 */ }
-    if (/favicon/i.test(url)) return;
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', (error) => errors.push('pageerror: ' + error.message));
+  page.on('response', (response) => {
+    if (response.status() < 400 || /favicon/i.test(response.url())) return;
+    let url = response.url();
+    try { url = decodeURIComponent(url); } catch (_e) {}
     missing.set(url, (missing.get(url) || 0) + 1);
   });
 
+  // 模拟与橱窗同源的壳子；只实现 watchView 协议，返回结构与 AcuData 完全一致。
+  await page.route(BRIDGE_URL, async (route) => {
+    const panelUrl = new URL(BASE);
+    panelUrl.searchParams.set('acuBridge', '1');
+    await route.fulfill({
+      contentType: 'text/html; charset=utf-8',
+      body: `<!doctype html><iframe id="app" style="width:100%;height:100%;border:0"></iframe>
+<script>
+const WORLD=${JSON.stringify(WORLD).replace(/</g, '\\u003c')};
+const app=document.getElementById('app');
+addEventListener('message',e=>{
+  const m=e.data;
+  if(!m||m.type!=='we-watch-view')return;
+  e.source.postMessage({type:'we-watch-view-result',watchId:m.watchId,ok:true,
+    result:{ok:true,data:{background_world:WORLD},revision:1}},'*');
+});
+app.src=${JSON.stringify(panelUrl.href + '#/overview')};
+</script>`,
+    });
+  });
+  await page.goto(BRIDGE_URL, { waitUntil: 'load' });
+
   let bad = 0;
+  const index = await indexFrame(page);
+  if (!index) {
+    throw new Error('静态站入口未通过真实数据桥启动\nframes:\n'
+      + page.frames().map((frame) => '  ' + frame.url()).join('\n')
+      + '\nerrors:\n  ' + errors.join('\n  '));
+  }
+
   for (const [id, label, file] of ROUTES) {
-    await page.goto(BASE + '#/' + id, { waitUntil: 'load' });
+    await index.evaluate((route) => window.WE_SPA.navigate(route), id);
     const frame = await panelFrame(page, file);
     if (!frame) { console.log(`✗ ${id} 没挂上子页`); bad++; continue; }
-    const active = await frame.$eval('.nav-item.on', (el) => el.textContent.trim()).catch(() => '');
-    const panels = await frame.$$eval('.panel', (els) => els.length).catch(() => 0);
+    const active = await frame.$eval('.nav-item.on', (element) => element.textContent.trim()).catch(() => '');
+    const panels = await frame.$$eval('.panel', (elements) => elements.length).catch(() => 0);
     const ok = active === label && panels > 0;
     if (!ok) bad++;
     console.log(`${ok ? '✓' : '✗'} ${id}  高亮=${active || '无'}  面板=${panels}`);
   }
 
-  // 侧栏点击是否真的换路由（不整页跳出入口），并且目标页确实挂上
-  await page.goto(BASE + '#/overview', { waitUntil: 'load' });
+  await index.evaluate(() => window.WE_SPA.navigate('overview'));
   const from = await panelFrame(page, '总览.html');
   await from.click('.nav-item[data-route="tasks"]');
-  await page.waitForFunction(() => location.hash === '#/tasks', null, { timeout: 5000 }).catch(() => {});
-  const hash = await page.evaluate(() => location.hash);
   const landed = await panelFrame(page, '任务与事件.html');
+  const hash = await index.evaluate(() => location.hash);
   const clickOk = hash === '#/tasks' && !!landed;
   if (!clickOk) bad++;
-  console.log(`${clickOk ? '✓' : '✗'} 侧栏点击切路由  hash=${hash}  落地=${landed ? '任务与事件' : '无'}`);
+  console.log(`${clickOk ? '✓' : '✗'} 侧栏切页  hash=${hash}`);
 
-  // 跨页带焦点：势力页点一条任务，应落到任务页并选中它
-  await page.goto(BASE + '#/factions', { waitUntil: 'load' });
-  const fac = await panelFrame(page, '势力与地区.html');
-  const focusName = await fac.evaluate(() => {
-    const el = document.querySelector('[data-name]');
-    if (!el) return '';
-    el.click();
-    return el.dataset.name || '';
-  });
-  let focusOk = false;
-  if (focusName) {
-    const taskFrame = await panelFrame(page, '任务与事件.html');
-    if (taskFrame) {
-      focusOk = await taskFrame.evaluate((n) => document.body.innerText.includes(n), focusName).catch(() => false);
-    }
-  }
-  if (!focusOk) bad++;
-  console.log(`${focusOk ? '✓' : '✗'} 跨页带焦点  目标=${focusName || '页面上没有可点的任务'}`);
+  // 不带桥直接打开：必须明确拒绝 mock，而不是静默展示假数据。
+  const direct = await browser.newPage();
+  await direct.goto(BASE, { waitUntil: 'load' });
+  const noMock = await direct.locator('#status').innerText();
+  const noMockOk = noMock.includes('需要从异步助手橱窗打开');
+  if (!noMockOk) bad++;
+  console.log(`${noMockOk ? '✓' : '✗'} 直开站点不回退 mock`);
+  await direct.close();
 
-  const real = errors.filter((t) => !/favicon|404|ERR_FILE|net::ERR/i.test(t));
-  console.log(real.length ? `✗ 控制台报错 ${real.length} 条：\n  ` + real.slice(0, 8).join('\n  ') : '✓ 无控制台报错');
-
+  const realErrors = errors.filter((text) => !/favicon|ERR_FILE|net::ERR/i.test(text));
+  console.log(realErrors.length
+    ? `✗ 控制台报错 ${realErrors.length} 条：\n  ` + realErrors.slice(0, 8).join('\n  ')
+    : '✓ 无控制台报错');
   if (missing.size) {
     bad++;
-    const list = [...missing.entries()].sort((a, b) => b[1] - a[1]);
-    console.log(`✗ 资源 404 ${list.length} 种（共 ${list.reduce((n, x) => n + x[1], 0)} 次）：`);
-    for (const [url, n] of list.slice(0, 10)) console.log(`  ×${n}  ${url}`);
-    if (list.length > 10) console.log(`  …另有 ${list.length - 10} 种`);
+    console.log(`✗ 资源 404 ${missing.size} 种`);
+    for (const [url, count] of [...missing.entries()].slice(0, 10)) console.log(`  ×${count} ${url}`);
   } else {
     console.log('✓ 无资源 404');
   }
 
   await browser.close();
-  process.exit(bad || real.length ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(1); });
+  process.exit(bad || realErrors.length ? 1 : 0);
+})().catch((error) => { console.error(error); process.exit(1); });

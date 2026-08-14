@@ -1,11 +1,11 @@
 /**
  * 四个面板页共用的取数与渲染工具。
- * 依赖：shared/vocab.js（中文词典）、shared/wtime.js（架空历法时间）、mock/world-state-v09.js（数据）。
+ * 依赖：shared/vocab.js（中文词典）、shared/wtime.js（架空历法时间）。
  *
  * 这里只放跨页面重复出现的东西。页面专属逻辑留在各自的 HTML 里。
  *
  * 路由：单页入口（index.html）用 hash；独立打开四个 HTML 时仍走文件跳转。
- * 数据：默认 WORLD_MOCK；嵌入异步助手橱窗壳子时可通过 postMessage 桥换真实视图。
+ * 数据：由 index.html 从异步助手 AcuData 桥取得后挂在 parent.WE_WORLD_DATA。
  */
 (function (global) {
   'use strict';
@@ -19,7 +19,12 @@
      必须带组名：同一个字符串在不同组里含义不同，例如 planned 是日程状态而不是阶段状态。 */
   const L = (group, value) => global.V.label(group, value, '未记录');
 
-  const DATA = (global.WORLD_MOCK || {}).background_world || {};
+  let DATA = {};
+  try {
+    DATA = global.parent && global.parent.WE_WORLD_DATA || {};
+  } catch (_e) {
+    DATA = {};
+  }
 
   /* ---------- 色相 ----------
      同一个键在页面上永远是同一个颜色。按出现顺序分配，保证不同页面之间也一致
