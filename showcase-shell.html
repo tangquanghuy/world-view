@@ -33,6 +33,7 @@
  * 当前桥：
  * - we-goto：子页切路由（已接）
  * - we-query-view / we-watch-view：代理 AcuData
+ * - we-apply-patches：角色档案删人 / 移入固定 / 打回候选
  * 静态站不再内置 mock；只有收到 bg_world_structured_v09 的真实数据后才渲染。
  */
 (function () {
@@ -95,6 +96,25 @@
     }
   }
 
+  async function handleApplyPatches(source, msg) {
+    var D = acuData();
+    if (!D) {
+      reply(source, { type: 'we-apply-patches-result', id: msg.id, ok: false, error: 'AcuData unavailable' });
+      return;
+    }
+    try {
+      await D.ready();
+      if (typeof D.applyPatches !== 'function') {
+        reply(source, { type: 'we-apply-patches-result', id: msg.id, ok: false, error: 'database is read-only' });
+        return;
+      }
+      var result = await D.applyPatches(msg.patches || []);
+      reply(source, { type: 'we-apply-patches-result', id: msg.id, ok: true, result: result || { ok: false } });
+    } catch (err) {
+      reply(source, { type: 'we-apply-patches-result', id: msg.id, ok: false, error: String(err && err.message || err) });
+    }
+  }
+
   window.addEventListener('message', function (e) {
     if (panelOrigin && e.origin !== panelOrigin) return;
     var msg = e.data;
@@ -114,6 +134,10 @@
     }
     if (msg.type === 'we-watch-view') {
       handleWatchView(e.source, msg);
+      return;
+    }
+    if (msg.type === 'we-apply-patches') {
+      handleApplyPatches(e.source, msg);
       return;
     }
     if (msg.type === 'we-unwatch-view' && msg.watchId && watchers[msg.watchId]) {

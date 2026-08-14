@@ -133,13 +133,36 @@
     frame.src = new URL(file, location.href).href;
   }
 
-  window.WE_SPA = { navigate: navigate, routes: ROUTES };
+  window.WE_SPA = { navigate: navigate, routes: ROUTES, applyPatches: applyPatches };
+
+  let patchSeq = 0;
+  const patchPending = Object.create(null);
+
+  function applyPatches(patches) {
+    return new Promise(function (resolve, reject) {
+      const id = 'p' + (++patchSeq);
+      patchPending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ type: 'we-apply-patches', id: id, patches: patches || [] }, '*');
+      setTimeout(function () {
+        if (!patchPending[id]) return;
+        delete patchPending[id];
+        reject(new Error('写入超时'));
+      }, 20000);
+    });
+  }
 
   window.addEventListener('message', function (e) {
     const data = e && e.data;
     if (!data || typeof data !== 'object') return;
     if (data.type === 'we-goto') {
       navigate(data.route, data.opts || {});
+      return;
+    }
+    if (e.source === window.parent && data.type === 'we-apply-patches-result' && data.id && patchPending[data.id]) {
+      const pending = patchPending[data.id];
+      delete patchPending[data.id];
+      if (data.ok) pending.resolve(data.result || { ok: true });
+      else pending.reject(new Error(data.error || '写入失败'));
       return;
     }
     if (e.source === window.parent && data.type === 'we-watch-view-result') {
