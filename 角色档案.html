@@ -244,15 +244,13 @@
 /* 长行不铺满七百像素：超过四十来个汉字一行，眼睛回不到下一行的行首 */
 .rnet-note{max-width:560px;margin:2px auto 0;padding:0 18px;color:var(--ink4);font:14px/1.6 var(--ui);text-align:center}
 .rnet-note:empty{display:none}
-/* 图收窄之后右边空出两百多像素，而「往来」清单就摞在图底下——把它挪到图旁边，
-   一条关系的面板从 349px 收到 210px（图 172 高，清单 133 高，摞着是两段之和，
-   并排是取大的那个）。剩不下 250px 时仍旧上下摞，由 renderNet 挂 .side 决定：
-   够不够宽是量出来的，不是按屏幕断点猜的。 */
+/* 图和往来并排。面板横跨中右之后，若把剩下列都给往来，一条关系右边会空出一大截。
+   往来只留一条关系的阅读宽度，多出来的给图画长。剩不下 250px 时仍旧上下摞。 */
 .netwrap{display:grid}
-.netwrap.side{grid-template-columns:var(--gw) minmax(250px,1fr);align-items:start;column-gap:8px}
+.netwrap.side{grid-template-columns:minmax(var(--gw),1fr) minmax(240px,300px);align-items:start;column-gap:18px}
 .netwrap.side .netgraph{min-width:0}
 .netwrap.side .rnet{width:100%;max-width:none;margin:6px 0 0}
-.netwrap.side .netlist{min-width:0;padding-top:4px}
+.netwrap.side .netlist{min-width:0;padding:4px 16px 8px 0}
 
 /* 往来细节：曲线上只标得下类别和增减，依据、时间这些要另有落点 */
 .relrow{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;padding:10px 0}
