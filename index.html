@@ -60,7 +60,7 @@
     const world = data && data.background_world;
     if (!world || typeof world !== 'object') throw new Error('视图缺少 data.background_world');
 
-    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions', 'exclusions'];
+    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions', 'exclusions', 'fixed_roster'];
     for (const key of sections) if (!Array.isArray(world[key])) world[key] = [];
 
     // 结构化视图必须保留原始英文键；中文 alias 会让现有页面所有字段失配。
@@ -72,8 +72,74 @@
     return world;
   }
 
+  function listOf(world, key) {
+    return Array.isArray(world && world[key]) ? world[key] : [];
+  }
+
+  function npcToCandidate(p) {
+    return {
+      name: p.name,
+      status: 'observe',
+      updated_at: p.updated_at || '',
+      next_update: p.next_update || '',
+      profile: p.profile || {},
+      current_state: p.current_state || {},
+      schedule: Array.isArray(p.schedule) ? p.schedule : [],
+      conditions: Array.isArray(p.conditions) ? p.conditions : [],
+      relations: Array.isArray(p.relations) ? p.relations : [],
+      decisions: Array.isArray(p.decisions) ? p.decisions : [],
+      observations: Array.isArray(p.observations) ? p.observations : [],
+      retention: {
+        status_basis: 'AI 误写入固定人物，已改回候选',
+        missing_evidence: '',
+        next_observation: p.next_update || '',
+      },
+    };
+  }
+
+  function applyMisplacedNpcsLocally(world, patches) {
+    for (const patch of patches) {
+      const name = patch.primaryKey;
+      if (patch.table === 'bg_fixed_npc_state' && patch.op === 'delete') {
+        world.npcs = listOf(world, 'npcs').filter(item => item && item.name !== name);
+      }
+      if (patch.table === 'bg_candidate_state' && patch.op === 'write') {
+        const row = Object.assign({}, patch.values || {}, { name: name });
+        world.candidates = listOf(world, 'candidates').filter(item => item && item.name !== name).concat([row]);
+      }
+    }
+  }
+
+  // AI 把新人写进 /npc 时，只有用户亲手「移入固定」的名字才留在固定表。
+  function buildMisplacedNpcPatches(world) {
+    const confirmed = new Set(listOf(world, 'fixed_roster').map(item => item && item.name).filter(Boolean));
+    const excluded = new Set(
+      listOf(world, 'exclusions')
+        .filter(item => item && item.kind === 'person' && item.name)
+        .map(item => item.name),
+    );
+    const patches = [];
+    listOf(world, 'npcs').forEach(function (npc) {
+      const name = npc && String(npc.name || '').trim();
+      if (!name || confirmed.has(name)) return;
+      patches.push({ op: 'delete', table: 'bg_fixed_npc_state', primaryKey: name });
+      if (excluded.has(name)) return;
+      patches.push({
+        op: 'write',
+        table: 'bg_candidate_state',
+        primaryKey: name,
+        values: npcToCandidate(npc),
+      });
+    });
+    return patches;
+  }
+
+  let repairing = false;
+
   function acceptData(result) {
     const world = extractWorld(result);
+    const patches = repairing ? [] : buildMisplacedNpcPatches(world);
+    if (patches.length) applyMisplacedNpcsLocally(world, patches);
     window.WE_WORLD_DATA = world;
     const first = !hasData;
     hasData = true;
@@ -82,6 +148,13 @@
     frame.hidden = false;
     // 页面在启动时把各分区缓存成常量；数据库变化后重载当前子页，确保所有模块一致更新。
     sync(!first || !frame.getAttribute('src'));
+    if (!patches.length || repairing) return;
+    repairing = true;
+    applyPatches(patches).catch(function (err) {
+      console.warn('[world-view] 纠正误写入固定人物失败', err);
+    }).then(function () {
+      repairing = false;
+    });
   }
 
   function startBridge() {
