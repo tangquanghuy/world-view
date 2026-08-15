@@ -123,10 +123,10 @@
 
 <header class="header">
   <div class="brand">
-    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-art" role="img" aria-label="世界引擎星盘"></div>
     <div class="brand-text">
       <h1>后台世界引擎</h1>
-      <p>当玩家不在场时，世界依然在呼吸</p>
+      <p>记录玩家离场后的因果、人物与秩序</p>
     </div>
   </div>
 
@@ -146,7 +146,7 @@
          这一页原来把六项写死在这儿，六项全点不动——包括三个真实存在的页面。
          根子是这页最早按原型复刻时还没有 shared 层，自己搭了一套外壳。 -->
     <nav class="nav" id="nav"></nav>
-    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+    <div class="side-art" role="img" aria-label="世界观测员插画"></div>
   </aside>
 
   <div class="main">
@@ -552,10 +552,10 @@ function renderEventDetail(){
 }
 
 /* ---------- 活跃事件 ---------- */
-function severity(e){
-  if(e.status==='active')return['sev-high','高危','rose'];
-  if(e.status==='contained')return['sev-mid','中危','amber'];
-  return['sev-low','低危','indigo'];
+function eventStatusHue(e){
+  if(['resolved','ended','contained'].includes(e.status))return'green';
+  if(e.status==='waiting')return'indigo';
+  return'violet';
 }
 let evPage=0;
 function sortedEvents(){return arr(DATA.events).slice().sort(WTime.byNewest('updated_at'))}
@@ -568,7 +568,7 @@ function renderEvents(){
   $('#events').innerHTML=all.length?all.slice(from,from+PAGE_SIZE).map((e,k)=>{
     const i=from+k;
     const hue=EVENT_HUE[e.category]||'purple';
-    const[,sevText,sevHue]=severity(e);
+    const statusHue=eventStatusHue(e);
     const icon=EVENT_ICON[e.category]||'i-scroll';
     const on=sel.kind==='event'&&sel.i===i;
     // 同样只留一行摘要，updated_at / expected_end / trigger / visible_effects
@@ -576,12 +576,12 @@ function renderEvents(){
     return '<button class="ev h-'+hue+(on?' on':'')+'" data-i="'+i+'">'+
       '<div class="ev-top">'+
         '<span class="ev-mark"><svg><use href="#'+icon+'"/></svg></span>'+
-        '<b>'+esc(e.name)+'</b><span class="chip h-'+sevHue+'">'+sevText+'</span></div>'+
+        '<b>'+esc(e.name)+'</b><span class="chip h-'+statusHue+'">'+esc(L('event.status',e.status))+'</span></div>'+
       '<p>'+esc(e.current_state||e.trigger||'未记录当前事态')+'</p>'+
       // 三项元信息各带图标：一个彩色小标签 + 两条带图标的灰行，
       // 比三行同色文字叠在一起容易分辨得多
       '<div class="ev-foot">'+
-        '<span class="ev-tag">'+esc(L('event.category',e.category))+' · '+esc(L('event.status',e.status))+'</span>'+
+        '<span class="ev-tag">'+esc(L('event.category',e.category))+'</span>'+
         '<span class="at" title="'+esc(arr(e.locations).join('、'))+'">'+
           '<svg><use href="#i-pin"/></svg><span>'+esc(arr(e.locations).join('、')||'地点未记录')+'</span></span>'+
         '<span class="next" title="'+esc(e.next_update||'')+'">'+

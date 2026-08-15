@@ -8,8 +8,8 @@ const EDGE = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C
 const BASE = path.join(__dirname, '..');
 const FILES = process.argv.slice(2).length ? process.argv.slice(2) : [
   'assets/art/profile-saiwen.png',
-  'assets/art/sidebar-heroine.png',
-  'assets/art/header-compass.png',
+  'assets/art/sidebar-observer-v2.png',
+  'assets/art/world-engine-mark.svg',
 ];
 
 (async () => {

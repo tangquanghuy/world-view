@@ -122,8 +122,8 @@
 .gwrap::before{
   content:"";position:absolute;left:16px;bottom:14px;width:104px;height:72px;
   z-index:1;pointer-events:none;opacity:.20;
-  filter:invert(1) contrast(1.15);mix-blend-mode:screen;
-  background:url("assets/art/header-compass.png") no-repeat center/contain;
+  filter:grayscale(.15) brightness(1.65);mix-blend-mode:screen;
+  background:url("assets/art/world-engine-mark.svg") no-repeat center/contain;
 }
 .gcanvas{position:relative;z-index:1;width:100%}
 /* 整层连线垫一道短投影。地形是有纹理的，1.3px 的背景线压在山脊上会被吃掉半截；
@@ -617,10 +617,10 @@
 
 <header class="header">
   <div class="brand">
-    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-art" role="img" aria-label="世界引擎星盘"></div>
     <div class="brand-text">
       <h1>后台世界引擎</h1>
-      <p>当玩家不在场时，世界依然在呼吸</p>
+      <p>记录玩家离场后的因果、人物与秩序</p>
     </div>
   </div>
 
@@ -637,7 +637,7 @@
 <div class="shell">
   <aside class="side">
     <nav class="nav" id="nav"></nav>
-    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+    <div class="side-art" role="img" aria-label="世界观测员插画"></div>
   </aside>
 
   <div class="mainwrap">

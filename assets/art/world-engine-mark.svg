@@ -1,0 +1,39 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" role="img" aria-labelledby="title desc">
+  <title id="title">世界引擎星盘</title>
+  <desc id="desc">由轨道、指针与星核构成的抽象世界引擎标记</desc>
+  <defs>
+    <radialGradient id="core" cx="38%" cy="30%" r="74%">
+      <stop offset="0" stop-color="#8798bc"/>
+      <stop offset=".58" stop-color="#52678f"/>
+      <stop offset="1" stop-color="#334767"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ead7a9"/>
+      <stop offset=".48" stop-color="#b88845"/>
+      <stop offset="1" stop-color="#7d592c"/>
+    </linearGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#31435f" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <g transform="translate(84 70)" filter="url(#shadow)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse rx="50" ry="50" stroke="#536886" stroke-width="2.4"/>
+    <ellipse rx="39" ry="39" stroke="#b98a49" stroke-opacity=".72" stroke-width="1.5"/>
+    <ellipse rx="59" ry="29" transform="rotate(-19)" stroke="url(#brass)" stroke-width="2.2"/>
+    <ellipse rx="28" ry="57" transform="rotate(34)" stroke="#7888a6" stroke-opacity=".7" stroke-width="1.5"/>
+    <path d="M0-61v8M0 53v8M-61 0h8M53 0h8" stroke="#a67839" stroke-width="2"/>
+    <path d="M-34-34 34 34M34-34-34 34" stroke="#72839f" stroke-opacity=".46" stroke-width="1.2"/>
+    <path d="M0-45 8-10 0-3-8-10Z" fill="url(#brass)" stroke="#8e672f" stroke-width="1.1"/>
+    <path d="M0 45 7 11 0 4-7 11Z" fill="#64779a" stroke="#3f5376" stroke-width="1.1"/>
+    <path d="M-45 0-11-7-4 0-11 7Z" fill="#d8c394" stroke="#9b733a" stroke-width="1.1"/>
+    <path d="M45 0 11-7 4 0 11 7Z" fill="#7d8ead" stroke="#52678c" stroke-width="1.1"/>
+    <circle r="14" fill="#fffdf6" stroke="url(#brass)" stroke-width="2.3"/>
+    <circle r="9" fill="url(#core)" stroke="#324867" stroke-width="1"/>
+    <path d="M0-5.5 2-2 5.5 0 2 2 0 5.5-2 2-5.5 0-2-2Z" fill="#f0d89c" stroke="none"/>
+  </g>
+  <g fill="#b88845">
+    <path d="M153 28l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8Z" opacity=".8"/>
+    <circle cx="146" cy="104" r="2.2" opacity=".55"/>
+    <circle cx="24" cy="30" r="1.8" opacity=".45"/>
+  </g>
+</svg>

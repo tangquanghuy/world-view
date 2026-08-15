@@ -73,6 +73,23 @@
   background:linear-gradient(158deg,var(--hue-soft),#f4f3fb);
 }
 .pf img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 14%}
+.pf-edit{
+  position:absolute;right:12px;top:12px;z-index:1;
+  padding:5px 10px;border:0;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.92);color:var(--ink3);font:600 12px/1.3 var(--ui);
+  box-shadow:var(--sh1);
+}
+.pf-edit:hover{background:#fff;color:var(--hue-ink)}
+.art-box{width:min(460px,100%);padding:22px 22px 20px}
+.art-dlg h3{margin:0 0 8px;color:var(--ink);font:600 20px/1.3 var(--serif)}
+.art-dlg p{margin:0 0 14px}
+.art-dlg label{display:block;margin:0 0 12px;color:var(--ink3);font:600 13px/1.4 var(--ui)}
+.art-dlg input{
+  display:block;width:100%;margin-top:6px;padding:8px 10px;
+  border:0;border-radius:var(--r-chip);background:var(--sunken);
+  color:var(--ink);font:14px/1.4 var(--ui);box-shadow:inset 0 0 0 1px var(--rule);
+}
+.art-dlg .h-actions{margin:16px 0 0;justify-content:flex-end}
 .pf-cap{
   position:absolute;left:12px;right:12px;bottom:12px;padding:9px 12px;border-radius:var(--r-chip);
   background:rgba(255,255,255,.9);box-shadow:var(--sh1);backdrop-filter:blur(8px);
@@ -416,10 +433,10 @@
 
 <header class="header">
   <div class="brand">
-    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-art" role="img" aria-label="世界引擎星盘"></div>
     <div class="brand-text">
       <h1>后台世界引擎</h1>
-      <p>当玩家不在场时，世界依然在呼吸</p>
+      <p>记录玩家离场后的因果、人物与秩序</p>
     </div>
   </div>
 
@@ -436,7 +453,7 @@
 <div class="shell">
   <aside class="side">
     <nav class="nav" id="nav"></nav>
-    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+    <div class="side-art" role="img" aria-label="世界观测员插画"></div>
   </aside>
 
   <div class="main archive">
@@ -507,13 +524,30 @@
 <i class="spark gold" style="left:47%;top:7%"></i>
 <i class="spark" style="right:6%;top:34%"></i>
 <i class="spark" style="left:22%;bottom:9%"></i>
+<div class="sheet" id="artDlg" hidden>
+  <div class="sheet-box art-box">
+    <button class="sheet-close" id="artDlgClose" aria-label="关闭">✕</button>
+    <div class="art-dlg">
+      <h3>自定义立绘</h3>
+      <p class="slot-note">给「<b id="artDlgName"></b>」填网络图片地址。头像用于名册圆图，立绘用于档案大图。留空的一项继续用默认图。</p>
+      <label>头像 URL<input id="artAvatarUrl" type="url" placeholder="https://"></label>
+      <label>立绘 URL<input id="artPortraitUrl" type="url" placeholder="https://"></label>
+      <div class="h-actions">
+        <button type="button" class="h-act" id="artDlgClear">恢复默认</button>
+        <button type="button" class="h-act" id="artDlgSave">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script src="shared/vocab.js"></script>
 <script src="shared/wtime.js"></script>
 <script src="shared/panel.js"></script>
 <script>
-const {$,$$,arr,esc,L,DATA,avatarTag,avatarFile,portraitFile,crestFile,sigilFile,
+const {$,$$,arr,esc,L,DATA,avatarTag,avatarFile,portraitFile,silhouetteFile,crestFile,sigilFile,
+       getCustomArt,setCustomArt,clearCustomArt,isAllowedImageUrl,
        fieldKey,termRow,kvGrid,renderPager,timeHH,toast}=P;
 
 /* ---------- 枚举 → 视觉 ----------
@@ -577,12 +611,9 @@ const T=s=>WTime.parse(stripYear(s));
 const WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
 const NOW_T=T(WORLD_TIME);
 
-/* 传名字进来时先查一遍本轮人物，把契约里写明的性别一起交给 avatarTag，
-   否则只能按名字哈希分到中性头像池。 */
 function faceOf(who,cls='av'){
-  const p=typeof who==='string'?byName(who):who;
   const name=typeof who==='string'?who:(who&&who.name)||'';
-  return avatarTag(name,cls,genderOf(p));
+  return avatarTag(name,cls);
 }
 /* 关系目标的形状即类型：人物圆头像，势力／地区盾形纹章。 */
 function targetFace(r,cls='pav'){
@@ -686,8 +717,9 @@ function renderHero(){
   const pct=actProgress(c);
   const span=[c.started_at,c.expected_end].filter(Boolean).join(' – ')||'时间未记录';
 
-  /* 立绘：赛文有专属半身像，其余按名字稳定哈希从通用池里取，同一个名字永远同一张。 */
-  const face=portraitFile(p.name,genderOf(p));
+  /* 立绘：自定义链接 > 正文美化内置名册 > 黄底剪影。同一个名字永远同一张。 */
+  const face=portraitFile(p.name);
+  const faceFallback=silhouetteFile(p.name);
 
   /* 身份。一份档案该先回答这个，所以这一节排在当前行动之前。
      两类人物共用同一套 profile 字段，固定人物不再缺少社会资料；字段缺失时保留标签，
@@ -719,7 +751,8 @@ function renderHero(){
   $('#hero').className='hero h-'+hue;
   $('#hero').innerHTML=
     '<div class="pf">'+
-      '<img src="'+face+'" alt="'+esc(p.name)+' 立绘" onerror="this.remove()">'+
+      '<img src="'+esc(face)+'" alt="'+esc(p.name)+' 立绘" onerror="this.onerror=null;this.src=\''+esc(faceFallback)+'\'">'+
+      '<button type="button" class="pf-edit" data-roster="art">改立绘</button>'+
       '<div class="pf-cap">'+fieldKey('i-pin','所在地')+'<b class="v">'+esc(c.location||'未记录')+'</b></div>'+
     '</div>'+
     '<div class="h-info">'+
@@ -736,9 +769,11 @@ function renderHero(){
           ?'<div class="h-actions">'+
               '<button type="button" class="h-act" data-roster="promote">移入固定角色</button>'+
               '<button type="button" class="h-act danger" data-roster="delete">删除</button>'+
+              '<button type="button" class="h-act" data-roster="art">自定义立绘</button>'+
             '</div>'
           :'<div class="h-actions">'+
               '<button type="button" class="h-act" data-roster="demote">打回候选</button>'+
+              '<button type="button" class="h-act" data-roster="art">自定义立绘</button>'+
             '</div>')+
       '</div>'+
 
@@ -1561,6 +1596,46 @@ async function deleteCandidate(name){
   ], '已删除并排除：'+name);
 }
 
+function openArtDlg(){
+  const p=cur();
+  if(!p||!p.name)return;
+  const custom=getCustomArt(p.name)||{};
+  $('#artDlgName').textContent=p.name;
+  $('#artAvatarUrl').value=custom.avatar||'';
+  $('#artPortraitUrl').value=custom.portrait||'';
+  $('#artAvatarUrl').placeholder=avatarFile(p.name);
+  $('#artPortraitUrl').placeholder=portraitFile(p.name);
+  $('#artDlg').hidden=false;
+  $('#artAvatarUrl').focus();
+}
+function closeArtDlg(){ $('#artDlg').hidden=true; }
+function saveArtDlg(){
+  const name=cur().name;
+  if(!name)return;
+  const avatar=$('#artAvatarUrl').value.trim();
+  const portrait=$('#artPortraitUrl').value.trim();
+  if(!isAllowedImageUrl(avatar)||!isAllowedImageUrl(portrait)){
+    toast('请填写 http(s) 图片地址');
+    return;
+  }
+  setCustomArt(name,{avatar,portrait});
+  closeArtDlg();
+  renderAll();
+  toast('已更新「'+name+'」的立绘');
+}
+function resetArtDlg(){
+  const name=cur().name;
+  if(!name)return;
+  clearCustomArt(name);
+  closeArtDlg();
+  renderAll();
+  toast('已恢复「'+name+'」的默认立绘');
+}
+$('#artDlgClose').addEventListener('click',closeArtDlg);
+$('#artDlg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeArtDlg()});
+$('#artDlgSave').addEventListener('click',saveArtDlg);
+$('#artDlgClear').addEventListener('click',resetArtDlg);
+
 $('#hero').addEventListener('click', e => {
   const btn = e.target.closest('[data-roster]');
   if (!btn) return;
@@ -1569,6 +1644,7 @@ $('#hero').addEventListener('click', e => {
   if (btn.dataset.roster === 'promote') promoteCandidate(name);
   else if (btn.dataset.roster === 'demote') demoteNpc(name);
   else if (btn.dataset.roster === 'delete') deleteCandidate(name);
+  else if (btn.dataset.roster === 'art') openArtDlg();
 });
 
 P.initChrome('角色管理');

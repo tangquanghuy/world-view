@@ -14,13 +14,18 @@
 
 /* ---------- 侧栏世界状态卡 ---------- */
 .side-state{
-  display:grid;gap:5px;padding:13px 14px;
-  border-radius:var(--r-panel);background:var(--paper);box-shadow:var(--sh1);text-align:center;
+  display:grid;gap:8px;padding:14px;
+  border:1px solid var(--rule);border-radius:var(--r-panel);
+  background:linear-gradient(155deg,rgba(255,255,252,.98),rgba(248,249,244,.94));
+  box-shadow:var(--sh1);text-align:left;
 }
-.side-state .k{justify-content:center}
-.side-state b{color:var(--ink2);font:700 22px/1.2 var(--serif)}
-.side-state p{margin:0;color:var(--ink4);font:14px/1.6 var(--ui)}
-.side-state .pill{height:34px;margin-top:4px;padding:0 14px;font-size:14px}
+.side-state .k{color:var(--ink4)}
+.state-head{display:flex;align-items:center;gap:9px}
+.state-dot{width:9px;height:9px;border-radius:50%;background:var(--hue);box-shadow:0 0 0 5px var(--hue-soft)}
+.side-state b{color:var(--ink2);font:700 20px/1.2 var(--serif)}
+.side-state p{margin:0;color:var(--ink4);font:13px/1.6 var(--ui);text-wrap:pretty}
+.state-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px}
+.state-meta span{padding:2px 7px;border-radius:7px;background:var(--hue-soft);color:var(--hue-ink);font:600 12px/1.45 var(--ui)}
 
 /* 时间尺本体在 shared/console.css，这里只调本页的上下留白 */
 .ruler{margin:10px 18px 0}
@@ -228,10 +233,10 @@
 
 <header class="header">
   <div class="brand">
-    <div class="brand-art" role="img" aria-label="罗盘装饰"></div>
+    <div class="brand-art" role="img" aria-label="世界引擎星盘"></div>
     <div class="brand-text">
       <h1>后台世界引擎</h1>
-      <p>当玩家不在场时，世界依然在呼吸</p>
+      <p>记录玩家离场后的因果、人物与秩序</p>
     </div>
   </div>
 
@@ -248,7 +253,7 @@
 <div class="shell">
   <aside class="side">
     <nav class="nav" id="nav"></nav>
-    <div class="side-art" role="img" aria-label="侧栏装饰立绘"></div>
+    <div class="side-art" role="img" aria-label="世界观测员插画"></div>
     <div class="side-state h-teal" id="sideState"></div>
   </aside>
 
@@ -904,22 +909,32 @@ function renderEvents(){
 
 /* ---------- 世界状态 ----------
    侧栏那张小卡，整个控制台唯一一处"概括"。它是一句话，点名了具体的东西：
-   「2 起事件尚未收束，另有 1 个地区在争夺中」——读起来是旁白，不是仪表。
+   「2 项事件待跟进，1 个地区处于争夺中」——陈述事实，不把流程状态渲染成情绪。
    同一份判断原来还铺成了一个 329px 的「世界概况」面板（八个数字加一圈光晕），
    那个删了，见 README「不要把世界摘成仪表盘」。 */
 function renderSummary(){
   const evs=arr(DATA.events),rs=arr(DATA.regions);
-  const contested=rs.filter(r=>r.control?.status==='contested').length;
   const openEv=evs.filter(e=>['active','waiting'].includes(e.status)).length;
-  const mood=openEv>=2?['紧张','rose']:openEv===1?['不安','amber']:['平静','green'];
+  const contested=rs.filter(r=>r.control?.status==='contested').length;
+  const uncertain=rs.filter(r=>['unclaimed','unclear'].includes(r.control?.status)).length;
+  const steady=Math.max(0,rs.length-contested-uncertain);
+
+  /* 事件“进行中”只表示流程状态，不等于危险等级。世界概况只按可验证的控制状态
+     和待跟进数量做克制判断，不再由一条普通事件直接推导出夸张警报。 */
+  const mood=contested>=2?['局势承压','rose']:
+             (contested===1||openEv>=3)?['局部波动','amber']:
+             openEv?['大体平稳','teal']:['运行平稳','green'];
+  const note=contested
+    ?openEv+' 项事件待跟进，'+contested+' 个地区处于争夺中。'
+    :openEv
+      ?openEv+' 项事件待跟进，已知地区控制稳定。'
+      :'当前没有待跟进事件，已知地区控制稳定。';
 
   $('#sideState').innerHTML=fieldKey('i-lantern','世界状态')+
-    '<b>'+mood[0]+'</b>'+
-    '<p>'+(openEv?openEv+' 起事件尚未收束，'+(contested?'另有 '+contested+' 个地区在争夺中。':'地区控制暂时稳定。')
-                :'没有未收束的事件，一切如常运转。')+'</p>'+
-    /* 原来这行底下还有一枚「查看详情」，弹「世界设定页尚未接入」。
-       这块本来就是从本轮记录里数出来的两句话，没有"详情"这一层。 */
-    '';
+    '<div class="state-head"><span class="state-dot"></span><b>'+mood[0]+'</b></div>'+
+    '<p>'+note+'</p>'+
+    '<div class="state-meta"><span>待跟进 '+openEv+'</span><span>稳定地区 '+steady+'</span>'+
+      ((contested+uncertain)?'<span>待确认 '+(contested+uncertain)+'</span>':'')+'</div>';
   $('#sideState').className='side-state h-'+mood[1];
 }
 

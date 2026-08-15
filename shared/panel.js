@@ -46,20 +46,40 @@
   }
 
   /* ---------- 头像与纹章 ----------
-     页面事先不知道会出现什么人、什么势力，所以除了少数已画好的角色，
-     其余一律按名字哈希从通用池里挑一张。挑中的结果对同一个名字永远相同。 */
-  /* GPT Image 2 pools. Name hash selects a stable index; gender selects the pool.
-     静态站根目录是「世界引擎面板/」时用 assets-gpt-image-2/；也可在页面里先设 window.WE_ASSET_ROOT。 */
+     人物图：用户自定义链接 > 正文美化内置名册 > 黄底剪影池。
+     同一个名字哈希到同一张剪影，圆头像用立绘上半身裁切。
+     势力纹章和地区徽记仍用 icons-v2。 */
   const ASSET_ROOT = global.WE_ASSET_ROOT != null ? String(global.WE_ASSET_ROOT) : 'assets-gpt-image-2/';
-  const AVATAR_POOLS={female:["avatar-v2-01.png","avatar-v2-02.png","avatar-v2-03.png","avatar-v2-04.png","avatar-v2-06.png","avatar-v2-07.png","avatar-v2-10.png","avatar-v2-12.png","avatar-v2-14.png","avatar-v2-16.png","avatar-v2-18.png","avatar-v2-20.png","avatar-v2-25.png","avatar-v2-26.png","avatar-v2-32.png","avatar-v2-37.png","avatar-v2-39.png"],male:["avatar-n-10.png","avatar-v2-05.png","avatar-v2-08.png","avatar-v2-09.png","avatar-v2-11.png","avatar-v2-13.png","avatar-v2-15.png","avatar-v2-17.png","avatar-v2-19.png","avatar-v2-21.png","avatar-v2-22.png","avatar-v2-23.png","avatar-v2-24.png","avatar-v2-27.png","avatar-v2-28.png","avatar-v2-29.png","avatar-v2-30.png","avatar-v2-31.png","avatar-v2-33.png","avatar-v2-34.png","avatar-v2-35.png","avatar-v2-36.png","avatar-v2-38.png","avatar-v2-40.png"],neutral:["avatar-neutral-001.png","avatar-neutral-002.png","avatar-neutral-003.png","avatar-neutral-004.png","avatar-neutral-005.png","avatar-neutral-006.png","avatar-neutral-007.png","avatar-neutral-008.png","avatar-neutral-009.png","avatar-neutral-010.png","avatar-neutral-011.png","avatar-neutral-012.png","avatar-neutral-013.png","avatar-neutral-014.png","avatar-neutral-015.png","avatar-neutral-016.png","avatar-neutral-017.png","avatar-neutral-018.png","avatar-neutral-019.png","avatar-neutral-020.png","avatar-neutral-021.png","avatar-neutral-022.png","avatar-neutral-023.png","avatar-neutral-024.png","avatar-neutral-025.png","avatar-neutral-026.png","avatar-neutral-027.png","avatar-neutral-028.png","avatar-neutral-029.png","avatar-neutral-030.png","avatar-neutral-031.png"]};
-  /* ??????????????????????
-     female ????????? 15 / 23 / 29 / 37?????????????????????
-     ????????????????????????????? */
-  const PORTRAIT_POOLS={
-    female:["portrait-v2-04.png","portrait-v2-09.png","portrait-v2-10.png","portrait-v2-13.png","portrait-v2-17.png","portrait-v2-19.png","portrait-v2-20.png","portrait-v2-21.png","portrait-v2-22.png","portrait-v2-31.png"],
-    male:["portrait-v2-03.png","portrait-v2-05.png","portrait-v2-11.png","portrait-v2-16.png","portrait-v2-18.png","portrait-v2-27.png","portrait-v2-33.png","portrait-v2-38.png","portrait-v2-39.png"],
-    neutral:["portrait-neutral-003.png","portrait-neutral-006.png","portrait-neutral-008.png","portrait-neutral-009.png","portrait-neutral-010.png","portrait-neutral-011.png","portrait-neutral-012.png","portrait-neutral-013.png","portrait-neutral-014.png","portrait-neutral-015.png"]
-  };
+  const SILHOUETTE_ROOT = global.WE_SILHOUETTE_ROOT != null ? String(global.WE_SILHOUETTE_ROOT) : 'assets/silhouettes/';
+  const SILHOUETTE_POOL = [
+    'silhouette-01.png', 'silhouette-02.png', 'silhouette-03.png', 'silhouette-04.png',
+    'silhouette-05.png', 'silhouette-06.png', 'silhouette-07.png', 'silhouette-08.png',
+  ];
+  /* 与 正文美化智慧姬兼容.html 同一套：头像走 /头像/，封面立绘走 /封面/。
+     典狱长、特图没有封面，立绘回落到头像。塔菲来自精简版正文美化。 */
+  const CHAR_ART_STORAGE = 'we-char-art-v1';
+  const CHAR_AVATAR_BASE = 'https://rpg.bolt.qzz.io/%E5%A4%B4%E5%83%8F/';
+  const CHAR_COVER_BASE = 'https://rpg.bolt.qzz.io/%E5%B0%81%E9%9D%A2/';
+  const CHAR_COVER_EXCLUDED = new Set(['典狱长', '特图']);
+  const BUILTIN_CHAR_ART = {};
+  [
+    ['法露特'], ['星极'], ['奈雅丽'], ['艾克莉西娅'], ['红莲'], ['特图'], ['典狱长'],
+    ['初濑伊纲', ['初濑伊纲', '伊纲']], ['白'], ['史蒂芬妮'], ['吉普莉尔'], ['菲尔'],
+    ['克拉米'], ['绯'], ['奥契丝'], ['亚丝娜'], ['露露卡'], ['优纪'], ['桐子'], ['米特'],
+    ['莉法'], ['西莉卡'], ['诗乃'], ['阿尔戈'], ['罗曼'], ['芙蕾雅'], ['卡提希娅'],
+    ['爱弥斯'], ['璐米欧儿'], ['雅儿贞特'], ['达妮娅'], ['洛茜'], ['夏弥'],
+    ['绘梨衣', ['上杉绘梨衣', '绘梨衣']], ['陈墨瞳', ['陈墨瞳', '诺诺']],
+    ['叶瞬光', ['叶瞬光', '瞬光']], ['莉贝尔'], ['塔菲'],
+  ].forEach((row) => {
+    const name = row[0];
+    const aliases = row[1] || [name];
+    const avatar = CHAR_AVATAR_BASE + encodeURIComponent(name) + '.webp';
+    BUILTIN_CHAR_ART[name] = {
+      avatar,
+      portrait: CHAR_COVER_EXCLUDED.has(name) ? '' : CHAR_COVER_BASE + encodeURIComponent(name) + '.webp',
+      aliases,
+    };
+  });
   /* 势力纹章只取 001-018 这一段，后面 019-036 不用。
 
      那一段是横向的编结和几何块，摆进圆形徽章里只占中间窄窄一条，剩下的圆面空着，
@@ -79,10 +99,74 @@
      两族。17 枚地物足够摆开，重复要到第 18 个地区才发生。 */
   const SIGIL_POOL=["sigil-v2-025.png","sigil-v2-026.png","sigil-v2-027.png","sigil-v2-028.png","sigil-v2-029.png","sigil-v2-030.png","sigil-v2-031.png","sigil-v2-032.png","sigil-v2-033.png","sigil-v2-034.png","sigil-v2-035.png","sigil-v2-036.png","sigil-v2-037.png","sigil-v2-038.png","sigil-v2-039.png","sigil-v2-040.png","sigil-v2-041.png"];
   const personRecord=name=>arr(DATA.npcs).concat(arr(DATA.candidates)).find(x=>x&&x.name===name)||null;
-  const genderKey=gender=>gender==='female'||gender==='\u5973'?'female':gender==='male'||gender==='\u7537'?'male':'neutral';
   const poolPick=(pool,name)=>pool[hash(name)%pool.length];
-  function avatarFile(name,gender){const g=genderKey(gender||personRecord(name)?.profile?.gender);if(g==='female')return ASSET_ROOT+'avatars-v2/female/'+poolPick(AVATAR_POOLS.female,name);if(g==='male')return ASSET_ROOT+'avatars-v2/male/'+poolPick(AVATAR_POOLS.male,name);return ASSET_ROOT+'avatars/'+poolPick(AVATAR_POOLS.neutral,name)}
-  function portraitFile(name,gender){const g=genderKey(gender||personRecord(name)?.profile?.gender);if(g==='female')return ASSET_ROOT+'portraits-v2/female/'+poolPick(PORTRAIT_POOLS.female,name);if(g==='male')return ASSET_ROOT+'portraits-v2/male/'+poolPick(PORTRAIT_POOLS.male,name);return ASSET_ROOT+'portraits/'+poolPick(PORTRAIT_POOLS.neutral,name)}
+  function silhouetteFile(name){return SILHOUETTE_ROOT+poolPick(SILHOUETTE_POOL,name)}
+  function readCustomArtMap(){
+    try{
+      const raw=global.localStorage&&global.localStorage.getItem(CHAR_ART_STORAGE);
+      const parsed=raw?JSON.parse(raw):{};
+      return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
+    }catch(_e){return {};}
+  }
+  function writeCustomArtMap(map){
+    try{global.localStorage&&global.localStorage.setItem(CHAR_ART_STORAGE,JSON.stringify(map||{}));}
+    catch(_e){}
+  }
+  function lookupArtRow(name,map){
+    const n=String(name||'').trim();
+    if(!n||!map||typeof map!=='object')return null;
+    if(map[n])return map[n];
+    for(const row of Object.values(map)){
+      if(row&&Array.isArray(row.aliases)&&row.aliases.includes(n))return row;
+    }
+    return null;
+  }
+  function getCustomArt(name){return lookupArtRow(name,readCustomArtMap());}
+  function normalizeImageUrl(url){
+    let trimmed=String(url||'').trim();
+    if(!trimmed)return '';
+    if(/^(SFW|NSFW)\//.test(trimmed)){
+      if(!/\.(webp|png|jpg|jpeg|gif|bmp|svg)(\?|#|$)/i.test(trimmed)) trimmed+='.webp';
+      return 'https://rpg.bolt.qzz.io/'+trimmed;
+    }
+    return trimmed;
+  }
+  function isAllowedImageUrl(url){
+    const t=String(url||'').trim();
+    if(!t)return true;
+    if(/^(SFW|NSFW)\//.test(t))return true;
+    if(/^https?:\/\//i.test(t))return true;
+    if(/^data:image\//i.test(t))return true;
+    return false;
+  }
+  function setCustomArt(name,art){
+    const n=String(name||'').trim();
+    if(!n)return getCustomArt(n);
+    const map=readCustomArtMap();
+    const avatar=normalizeImageUrl(art&&art.avatar);
+    const portrait=normalizeImageUrl(art&&art.portrait);
+    if(!avatar&&!portrait)delete map[n];
+    else map[n]={avatar,portrait};
+    writeCustomArtMap(map);
+    return map[n]||null;
+  }
+  function clearCustomArt(name){return setCustomArt(name,{});}
+  function lookupBuiltinArt(name){return lookupArtRow(name,BUILTIN_CHAR_ART);}
+  function avatarFile(name){
+    const custom=getCustomArt(name);
+    if(custom&&custom.avatar)return custom.avatar;
+    const built=lookupBuiltinArt(name);
+    if(built&&built.avatar)return built.avatar;
+    return silhouetteFile(name);
+  }
+  function portraitFile(name){
+    const custom=getCustomArt(name);
+    if(custom&&custom.portrait)return custom.portrait;
+    const built=lookupBuiltinArt(name);
+    if(built&&built.portrait)return built.portrait;
+    if(built&&built.avatar)return built.avatar;
+    return silhouetteFile(name);
+  }
   const crestFile=faction=>ASSET_ROOT+'icons-v2/crests/'+poolPick(CREST_POOL,faction&&faction.name||'');
   const sigilFile=region=>ASSET_ROOT+'icons-v2/sigils/'+poolPick(SIGIL_POOL,region&&region.name||'');
 
@@ -109,11 +193,9 @@
     const initial = esc(String(name || '?').slice(0, 1));
     const shape = person ? '' : ' crest';
     const tip = esc(name + (typeof p === 'object' && p && p.type ? '（' + L('participant.type', p.type) + '）' : ''));
-    // 两张人物表的 profile.gender 都是契约里明写的，不用它就会被名字哈希分到中性头像池
-    const g = gender || (typeof p === 'object' && p && p.profile && p.profile.gender) || personRecord(name)?.profile?.gender || '';
-    const file = person ? avatarFile(name, g) : '';
+    const file = person ? avatarFile(name) : '';
     const fallback = `this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls}${shape} ph',textContent:'${initial}'}))`;
-    if (file) return `<img class="${cls}${shape}" src="${file}" alt="${esc(name)}" title="${tip}" onerror="${fallback}">`;
+    if (file) return `<img class="${cls}${shape}" src="${esc(file)}" alt="${esc(name)}" title="${tip}" onerror="${fallback}">`;
     return `<span class="${cls}${shape} ph" title="${tip}">${initial}</span>`;
   }
   function avatarRow(list, max = 3, cls = 'av') {
@@ -278,7 +360,8 @@
   global.P = {
     $, $$, arr, esc, L, DATA,
     HUES, hueCycler, hash, mode,
-    avatarFile, portraitFile, crestFile, sigilFile, isPerson,
+    avatarFile, portraitFile, silhouetteFile, crestFile, sigilFile, isPerson,
+    getCustomArt, setCustomArt, clearCustomArt, isAllowedImageUrl,
     avatarTag, avatarRow, participantList,
     fieldKey, termRow, kvGrid,
     timeHH, progressOf, pageSlice, renderPager, toast, initChrome,

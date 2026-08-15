@@ -14,11 +14,15 @@
   align-items:center;gap:11px;
   height:76px;padding:0 18px 0 0;
 }
-.brand{display:flex;align-items:center;gap:2px;min-width:0}
-.brand-art{flex:0 0 auto;width:100px;height:76px;background:var(--art-compass) center/contain no-repeat}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-art{
+  flex:0 0 auto;width:86px;height:70px;
+  background:var(--art-compass) center/contain no-repeat;
+  filter:drop-shadow(0 5px 8px rgba(54,68,91,.12));
+}
 .brand-text{min-width:0}
 .brand h1{margin:0;color:var(--ink);font:700 30px/1.15 var(--serif);letter-spacing:.02em}
-.brand p{margin:3px 0 0;color:var(--ink4);font:14px/1.4 var(--ui)}
+.brand p{margin:4px 0 0;color:var(--ink4);font:14px/1.4 var(--ui);letter-spacing:.015em}
 
 .hbox{
   position:relative;overflow:hidden;
@@ -70,7 +74,21 @@
 }
 .nav-item.on .ni{color:#fff}
 .nav-item.on::after{content:"✦";margin-left:auto;color:var(--gold-soft);font-size:12px}
-.side-art{height:190px;border-radius:var(--r-panel);background:var(--art-sidebar) center bottom/contain no-repeat;opacity:.9}
+.side-art{
+  position:relative;height:206px;overflow:hidden;border-radius:var(--r-panel);
+  border:1px solid rgba(92,112,153,.10);
+  background:#111;
+  box-shadow:inset 0 1px rgba(255,255,255,.85),var(--sh1);
+}
+.side-art::before{
+  content:"";position:absolute;inset:0;
+  background:var(--art-sidebar) center 18%/cover no-repeat;
+  opacity:.96;
+}
+.side-art::after{
+  content:"";position:absolute;inset:auto 0 0;height:42px;pointer-events:none;
+  background:linear-gradient(to bottom,transparent,rgba(17,17,17,.55));
+}
 
 .main{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:12px;align-items:start}
 .col{display:grid;gap:12px;min-width:0}
@@ -146,7 +164,7 @@
 
 /* ---------- 头像与纹章 ---------- */
 .avs{display:flex;align-items:center;gap:7px}
-.av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
+.av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:center 12%;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
 .av.ph{display:grid;place-items:center;color:var(--hue-ink);font:600 15px var(--ui)}
 .av-more{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hue-track);color:var(--hue-ink);font:600 14px var(--ui)}
 /* 势力与团体用盾形纹章，跟人物的圆头像一眼分得开，类型不必再写成文字。
@@ -182,7 +200,7 @@ img.av.crest,img.pav.crest{
 .pinfo{display:flex;flex-direction:column;min-width:0}
 .pinfo b{margin:0;color:var(--ink2);font:600 14px/1.35 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pinfo small{color:var(--hue-ink);font:14px/1.35 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pav{flex:0 0 auto;width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
+.pav{flex:0 0 auto;width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:center 12%;background:var(--hue-soft);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--hue-track)}
 .pav.ph{display:grid;place-items:center;color:var(--hue-ink);font:600 14px var(--ui)}
 
 /* ---------- 时间戳 ----------

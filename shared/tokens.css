@@ -16,9 +16,9 @@
   /* 美术资产槽位。文件缺失时自动留白，不破图。 */
   --art-bloom-tl:url("../assets/art/bloom-tl.png");
   --art-bloom-br:url("../assets/art/bloom-br.png");
-  --art-compass:url("../assets/art/header-compass.png");
+  --art-compass:url("../assets/art/world-engine-mark.svg");
   --art-castle:url("../assets/art/clock-castle.png");
-  --art-sidebar:url("../assets/art/sidebar-heroine.png");
+  --art-sidebar:url("../assets/portraits/hero-left.png");
   /* 注意：上面这几条只能在本文件内部用。custom property 里的相对 url() 在 Chromium
      里是按"用它的那张样式表"解析的，不是按声明它的这张——页面自己的 <style> 里写
      var(--art-compass) 会解析到 世界引擎面板/../assets/，一路 404。
