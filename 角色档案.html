@@ -447,6 +447,7 @@
         <div><h2>人物名册</h2></div>
       </header>
       <div class="roster" id="roster"></div>
+      <p class="slot-note" id="rosterNote" hidden></p>
       <div class="pager" id="rosterPager"></div>
     </section>
 
@@ -538,10 +539,12 @@ const TARGET_ICON={person:'i-user',faction:'i-shield',region:'i-map',task:'i-scr
 
 const NPC_TABLE='bg_fixed_npc_state';
 const CAND_TABLE='bg_candidate_state';
-let NPCS=[], CANDS=[], PEOPLE=[], CAND_NAMES=new Set();
+const EXCLUSION_TABLE='bg_exclusion_list';
+let NPCS=[], CANDS=[], PEOPLE=[], CAND_NAMES=new Set(), EXCLUSIONS=[];
 function refreshLists(){
   NPCS=arr(DATA.npcs);
   CANDS=arr(DATA.candidates);
+  EXCLUSIONS=arr(DATA.exclusions);
   PEOPLE=[...NPCS,...CANDS];
   CAND_NAMES=new Set(CANDS.map(c=>c&&c.name).filter(Boolean));
 }
@@ -615,7 +618,7 @@ const byNew=list=>list.slice().sort(WTime.byNewest('updated_at'));
 const sortedPeople=()=>[...byNew(NPCS),...byNew(CANDS)];
 const GROUP={
   npc :['indigo','i-people','固定人物','你点进来的人，后台会持续推演'],
-  cand:['teal',  'i-eye',   '候选人物','AI 新加的人先待在这儿，你可以移入、打回或删除'],
+  cand:['teal',  'i-eye',   '候选人物','AI 新加的人先待在这儿；删除会同时写入排除名单，后台不会再加回来'],
 };
 
 function renderRoster(){
@@ -653,6 +656,12 @@ function renderRoster(){
     note:'按推演时间倒序',onGo:n=>{rosterPage=n;renderRoster()}});
 
   $$('.rcard').forEach(el=>el.addEventListener('click',()=>pick(el.dataset.n)));
+  const banned=EXCLUSIONS.filter(item=>item&&item.kind==='person'&&item.name).map(item=>item.name);
+  const note=$('#rosterNote');
+  if(note){
+    note.textContent=banned.length?'已排除、后台不再引入：'+banned.join('、'):'';
+    note.hidden=!banned.length;
+  }
 }
 
 /* ---------- 档案主卡 ---------- */
@@ -1456,10 +1465,23 @@ function npcToCandidate(p){
   };
 }
 
+function exclusionKey(kind, name){
+  return String(kind || 'person') + '|' + String(name || '');
+}
+
 function applyLocalPatches(patches){
   for (const patch of patches || []) {
     if (!patch) continue;
     const key = patch.primaryKey;
+    if (patch.table === EXCLUSION_TABLE) {
+      if (patch.op === 'delete') {
+        DATA.exclusions = arr(DATA.exclusions).filter(x => x && x.entry_key !== key && x.name !== key);
+      } else {
+        const row = Object.assign({}, patch.values || {}, { entry_key: key });
+        DATA.exclusions = arr(DATA.exclusions).filter(x => x && x.entry_key !== key).concat([row]);
+      }
+      continue;
+    }
     const listKey = patch.table === NPC_TABLE ? 'npcs' : patch.table === CAND_TABLE ? 'candidates' : '';
     if (!listKey) continue;
     if (patch.op === 'delete') {
@@ -1520,11 +1542,23 @@ async function demoteNpc(name){
 async function deleteCandidate(name){
   const person = byName(name);
   if (!person || !isCand(person)) { toast('只能删除候选人物'); return; }
-  if (!confirm('删除候选人物「'+name+'」？会从数据库拿掉，下一轮提示词不再带上。')) return;
-  await commitPatches(
-    [{ op: 'delete', table: CAND_TABLE, primaryKey: name }],
-    '已删除：'+name
-  );
+  if (!confirm('删除候选人物「'+name+'」？会从数据库拿掉，并写入排除名单，后台下一轮不会再把这个人加回来。')) return;
+  const entryKey = exclusionKey('person', name);
+  await commitPatches([
+    { op: 'delete', table: CAND_TABLE, primaryKey: name },
+    {
+      op: 'write',
+      table: EXCLUSION_TABLE,
+      primaryKey: entryKey,
+      values: {
+        entry_key: entryKey,
+        name,
+        kind: 'person',
+        reason: '用户从候选名单删除',
+        excluded_at: WORLD_TIME || '',
+      },
+    },
+  ], '已删除并排除：'+name);
 }
 
 $('#hero').addEventListener('click', e => {

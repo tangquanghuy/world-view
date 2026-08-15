@@ -60,7 +60,7 @@
     const world = data && data.background_world;
     if (!world || typeof world !== 'object') throw new Error('视图缺少 data.background_world');
 
-    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions'];
+    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions', 'exclusions'];
     for (const key of sections) if (!Array.isArray(world[key])) world[key] = [];
 
     // 结构化视图必须保留原始英文键；中文 alias 会让现有页面所有字段失配。
