@@ -153,6 +153,12 @@
 /* 一节确实没内容时的旁注。曾经还有一套虚线胶囊（.ghost）替原型上那些契约里
    根本没有的数值占位，随「角色卡」那张空态卡一起删了——见 renderRail 的注释。 */
 .slot-note{margin:8px 0 0;color:var(--ink4);font:14px/1.6 var(--ui)}
+.xban{display:inline-flex;align-items:center;gap:1px;margin-right:2px}
+.xban-del{
+  margin:0 0 0 1px;padding:0 5px;border:0;border-radius:4px;background:transparent;
+  color:var(--ink4);font:600 15px/1 var(--ui);cursor:pointer;
+}
+.xban-del:hover{color:var(--hue-ink);background:var(--sunken)}
 
 /* 日程时间尺本体在 shared/console.css，本页只是刻度取的是这个人自己的时间跨度 */
 
@@ -707,12 +713,25 @@ function renderRoster(){
     note:'按推演时间倒序',onGo:n=>{rosterPage=n;renderRoster()}});
 
   $$('.rcard').forEach(el=>el.addEventListener('click',()=>pick(el.dataset.n)));
-  const banned=EXCLUSIONS.filter(item=>item&&item.kind==='person'&&item.name).map(item=>item.name);
+  renderExclusionNote();
+}
+
+function exclusionEntryKey(item){
+  return (item&&item.entry_key)||exclusionKey(item&&item.kind,item&&item.name);
+}
+
+function renderExclusionNote(){
   const note=$('#rosterNote');
-  if(note){
-    note.textContent=banned.length?'已排除、后台不再引入：'+banned.join('、'):'';
-    note.hidden=!banned.length;
-  }
+  if(!note)return;
+  const banned=EXCLUSIONS.filter(item=>item&&item.name);
+  if(!banned.length){note.hidden=true;note.innerHTML='';return}
+  note.hidden=false;
+  note.innerHTML='已排除、后台不再引入：'+banned.map(item=>{
+    const key=exclusionEntryKey(item);
+    const tag=item.kind==='faction'?'（势力）':'';
+    return '<span class="xban">'+esc(item.name)+tag+
+      '<button type="button" class="xban-del" data-exkey="'+esc(key)+'" data-exname="'+esc(item.name)+'" title="从排除名单移除，后台可以再引入">×</button></span>';
+  }).join('、');
 }
 
 /* ---------- 档案主卡 ---------- */
@@ -1614,6 +1633,14 @@ async function deleteCandidate(name){
   ], '已删除并排除：'+name);
 }
 
+async function liftExclusion(entryKey, name){
+  if (!entryKey) { toast('这条排除记录没有键，无法删除'); return; }
+  if (!confirm('把「'+name+'」移出排除名单？后台之后可以再把这个人加回来。')) return;
+  await commitPatches([
+    { op: 'delete', table: EXCLUSION_TABLE, primaryKey: entryKey },
+  ], '已移出排除名单：'+name);
+}
+
 function openArtDlg(){
   const p=cur();
   if(!p||!p.name)return;
@@ -1653,6 +1680,12 @@ $('#artDlgClose').addEventListener('click',closeArtDlg);
 $('#artDlg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeArtDlg()});
 $('#artDlgSave').addEventListener('click',saveArtDlg);
 $('#artDlgClear').addEventListener('click',resetArtDlg);
+
+$('#rosterNote').addEventListener('click', e => {
+  const btn = e.target.closest('.xban-del');
+  if (!btn) return;
+  liftExclusion(btn.dataset.exkey, btn.dataset.exname);
+});
 
 $('#hero').addEventListener('click', e => {
   const btn = e.target.closest('[data-roster]');
