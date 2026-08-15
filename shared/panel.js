@@ -90,6 +90,37 @@
       aliases,
     };
   });
+  /* 默示名册：头像走 /profile/。
+     有壁纸的立绘走 /壁纸/（默认编号 1；艾玛用 3；雪莉无编号）。
+     没有壁纸的立绘走 /SFW/名字/通常1.webp。Jailer、Warden 不加。 */
+  const MOSHEN_ORIGIN = 'https://moshen.bolt.qzz.io/';
+  const MOSHEN_AVATAR_BASE = MOSHEN_ORIGIN + 'profile/';
+  const MOSHEN_WALL_BASE = MOSHEN_ORIGIN + '%E5%A3%81%E7%BA%B8/';
+  const MOSHEN_SFW_BASE = MOSHEN_ORIGIN + 'SFW/';
+  [
+    { name: '奈叶香', avatar: 'Profile_Nanoka.webp', wall: '奈叶香1.webp', aliases: ['奈叶香', '黑部奈叶香'] },
+    { name: '安安', avatar: 'Profile_AnAn.webp', wall: '安安1.webp', aliases: ['安安', '夏目安安'] },
+    { name: '希罗', avatar: 'Profile_Hiro.webp', wall: '希罗1.webp', aliases: ['希罗', '二阶堂希罗'] },
+    { name: '月代雪', avatar: 'Profile_Yuki.webp', wall: '月代雪1.webp', aliases: ['月代雪', '雪'] },
+    { name: '梅露露', avatar: 'Profile_Meruru.webp', wall: '梅露露1.webp', aliases: ['梅露露', '冰上梅露露'] },
+    { name: '玛格', avatar: 'Profile_Margo.webp', wall: '玛格1.webp', aliases: ['玛格', '宝生玛格'] },
+    { name: '米莉亚', avatar: 'Profile_Miria.webp', wall: '米莉亚1.webp', aliases: ['米莉亚', '佐伯米莉亚'] },
+    { name: '艾玛', avatar: 'Profile_Ema.webp', wall: '艾玛3.webp', aliases: ['艾玛', '樱羽艾玛'] },
+    { name: '蕾雅', avatar: 'Profile_Leia.webp', wall: '蕾雅1.webp', aliases: ['蕾雅', '莲见蕾雅'] },
+    { name: '雪莉', avatar: 'Profile_Sherry.webp', wall: '雪莉.webp', aliases: ['雪莉', '橘雪莉'] },
+    { name: '亚里沙', avatar: 'Profile_Alisa.webp', sfw: '亚里沙', aliases: ['亚里沙', '紫藤亚里沙'] },
+    { name: '可可', avatar: 'Profile_Coco.webp', sfw: '可可', aliases: ['可可', '泽渡可可'] },
+    { name: '汉娜', avatar: 'Profile_Hanna.webp', sfw: '汉娜', aliases: ['汉娜', '远野汉娜'] },
+    { name: '诺亚', avatar: 'Profile_Noah.webp', sfw: '诺亚', aliases: ['诺亚', '城崎诺亚'] },
+  ].forEach((row) => {
+    BUILTIN_CHAR_ART[row.name] = {
+      avatar: MOSHEN_AVATAR_BASE + encodeURIComponent(row.avatar),
+      portrait: row.wall
+        ? MOSHEN_WALL_BASE + encodeURIComponent(row.wall)
+        : MOSHEN_SFW_BASE + encodeURIComponent(row.sfw) + '/' + encodeURIComponent('通常1.webp'),
+      aliases: row.aliases || [row.name],
+    };
+  });
   /* 势力纹章只取 001-018 这一段，后面 019-036 不用。
 
      那一段是横向的编结和几何块，摆进圆形徽章里只占中间窄窄一条，剩下的圆面空着，
