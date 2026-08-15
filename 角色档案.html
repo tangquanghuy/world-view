@@ -540,7 +540,6 @@ const TARGET_ICON={person:'i-user',faction:'i-shield',region:'i-map',task:'i-scr
 const NPC_TABLE='bg_fixed_npc_state';
 const CAND_TABLE='bg_candidate_state';
 const EXCLUSION_TABLE='bg_exclusion_list';
-const ROSTER_TABLE='bg_fixed_roster';
 let NPCS=[], CANDS=[], PEOPLE=[], CAND_NAMES=new Set(), EXCLUSIONS=[];
 function refreshLists(){
   NPCS=arr(DATA.npcs);
@@ -1483,15 +1482,6 @@ function applyLocalPatches(patches){
       }
       continue;
     }
-    if (patch.table === ROSTER_TABLE) {
-      if (patch.op === 'delete') {
-        DATA.fixed_roster = arr(DATA.fixed_roster).filter(x => x && x.name !== key);
-      } else {
-        const row = Object.assign({}, patch.values || {}, { name: key });
-        DATA.fixed_roster = arr(DATA.fixed_roster).filter(x => x && x.name !== key).concat([row]);
-      }
-      continue;
-    }
     const listKey = patch.table === NPC_TABLE ? 'npcs' : patch.table === CAND_TABLE ? 'candidates' : '';
     if (!listKey) continue;
     if (patch.op === 'delete') {
@@ -1535,7 +1525,6 @@ async function promoteCandidate(name){
   if (!confirm('把「'+name+'」移入固定角色？移入后后台会持续推演这个人。')) return;
   await commitPatches([
     { op: 'write', table: NPC_TABLE, primaryKey: name, values: candidateToNpc(person) },
-    { op: 'write', table: ROSTER_TABLE, primaryKey: name, values: { name, added_at: WORLD_TIME || '' } },
     { op: 'delete', table: CAND_TABLE, primaryKey: name },
   ], '已移入固定角色：'+name);
 }
@@ -1547,7 +1536,6 @@ async function demoteNpc(name){
   await commitPatches([
     { op: 'write', table: CAND_TABLE, primaryKey: name, values: npcToCandidate(person) },
     { op: 'delete', table: NPC_TABLE, primaryKey: name },
-    { op: 'delete', table: ROSTER_TABLE, primaryKey: name },
   ], '已打回候选：'+name);
 }
 

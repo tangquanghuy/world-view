@@ -60,7 +60,7 @@
     const world = data && data.background_world;
     if (!world || typeof world !== 'object') throw new Error('视图缺少 data.background_world');
 
-    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions', 'exclusions', 'fixed_roster'];
+    const sections = ['world', 'changes', 'npcs', 'factions', 'candidates', 'tasks', 'events', 'regions', 'exclusions'];
     for (const key of sections) if (!Array.isArray(world[key])) world[key] = [];
 
     // 结构化视图必须保留原始英文键；中文 alias 会让现有页面所有字段失配。
@@ -71,6 +71,10 @@
     }
     return world;
   }
+
+  // 演进面板业务：副 AI 从零 add /npc 时，用 AcuData.applyPatches 改写到候选。
+  // 用户晋升也走 applyPatches，source 是 acu-data，不会进这里。橱窗壳只转发事件，不认人。
+  let pendingAiNpcNames = null;
 
   function listOf(world, key) {
     return Array.isArray(world && world[key]) ? world[key] : [];
@@ -97,49 +101,47 @@
     };
   }
 
-  function applyMisplacedNpcsLocally(world, patches) {
-    for (const patch of patches) {
-      const name = patch.primaryKey;
-      if (patch.table === 'bg_fixed_npc_state' && patch.op === 'delete') {
-        world.npcs = listOf(world, 'npcs').filter(item => item && item.name !== name);
-      }
-      if (patch.table === 'bg_candidate_state' && patch.op === 'write') {
-        const row = Object.assign({}, patch.values || {}, { name: name });
-        world.candidates = listOf(world, 'candidates').filter(item => item && item.name !== name).concat([row]);
-      }
-    }
+  function markAiOutput(change) {
+    if (!change || change.source !== 'unit-output') return;
+    pendingAiNpcNames = new Set(listOf(window.WE_WORLD_DATA, 'npcs').map(function (item) {
+      return item && item.name;
+    }).filter(Boolean));
   }
 
-  // AI 把新人写进 /npc 时，只有用户亲手「移入固定」的名字才留在固定表。
-  function buildMisplacedNpcPatches(world) {
-    const confirmed = new Set(listOf(world, 'fixed_roster').map(item => item && item.name).filter(Boolean));
+  function takeAiAddedNpcs(world) {
+    const before = pendingAiNpcNames;
+    pendingAiNpcNames = null;
+    if (!before) return [];
     const excluded = new Set(
       listOf(world, 'exclusions')
-        .filter(item => item && item.kind === 'person' && item.name)
-        .map(item => item.name),
+        .filter(function (item) { return item && item.kind === 'person' && item.name; })
+        .map(function (item) { return item.name; }),
     );
+    return listOf(world, 'npcs').filter(function (npc) {
+      return npc && npc.name && !before.has(npc.name);
+    }).map(function (npc) {
+      return { npc: npc, excluded: excluded.has(npc.name) };
+    });
+  }
+
+  function applyAiNpcMovesLocally(world, added) {
     const patches = [];
-    listOf(world, 'npcs').forEach(function (npc) {
-      const name = npc && String(npc.name || '').trim();
-      if (!name || confirmed.has(name)) return;
+    added.forEach(function (item) {
+      const name = item.npc.name;
+      world.npcs = listOf(world, 'npcs').filter(function (row) { return !row || row.name !== name; });
       patches.push({ op: 'delete', table: 'bg_fixed_npc_state', primaryKey: name });
-      if (excluded.has(name)) return;
-      patches.push({
-        op: 'write',
-        table: 'bg_candidate_state',
-        primaryKey: name,
-        values: npcToCandidate(npc),
-      });
+      if (item.excluded) return;
+      const row = npcToCandidate(item.npc);
+      world.candidates = listOf(world, 'candidates').filter(function (c) { return !c || c.name !== name; }).concat([row]);
+      patches.push({ op: 'write', table: 'bg_candidate_state', primaryKey: name, values: row });
     });
     return patches;
   }
 
-  let repairing = false;
-
   function acceptData(result) {
     const world = extractWorld(result);
-    const patches = repairing ? [] : buildMisplacedNpcPatches(world);
-    if (patches.length) applyMisplacedNpcsLocally(world, patches);
+    const added = takeAiAddedNpcs(world);
+    const patches = added.length ? applyAiNpcMovesLocally(world, added) : [];
     window.WE_WORLD_DATA = world;
     const first = !hasData;
     hasData = true;
@@ -148,12 +150,8 @@
     frame.hidden = false;
     // 页面在启动时把各分区缓存成常量；数据库变化后重载当前子页，确保所有模块一致更新。
     sync(!first || !frame.getAttribute('src'));
-    if (!patches.length || repairing) return;
-    repairing = true;
-    applyPatches(patches).catch(function (err) {
-      console.warn('[world-view] 纠正误写入固定人物失败', err);
-    }).then(function () {
-      repairing = false;
+    if (patches.length) applyPatches(patches).catch(function (err) {
+      console.warn('[world-view] 将 AI 新增人物改回候选失败', err);
     });
   }
 
@@ -177,6 +175,11 @@
       viewId: VIEW_ID,
       params: {},
       options: {},
+    }, '*');
+    window.parent.postMessage({
+      type: 'we-subscribe',
+      subscribeId: WATCH_ID + '-changes',
+      filter: {},
     }, '*');
   }
 
@@ -236,6 +239,10 @@
       delete patchPending[data.id];
       if (data.ok) pending.resolve(data.result || { ok: true });
       else pending.reject(new Error(data.error || '写入失败'));
+      return;
+    }
+    if (e.source === window.parent && data.type === 'we-data-changed') {
+      markAiOutput(data.change);
       return;
     }
     if (e.source === window.parent && data.type === 'we-watch-view-result') {

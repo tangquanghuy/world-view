@@ -30,11 +30,12 @@
  * - 橱窗 iframe 是 srcdoc、与酒馆页同源，能直接碰 window.top.AcuData。
  * - GitHub Pages 是跨域页面，不能直接读 top.AcuData，必须由壳子做 postMessage 代理。
  *
- * 当前桥：
- * - we-goto：子页切路由（已接）
- * - we-query-view / we-watch-view：代理 AcuData
- * - we-apply-patches：角色档案删人 / 移入固定 / 打回候选
- * 静态站不再内置 mock；只有收到 bg_world_structured_v09 的真实数据后才渲染。
+ * 当前桥（只代理 AcuData，不含业务）：
+ * - we-goto：转给面板
+ * - we-query-view / we-watch-view / we-unwatch-view
+ * - we-apply-patches
+ * - we-subscribe / we-unsubscribe → acu-data:changed
+ * 静态站不再内置 mock；只有收到真实视图数据后才渲染。
  */
 (function () {
   'use strict';
@@ -49,6 +50,7 @@
 
   var reqSeq = 0;
   var watchers = Object.create(null);
+  var subscribers = Object.create(null);
 
   function acuData() {
     try {
@@ -96,6 +98,25 @@
     }
   }
 
+  async function handleSubscribe(source, msg) {
+    var D = acuData();
+    var sid = msg.subscribeId || ('s' + (++reqSeq));
+    if (!D || typeof D.subscribe !== 'function') {
+      reply(source, { type: 'we-subscribe-result', subscribeId: sid, ok: false, error: 'AcuData unavailable' });
+      return;
+    }
+    try {
+      await D.ready();
+      if (subscribers[sid] && typeof subscribers[sid] === 'function') subscribers[sid]();
+      subscribers[sid] = D.subscribe(msg.filter || {}, function (change) {
+        reply(source, { type: 'we-data-changed', subscribeId: sid, change: change || {} });
+      });
+      reply(source, { type: 'we-subscribe-result', subscribeId: sid, ok: true });
+    } catch (err) {
+      reply(source, { type: 'we-subscribe-result', subscribeId: sid, ok: false, error: String(err && err.message || err) });
+    }
+  }
+
   async function handleApplyPatches(source, msg) {
     var D = acuData();
     if (!D) {
@@ -138,6 +159,15 @@
     }
     if (msg.type === 'we-apply-patches') {
       handleApplyPatches(e.source, msg);
+      return;
+    }
+    if (msg.type === 'we-subscribe') {
+      handleSubscribe(e.source, msg);
+      return;
+    }
+    if (msg.type === 'we-unsubscribe' && msg.subscribeId && subscribers[msg.subscribeId]) {
+      try { subscribers[msg.subscribeId](); } catch (_e) { /* ignore */ }
+      delete subscribers[msg.subscribeId];
       return;
     }
     if (msg.type === 'we-unwatch-view' && msg.watchId && watchers[msg.watchId]) {
