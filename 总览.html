@@ -375,10 +375,7 @@ const REL_HUE={alliance:'green',cooperation:'teal',trade:'amber',employment:'ind
                rivalry:'amber',hostility:'rose',debt:'purple',influence:'violet'};
 const TARGET_ICON={faction:'i-shield',region:'i-map',task:'i-scroll',event:'i-bell',other:'i-spark'};
 
-const NPCS=arr(DATA.npcs);
-const CANDIDATES=arr(DATA.candidates);
-const PEOPLE=[...NPCS,...CANDIDATES];
-const CAND=new Set(CANDIDATES.map(c=>c.name));
+let NPCS=[], CANDIDATES=[], PEOPLE=[], CAND=new Set();
 
 /* 固定人物用 presence（视线外/邻近/前台/休眠/已退场），
    候选人物没有这个字段，契约给的是 status（观察中/可启用/休眠/已弃用）。
@@ -391,8 +388,7 @@ function standing(p){
 }
 /** 是否计入"活跃人物"。两张表的休眠／退场语义一致，判定合并在这里。 */
 const isLive=p=>!standing(p).far||standing(p).label==='视线外';
-const WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
-const NOW=WTime.parse(WORLD_TIME);
+let WORLD_TIME='', NOW=null;
 
 const taskHue=hueCycler();          // 同一委托方一个颜色
 arr(DATA.tasks).forEach(t=>taskHue(t.source||''));
@@ -402,7 +398,7 @@ const byName=n=>PEOPLE.find(p=>p.name===n);
    两者拿去比较时年份不同会差出一整个量级，所以比较前先把年份剥掉。 */
 const stripYear=s=>String(s||'').replace(/^[^\d]*\d+\s*年\s*[·・]?\s*/,'');
 const T=s=>WTime.parse(stripYear(s));
-const NOW_T=T(WORLD_TIME);
+let NOW_T=null;
 
 /* ---------- 时间尺 ----------
    刻度取自本批数据实际覆盖的时间跨度，不是写死的钟点。 */
@@ -477,8 +473,20 @@ function actPageSize(){
   return cols<=1?4:cols*ACT_ROWS;
 }
 /* 开局聚焦关系最多的人。取第一个 NPC 常常只有一条边，关系图一上来就是空的。 */
-const busiest=PEOPLE.slice().sort((a,b)=>egoNeighbors(b).length-egoNeighbors(a).length)[0];
-let actPage=0,keyOnly=false,expanded=false,focusName=busiest?.name||NPCS[0]?.name||'';
+let busiest=null;
+let actPage=0,keyOnly=false,expanded=false,focusName='';
+function refreshLists(){
+  NPCS=arr(DATA.npcs);
+  CANDIDATES=arr(DATA.candidates);
+  PEOPLE=[...NPCS,...CANDIDATES];
+  CAND=new Set(CANDIDATES.map(c=>c.name));
+  WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
+  NOW=WTime.parse(WORLD_TIME);
+  NOW_T=T(WORLD_TIME);
+  busiest=PEOPLE.slice().sort((a,b)=>egoNeighbors(b).length-egoNeighbors(a).length)[0];
+  if(!PEOPLE.some(p=>p.name===focusName)) focusName=busiest?.name||NPCS[0]?.name||'';
+}
+refreshLists();
 
 function actList(){
   const ps=PEOPLE.slice().sort(WTime.byNewest('updated_at'));
@@ -1008,17 +1016,19 @@ function fitChgPage(){
 const balance=()=>{fillEgoList();fitChgPage()};
 
 /* ---------- 启动 ---------- */
-P.initChrome('世界演进');
-renderRuler();
-renderActs();
-// 关系图要量右边那块面板有多高才知道自己能撑多大，所以放在变化列表之后渲染
-renderChanges();
-renderEvents();
-renderSummary();
-renderTasks();
-renderEgo();
-// 头像和字体到位后面板高度还会再变一次，补一遍量高
-requestAnimationFrame(()=>{renderEgo();balance()});
+function paint(){
+  P.initChrome('世界演进');
+  renderRuler();
+  renderActs();
+  renderChanges();
+  renderEvents();
+  renderSummary();
+  renderTasks();
+  renderEgo();
+  requestAnimationFrame(()=>{renderEgo();balance()});
+}
+paint();
+addEventListener('we-world-refresh',()=>{refreshLists();paint()});
 
 $('#keyOnly').addEventListener('click',e=>{
   keyOnly=!keyOnly;actPage=0;

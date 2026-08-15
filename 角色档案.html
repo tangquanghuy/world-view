@@ -20,11 +20,22 @@
    后台世界引擎只产出动态状态，不产出角色卡属性、技能、物品或数值槽。
    ========================================================================== */
 
-/* ---------- 四列骨架：导航 | 角色列表 | 主档案 | 角色详情 ----------
+/* ---------- 档案骨架：名册通栏 | 立绘+近况同行 | 日程/关系横跨中右 ----------
    console.css 的 .main 只有两列，这里加一个类把特异度提到 (0,2,0)，
    连同它自己的三档断点一起覆盖掉——否则 console.css 里 1440/1180 那两条
    媒体查询会在窄屏把第三列打回原形。 */
-.main.archive{grid-template-columns:224px minmax(0,1fr) 352px}
+.main.archive{
+  grid-template-columns:224px minmax(0,1fr) 352px;
+  grid-template-areas:
+    "roster hero rail"
+    "roster sched sched"
+    "roster rel rel";
+}
+.main.archive>.roster-panel{grid-area:roster}
+.main.archive>.hero-panel{grid-area:hero}
+.main.archive>.rail-panel{grid-area:rail}
+.main.archive>.sched-panel{grid-area:sched}
+.main.archive>.rel-panel{grid-area:rel}
 
 /* ---------- 角色列表 ---------- */
 .roster{display:grid;gap:9px;padding:10px 12px 2px}
@@ -96,8 +107,8 @@
 }
 .pf-cap .v{margin-top:3px}
 
-.h-top{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
-.h-actions{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.h-top{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:4px}
+.h-actions{display:flex;flex-wrap:wrap;gap:8px}
 .h-act{
   padding:6px 12px;border:0;border-radius:999px;cursor:pointer;
   background:var(--paper);color:var(--hue-ink);font:600 13px/1.4 var(--ui);
@@ -401,12 +412,26 @@
   .main.archive>.panel>.phead h2{font-size:18px}
 }
 @media(max-width:1180px){
-  .main.archive{grid-template-columns:202px minmax(0,1fr)}
-  .rail-panel{grid-column:1/-1}
+  .main.archive{
+    grid-template-columns:202px minmax(0,1fr);
+    grid-template-areas:
+      "roster hero"
+      "roster sched"
+      "roster rel"
+      "rail rail";
+  }
   .hero{grid-template-columns:280px minmax(0,1fr)}
 }
 @media(max-width:860px){
-  .main.archive{grid-template-columns:minmax(0,1fr)}
+  .main.archive{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:
+      "roster"
+      "hero"
+      "rail"
+      "sched"
+      "rel";
+  }
 }
 @media(max-width:700px){
   /* 单栏时面板标题和时间尺的第一个刻度挨在同一段横向空间里，差不了几个像素 */
@@ -458,7 +483,7 @@
 
   <div class="main archive">
 
-    <section class="panel">
+    <section class="panel roster-panel">
       <header class="phead">
         <span class="pmark h-indigo"><svg><use href="#i-people"/></svg></span>
         <div><h2>人物名册</h2></div>
@@ -468,38 +493,7 @@
       <div class="pager" id="rosterPager"></div>
     </section>
 
-    <div class="col">
-
-      <section class="panel"><div class="hero" id="hero"></div></section>
-
-      <section class="panel">
-        <header class="phead">
-          <span class="pmark h-amber"><svg><use href="#i-clock"/></svg></span>
-          <div><h2>日程与行动</h2></div>
-        </header>
-        <div class="ruler" id="ruler"></div>
-        <div class="strip" id="strip"></div>
-        <div class="nowline" id="nowLine">—</div>
-      </section>
-
-      <section class="panel">
-        <header class="phead">
-          <span class="pmark h-rose"><svg><use href="#i-heart"/></svg></span>
-          <div><h2>人际关系</h2></div>
-        </header>
-        <div class="netwrap" id="netWrap">
-          <div class="netgraph">
-            <div class="rnet" id="rnet"></div>
-            <p class="rnet-note" id="netNote"></p>
-          </div>
-          <div class="netlist">
-            <div class="pbody" style="padding-top:6px" id="relList"></div>
-            <div class="pager" id="relPager"></div>
-          </div>
-        </div>
-      </section>
-
-    </div>
+    <section class="panel hero-panel"><div class="hero" id="hero"></div></section>
 
     <section class="panel rail-panel">
       <header class="phead">
@@ -507,6 +501,33 @@
         <div><h2>近况</h2></div>
       </header>
       <div class="rail-body" id="rail"></div>
+    </section>
+
+    <section class="panel sched-panel">
+      <header class="phead">
+        <span class="pmark h-amber"><svg><use href="#i-clock"/></svg></span>
+        <div><h2>日程与行动</h2></div>
+      </header>
+      <div class="ruler" id="ruler"></div>
+      <div class="strip" id="strip"></div>
+      <div class="nowline" id="nowLine">—</div>
+    </section>
+
+    <section class="panel rel-panel">
+      <header class="phead">
+        <span class="pmark h-rose"><svg><use href="#i-heart"/></svg></span>
+        <div><h2>人际关系</h2></div>
+      </header>
+      <div class="netwrap" id="netWrap">
+        <div class="netgraph">
+          <div class="rnet" id="rnet"></div>
+          <p class="rnet-note" id="netNote"></p>
+        </div>
+        <div class="netlist">
+          <div class="pbody" style="padding-top:6px" id="relList"></div>
+          <div class="pager" id="relPager"></div>
+        </div>
+      </div>
     </section>
 
   </div>
@@ -575,14 +596,6 @@ const NPC_TABLE='bg_fixed_npc_state';
 const CAND_TABLE='bg_candidate_state';
 const EXCLUSION_TABLE='bg_exclusion_list';
 let NPCS=[], CANDS=[], PEOPLE=[], CAND_NAMES=new Set(), EXCLUSIONS=[];
-function refreshLists(){
-  NPCS=arr(DATA.npcs);
-  CANDS=arr(DATA.candidates);
-  EXCLUSIONS=arr(DATA.exclusions);
-  PEOPLE=[...NPCS,...CANDS];
-  CAND_NAMES=new Set(CANDS.map(c=>c&&c.name).filter(Boolean));
-}
-refreshLists();
 const isCand=p=>!!p&&CAND_NAMES.has(p.name);
 const byName=n=>PEOPLE.find(p=>p.name===n);
 
@@ -608,8 +621,17 @@ const genderOf=p=>{const pr=profileOf(p);return pr?pr.gender||'':''};
    两者直接比较时年份会差出一整个量级，所以比大小之前先把年份剥掉。 */
 const stripYear=s=>String(s||'').replace(/^[^\d]*\d+\s*年\s*[·・]?\s*/,'');
 const T=s=>WTime.parse(stripYear(s));
-const WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
-const NOW_T=T(WORLD_TIME);
+let WORLD_TIME='', NOW_T=null;
+function refreshLists(){
+  NPCS=arr(DATA.npcs);
+  CANDS=arr(DATA.candidates);
+  EXCLUSIONS=arr(DATA.exclusions);
+  PEOPLE=[...NPCS,...CANDS];
+  CAND_NAMES=new Set(CANDS.map(c=>c&&c.name).filter(Boolean));
+  WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
+  NOW_T=T(WORLD_TIME);
+}
+refreshLists();
 
 function faceOf(who,cls='av'){
   const name=typeof who==='string'?who:(who&&who.name)||'';
@@ -730,7 +752,7 @@ function renderHero(){
     ['i-flag','社会角色',pr.social_role],
     ['i-hourglass','年纪',pr.age||pr.age===0?String(pr.age)+' 岁':''],
     ['i-gender','性别',pr.gender],
-    ['i-coin','生计',pr.livelihood,true],
+    ['i-coin','生计',pr.livelihood],
     ['i-pin','常驻地',pr.main_location],
     ['i-medal','专长',pr.capability_basis,true],
     ['i-eye','外貌',pr.appearance,true],
@@ -769,11 +791,9 @@ function renderHero(){
           ?'<div class="h-actions">'+
               '<button type="button" class="h-act" data-roster="promote">移入固定角色</button>'+
               '<button type="button" class="h-act danger" data-roster="delete">删除</button>'+
-              '<button type="button" class="h-act" data-roster="art">自定义立绘</button>'+
             '</div>'
           :'<div class="h-actions">'+
               '<button type="button" class="h-act" data-roster="demote">打回候选</button>'+
-              '<button type="button" class="h-act" data-roster="art">自定义立绘</button>'+
             '</div>')+
       '</div>'+
 
@@ -1649,6 +1669,7 @@ $('#hero').addEventListener('click', e => {
 
 P.initChrome('角色管理');
 renderAll();
+addEventListener('we-world-refresh',()=>{refreshLists();P.initChrome('角色管理');renderAll()});
 
 // 关系图的节点坐标是按像素算的，面板宽度变了要重排
 addEventListener('resize',renderNet);

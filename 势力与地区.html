@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -749,6 +749,10 @@ const {$,$$,arr,esc,L,fieldKey,termRow,kvGrid,renderPager,toast,crestFile,sigilF
    所以这里用 let，不直接引用 P.DATA。 */
 let FACTIONS=arr(P.DATA.factions);
 let REGIONS=arr(P.DATA.regions);
+function refreshLists(){
+  FACTIONS=arr(P.DATA.factions);
+  REGIONS=arr(P.DATA.regions);
+}
 
 /* ---------- 枚举 → 视觉 ----------
    每一组都对着 shared/vocab.js 里的一条枚举写；缺项回落中性色与通用图标，
@@ -2318,6 +2322,7 @@ function renderAll(){
   renderGraph();renderEdgeFoot();renderStance();renderRegions();renderIdx();renderWtl();
 }
 P.initChrome('势力与地区');
+addEventListener('we-world-refresh',()=>{refreshLists();P.initChrome('势力与地区');renderAll()});
 /* 首屏先把当前势力最相关的那个地区行展开：五行全收着的话，
    「查看详情里还有条件和近期变化」这件事根本没人会发现。 */
 (function openFirstRow(){

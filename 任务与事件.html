@@ -229,6 +229,10 @@ const EVENT_ICON={conflict:'i-ship',disaster:'i-fire',infrastructure:'i-arch'};
 const STAGE_PHASE={completed:'done',current:'active',blocked:'key',available:'idle',waiting:'idle',cancelled:'idle'};
 
 const DATA=P.DATA;
+function refreshHues(){
+  SOURCE_HUE.clear();
+  arr(DATA.tasks).forEach(t=>{const k=t.source||'';if(!SOURCE_HUE.has(k))SOURCE_HUE.set(k,HUES[SOURCE_HUE.size%HUES.length])});
+}
 // 详情面板给任务和事件共用，选中项要连类型一起记，否则翻页后下标会串到另一个列表
 let sel={kind:'task',i:0};
 
@@ -238,7 +242,7 @@ let sel={kind:'task',i:0};
    同一个公会发出的两条委托共用一色，本身就是有用的信息。 */
 const HUES=['indigo','amber','violet','teal','green','purple','rose'];
 const SOURCE_HUE=new Map();
-arr(DATA.tasks).forEach(t=>{const k=t.source||'';if(!SOURCE_HUE.has(k))SOURCE_HUE.set(k,HUES[SOURCE_HUE.size%HUES.length])});
+refreshHues();
 function hueOf(t){return SOURCE_HUE.get(t.source||'')||'indigo'}
 function timeHH(t){const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?m[1].padStart(2,'0')+':'+m[2]:''}
 /* 时间戳保留完整日期，不截成 HH:mm */
@@ -623,17 +627,22 @@ function renderSummary(){
 /* ---------- 启动 ---------- */
 P.initChrome('任务与剧本');
 
-/* 另外三页共有五处「点一条任务／事件跳到这一页」，它们把名字放进 sessionStorage
-   再跳过来。这一页原来根本不读这个键：从势力页点一个任务过去，落地是默认选中的
-   第一条，点击的目标静默丢了，而且看不出丢了。 */
-(function takeFocus(){
-  const want=sessionStorage.getItem('focusTask');
-  if(!want)return;
-  sessionStorage.removeItem('focusTask');    // 只认这一次，别让它黏在后续的访问上
-  if(!focusByName(want))P.toast('本轮记录里没有「'+want+'」');
-})();
+function takeFocus(want){
+  const name=String(want||'').trim();
+  if(!name)return;
+  try{sessionStorage.removeItem('focusTask')}catch(_e){}
+  if(!focusByName(name))P.toast('本轮记录里没有「'+name+'」');
+}
+try{takeFocus(sessionStorage.getItem('focusTask'))}catch(_e){}
 
-renderTimeline();renderCards();renderDetail();renderEvents();renderSummary();
+function paint(){
+  P.initChrome('任务与剧本');
+  refreshHues();
+  renderTimeline();renderCards();renderDetail();renderEvents();renderSummary();
+}
+paint();
+addEventListener('we-world-refresh',paint);
+addEventListener('we-focus',e=>{takeFocus(e.detail);paint()});
 </script>
 </body>
 </html>

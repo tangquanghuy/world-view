@@ -4,8 +4,9 @@
  *
  * 这里只放跨页面重复出现的东西。页面专属逻辑留在各自的 HTML 里。
  *
- * 路由：单页入口（index.html）用 hash；独立打开四个 HTML 时仍走文件跳转。
+ * 路由：单页入口（index.html）用 hash，四页 iframe 保活显隐；独立打开四个 HTML 时仍走文件跳转。
  * 数据：由 index.html 从异步助手 AcuData 桥取得后挂在 parent.WE_WORLD_DATA。
+ * 数据更新走 we-world-refresh，不再整页换地址。
  */
 (function (global) {
   'use strict';
@@ -19,12 +20,21 @@
      必须带组名：同一个字符串在不同组里含义不同，例如 planned 是日程状态而不是阶段状态。 */
   const L = (group, value) => global.V.label(group, value, '未记录');
 
-  let DATA = {};
-  try {
-    DATA = global.parent && global.parent.WE_WORLD_DATA || {};
-  } catch (_e) {
-    DATA = {};
+  const DATA = {};
+  function readParentWorld() {
+    try {
+      return (global.parent && global.parent.WE_WORLD_DATA) || {};
+    } catch (_e) {
+      return {};
+    }
   }
+  function adoptWorldData() {
+    const next = readParentWorld();
+    Object.keys(DATA).forEach((key) => { delete DATA[key]; });
+    Object.assign(DATA, next);
+    return DATA;
+  }
+  adoptWorldData();
 
   /* ---------- 色相 ----------
      同一个键在页面上永远是同一个颜色。按出现顺序分配，保证不同页面之间也一致
@@ -321,11 +331,9 @@
     location.href = route ? route.file : String(target);
   }
 
-  function initChrome(activeLabel) {
+  function updateWorldClock() {
     const raw = String(DATA.world?.[0]?.world_time || '');
     const dateEl = $('#wDate'), clockEl = $('#wClock');
-    // 按分隔点切成整段。中文可以在任意字之间断行，整串交给浏览器的话
-    // 390 下会折成「王历 312 / 年 · 霜月 / 12 日」这种断在词中间的三行。
     if (dateEl) {
       const date = raw.replace(/\s*[·・]?\s*\d{1,2}:\d{2}.*$/, '').trim();
       dateEl.innerHTML = date
@@ -333,29 +341,38 @@
         : '时间未记录';
     }
     if (clockEl) clockEl.textContent = timeHH(raw) || '--:--';
+  }
 
+  function initChrome(activeLabel) {
+    updateWorldClock();
     const active = ROUTE_BY_LABEL[activeLabel] || ROUTE_BY_ID[activeLabel] || null;
     const nav = $('#nav');
-    if (nav) {
-      nav.innerHTML = ROUTES.map((r) =>
-        `<button class="nav-item${active && r.id === active.id ? ' on' : ''}" type="button" data-route="${r.id}"><svg class="ni"><use href="#${r.icon}"/></svg>${r.label}</button>`
-      ).join('');
-      $$('.nav-item', nav).forEach((b) => b.addEventListener('click', () => {
-        if (b.classList.contains('on')) toast('已经在' + b.textContent.trim());
-        else goto(b.dataset.route);
-      }));
+    if (!nav) return;
+    if (nav.dataset.bound === '1') {
+      $$('.nav-item', nav).forEach((b) => b.classList.toggle('on', !!(active && b.dataset.route === active.id)));
+      return;
     }
-
-    /* 这里原来还有三样东西，都删了。
-
-       「速度倍率 × 2.0」和「暂停中／继续」：契约里没有任何间隔、频率、速度字段
-       （推演由后台的 bg_world_tick_v09 驱动），× 2.0 是四页写死的一个数，
-       那对按钮是个只会弹吐司的假开关。页面是引擎产出的显示端，不是它的遥控器。
-
-       `[data-toast]` 的全局委托：它的唯一用途是让「摆一个点了弹『尚未接入』的按钮」
-       变得很省事，四页曾经挂了 11 处。占位按钮比没有这个按钮更糟——它承诺了一个
-       不存在的地方。真需要弹一句时直接调 P.toast，不要再造这个口子。 */
+    nav.dataset.bound = '1';
+    nav.innerHTML = ROUTES.map((r) =>
+      `<button class="nav-item${active && r.id === active.id ? ' on' : ''}" type="button" data-route="${r.id}"><svg class="ni"><use href="#${r.icon}"/></svg>${r.label}</button>`
+    ).join('');
+    $$('.nav-item', nav).forEach((b) => b.addEventListener('click', () => {
+      if (b.classList.contains('on')) toast('已经在' + b.textContent.trim());
+      else goto(b.dataset.route);
+    }));
   }
+
+  global.addEventListener('message', (e) => {
+    const data = e && e.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'we-world-refresh') {
+      adoptWorldData();
+      try { global.dispatchEvent(new CustomEvent('we-world-refresh')); } catch (_e) { /* ignore */ }
+    }
+    if (data.type === 'we-focus' && data.name) {
+      try { global.dispatchEvent(new CustomEvent('we-focus', { detail: String(data.name) })); } catch (_e) { /* ignore */ }
+    }
+  });
 
   global.P = {
     $, $$, arr, esc, L, DATA,
@@ -364,7 +381,7 @@
     getCustomArt, setCustomArt, clearCustomArt, isAllowedImageUrl,
     avatarTag, avatarRow, participantList,
     fieldKey, termRow, kvGrid,
-    timeHH, progressOf, pageSlice, renderPager, toast, initChrome,
+    timeHH, progressOf, pageSlice, renderPager, toast, initChrome, updateWorldClock, adoptWorldData,
     ROUTES, goto,
   };
 })(window);

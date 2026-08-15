@@ -6,8 +6,13 @@
 <title>后台世界引擎</title>
 <style>
   html, body { margin: 0; height: 100%; background: #f4efe6; }
-  #frame { display: block; width: 100%; height: 100%; border: 0; background: #f4efe6; }
-  #frame[hidden] { display: none; }
+  #frames { position: relative; width: 100%; height: 100%; }
+  #frames iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    border: 0; background: #f4efe6;
+    visibility: hidden; pointer-events: none; z-index: 0;
+  }
+  #frames iframe.is-on { visibility: visible; pointer-events: auto; z-index: 2; }
   #status {
     position: fixed; inset: 0; display: grid; place-items: center; padding: 28px;
     color: #695d50; background: #f4efe6; text-align: center;
@@ -20,15 +25,15 @@
 </head>
 <body>
 <div id="status"><div><strong>正在连接异步助手数据…</strong><small>等待后台世界引擎结构化视图。</small></div></div>
-<iframe id="frame" title="后台世界引擎面板" hidden></iframe>
+<div id="frames" hidden></div>
 <script>
 /**
  * 静态站单入口：四页仍是独立 HTML（方便截图/体检工具），对外只暴露一个 URL。
  * 路由：#/overview | #/characters | #/factions | #/tasks
  * 子页通过 window.parent.WE_SPA.navigate 或 postMessage({type:'we-goto'}) 切页。
  *
- * 数据不再使用 mock。橱窗壳在 URL 上加 ?acuBridge=1，并通过 postMessage 代理
- * window.top.AcuData.watchView。首次收到真实数据后才挂载页面；数据库提交后重载当前页。
+ * 切页保活：每个路由一个 iframe，显隐切换，不重复拆文档。
+ * 数据更新：改 WE_WORLD_DATA 后 postMessage we-world-refresh，子页就地重绘。
  */
 (function () {
   'use strict';
@@ -43,16 +48,19 @@
   const VIEW_ID = 'bg_world_structured_v09';
   const WATCH_ID = 'bg-world-panel';
   const bridgeEnabled = new URLSearchParams(location.search).get('acuBridge') === '1';
-  const frame = document.getElementById('frame');
+  const framesRoot = document.getElementById('frames');
   const status = document.getElementById('status');
+  const frames = Object.create(null);
   let current = '';
+  let pending = '';
   let hasData = false;
   let bridgeTimer = 0;
+  let prefetchStarted = false;
 
   function setStatus(title, detail) {
     status.innerHTML = '<div><strong>' + title + '</strong><small>' + (detail || '') + '</small></div>';
     status.hidden = false;
-    frame.hidden = true;
+    framesRoot.hidden = true;
   }
 
   function extractWorld(result) {
@@ -147,9 +155,9 @@
     hasData = true;
     clearTimeout(bridgeTimer);
     status.hidden = true;
-    frame.hidden = false;
-    // 页面在启动时把各分区缓存成常量；数据库变化后重载当前子页，确保所有模块一致更新。
-    sync(!first || !frame.getAttribute('src'));
+    framesRoot.hidden = false;
+    if (first) sync(false);
+    else broadcastRefresh();
     if (patches.length) applyPatches(patches).catch(function (err) {
       console.warn('[world-view] 将 AI 新增人物改回候选失败', err);
     });
@@ -199,14 +207,101 @@
     else location.hash = next;
   }
 
+  function frameUrl(id) {
+    return new URL(ROUTES[id], location.href).href;
+  }
+
+  function ensureFrame(id) {
+    if (frames[id]) return frames[id];
+    const el = document.createElement('iframe');
+    el.title = id;
+    el.dataset.route = id;
+    framesRoot.appendChild(el);
+    frames[id] = el;
+    return el;
+  }
+
+  function reveal(id) {
+    current = id;
+    Object.keys(ROUTES).forEach(function (rid) {
+      const el = frames[rid];
+      if (el) el.classList.toggle('is-on', rid === id);
+    });
+  }
+
+  function postToFrame(id, payload) {
+    const el = frames[id];
+    if (!el || !el.contentWindow || el.dataset.ready !== '1') return;
+    try { el.contentWindow.postMessage(payload, '*'); } catch (_e) { /* ignore */ }
+  }
+
+  function loadFrame(id, thenReveal) {
+    const el = ensureFrame(id);
+    if (el.dataset.ready === '1' && el.getAttribute('src')) {
+      if (thenReveal) reveal(id);
+      return;
+    }
+    if (el.getAttribute('src') && el.dataset.loading === '1') {
+      if (thenReveal) el.dataset.reveal = '1';
+      return;
+    }
+    el.dataset.loading = '1';
+    if (thenReveal) el.dataset.reveal = '1';
+    el.addEventListener('load', function () {
+      el.dataset.ready = '1';
+      el.dataset.loading = '';
+      if (el.dataset.reveal === '1' && pending === id) reveal(id);
+      el.dataset.reveal = '';
+    }, { once: true });
+    el.src = frameUrl(id);
+  }
+
+  function prefetchRest(except) {
+    if (prefetchStarted) return;
+    prefetchStarted = true;
+    const rest = Object.keys(ROUTES).filter(function (id) { return id !== except; });
+    let i = 0;
+    function next() {
+      if (i >= rest.length) return;
+      loadFrame(rest[i++], false);
+      setTimeout(next, 80);
+    }
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(next, { timeout: 600 });
+    } else {
+      setTimeout(next, 200);
+    }
+  }
+
+  function showRoute(id) {
+    pending = id;
+    const el = ensureFrame(id);
+    if (el.dataset.ready === '1') {
+      reveal(id);
+      prefetchRest(id);
+      return;
+    }
+    loadFrame(id, true);
+    prefetchRest(id);
+  }
+
+  function broadcastRefresh() {
+    Object.keys(frames).forEach(function (id) {
+      postToFrame(id, { type: 'we-world-refresh' });
+    });
+  }
+
   function sync(force) {
     if (!hasData) return;
     const id = parseRoute();
-    const file = ROUTES[id];
-    if (!force && id === current && frame.getAttribute('src')) return;
-    current = id;
-    // 相对当前 index.html；GitHub Pages 挂在子目录时也能工作
-    frame.src = new URL(file, location.href).href;
+    showRoute(id);
+    let focus = '';
+    try { focus = sessionStorage.getItem('focusTask') || ''; } catch (_e) { focus = ''; }
+    if (!focus) return;
+    const send = function () { postToFrame(id, { type: 'we-focus', name: focus }); };
+    const el = frames[id];
+    if (el && el.dataset.ready === '1') send();
+    else if (el) el.addEventListener('load', send, { once: true });
   }
 
   window.WE_SPA = { navigate: navigate, routes: ROUTES, applyPatches: applyPatches };
