@@ -371,11 +371,29 @@ img.av.crest,img.pav.crest{
   .brand{grid-column:1/-1}
   .shell{grid-template-columns:minmax(0,1fr);padding:0 14px 20px}
   .side{position:static}
-  .nav{grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);overflow-x:auto;padding-bottom:4px}
+  /* 四项收进一条分段条，不要拆成两列卡片，也不要横向滚。
+     侧栏那套「每项一张白底」搬到窄屏上就是四块格子；横滑在 Windows 下
+     又会画出一根带箭头的原生滚动条。合成一条底，只有当前项着色。 */
+  .nav{
+    display:flex;gap:3px;padding:4px;
+    border-radius:14px;background:rgba(255,255,255,.78);box-shadow:var(--sh1);
+  }
+  .nav-item{
+    flex:1 1 0;min-width:0;min-height:40px;justify-content:center;gap:6px;
+    padding:0 6px;border-radius:10px;background:transparent;
+    font-size:13px;white-space:nowrap;
+  }
+  .nav-item .ni{width:16px;height:16px}
+  .nav-item:hover{background:transparent;transform:none}
+  .nav-item.on{box-shadow:0 0 0 1.5px var(--gold),0 4px 12px rgba(95,115,150,.26)}
+  .nav-item.on::after{content:none}
   .side-art{display:none}
   .kv{--kv-cols:2}
 }
 @media(max-width:560px){
+  /* 390 下一格只剩约 88px，图标再占 16 就会把「势力与地区」挤折行。 */
+  .nav-item{font-size:12px}
+  .nav-item .ni{display:none}
   .kv{--kv-cols:1}
   /* 30px 的时钟在半屏宽的框里放不下：日期与时刻改成上下两行，
      并排会把时刻挤到卡片右下角、压在城堡底纹上。 */
