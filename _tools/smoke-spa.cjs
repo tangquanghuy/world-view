@@ -13,9 +13,13 @@ const { chromium } = require(require.resolve('playwright-core', { paths: [MODULE
 
 const BASE = process.argv[2] || 'http://localhost:5500/';
 const BRIDGE_URL = new URL('__bridge_test__', BASE).href;
-const FIXTURE = process.argv[3]
-  || path.resolve(__dirname, '../../异步助手-project/配置方案/世界引擎面板/mock/world-state-v09.json');
-const WORLD = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')).background_world;
+// fixture 可以是 {background_world} 本身，也可以是 AcuData.queryView 的整份结果 {viewId, data:{background_world}}。
+// 视图 id 取 fixture 里的 viewId（默认 v1.0），假壳只回应这个视图——跟真实 watchView 一样，没有的视图不回话。
+const FIXTURE = process.argv[3] || path.resolve(__dirname, '../mock/world-state-v10.json');
+const RAW = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
+const WORLD = RAW.background_world || (RAW.data && RAW.data.background_world);
+const VIEW = process.argv[4] || RAW.viewId || 'bg_world_structured_v10';
+if (!WORLD) throw new Error('fixture 里没有 background_world：' + FIXTURE);
 const ROUTES = [
   ['overview', '世界演进', '总览.html'],
   ['characters', '角色管理', '角色档案.html'],
@@ -57,7 +61,7 @@ async function launch() {
 
 (async () => {
   const browser = await launch();
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 } });
+  const page = await browser.newPage({ viewport: { width: 1536, height: process.env.SHOTS ? 2400 : 960 } });
   const errors = [];
   const missing = new Map();
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -75,13 +79,14 @@ async function launch() {
     panelUrl.searchParams.set('acuBridge', '1');
     await route.fulfill({
       contentType: 'text/html; charset=utf-8',
-      body: `<!doctype html><iframe id="app" style="width:100%;height:100%;border:0"></iframe>
+      body: `<!doctype html><style>html,body{margin:0;height:100%}</style><iframe id="app" style="display:block;width:100%;height:100%;border:0"></iframe>
 <script>
 const WORLD=${JSON.stringify(WORLD).replace(/</g, '\\u003c')};
 const app=document.getElementById('app');
 addEventListener('message',e=>{
   const m=e.data;
   if(!m||m.type!=='we-watch-view')return;
+  if(m.viewId!==${JSON.stringify(VIEW)}){e.source.postMessage({type:'we-watch-view-ready',watchId:m.watchId,ok:true},'*');return}
   e.source.postMessage({type:'we-watch-view-result',watchId:m.watchId,ok:true,
     result:{ok:true,data:{background_world:WORLD},revision:1}},'*');
 });
@@ -105,10 +110,24 @@ app.src=${JSON.stringify(panelUrl.href + '#/overview')};
     if (!frame) { console.log(`✗ ${id} 没挂上子页`); bad++; continue; }
     const active = await frame.$eval('.nav-item.on', (element) => element.textContent.trim()).catch(() => '');
     const panels = await frame.$$eval('.panel', (elements) => elements.length).catch(() => 0);
-    const ok = active === label && panels > 0;
+    // 页面文字里不该漏出程序值；「未记录」只计数，供对照 v0.9 / v1.0 的空字段处理。
+    if (process.env.SHOTS) {
+      // 截图对照用：SHOTS=目录 时把每页整页截下来（视口拉高，iframe 内不再滚动）
+      fs.mkdirSync(process.env.SHOTS, { recursive: true });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(process.env.SHOTS, id + '.png'), fullPage: false });
+    }
+    const text = await frame.evaluate(() => document.body.innerText).catch(() => '');
+    const leaks = (text.match(/undefined|\[object Object\]|NaN/g) || []).length;
+    const blanks = (text.match(/未记录/g) || []).length;
+    const ok = active === label && panels > 0 && !leaks;
     if (!ok) bad++;
-    console.log(`${ok ? '✓' : '✗'} ${id}  高亮=${active || '无'}  面板=${panels}`);
+    console.log(`${ok ? '✓' : '✗'} ${id}  高亮=${active || '无'}  面板=${panels}  文字=${text.length}  未记录=${blanks}${leaks ? '  漏出程序值=' + leaks : ''}`);
   }
+  const version = await index.evaluate(() => window.WE_WORLD_DATA && window.WE_WORLD_DATA.__version);
+  const versionOk = version === (VIEW.endsWith('_v09') ? 'v09' : 'v10');
+  if (!versionOk) bad++;
+  console.log(`${versionOk ? '✓' : '✗'} 数据版本  视图=${VIEW}  识别为=${version}`);
 
   await index.evaluate(() => window.WE_SPA.navigate('overview'));
   const from = await panelFrame(page, '总览.html');

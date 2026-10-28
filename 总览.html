@@ -62,9 +62,6 @@
 .act-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:10px}
 .acts.open .act-foot{margin-top:0}
 .act-when{flex:0 0 auto;color:var(--hue-ink);font:600 13px/1.4 var(--ui);font-variant-numeric:tabular-nums}
-.act-foot .bar{flex:1 1 auto;height:7px}
-/* 没有预计结束时间时进度不可计算，画成虚线槽而不是画一条 0% 的实条 */
-.act-foot .bar.unknown{background:transparent;box-shadow:inset 0 0 0 1px var(--hue-track);border-radius:4px}
 
 /* 展开后的日程。schedule 是"近期已完成或已安排"的行动，当前行动不在里面。 */
 .sched{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);display:grid;gap:8px}
@@ -81,7 +78,6 @@
 .cond-b{min-width:0}
 .cond-b b{display:block;color:var(--ink2);font:400 14px/1.55 var(--ui);overflow-wrap:anywhere}
 .cond-b small{display:block;color:var(--ink4);font:13px/1.5 var(--ui);overflow-wrap:anywhere}
-.cond-b .rev{color:var(--hue-ink)}
 
 /* ---------- 开关 ---------- */
 .switch{display:inline-flex;align-items:center;gap:8px;margin-left:auto;border:0;background:transparent;color:var(--ink4);font:14px var(--ui);white-space:nowrap;cursor:pointer}
@@ -156,11 +152,8 @@
 }
 .wire-tag svg{width:14px;height:14px;color:var(--hue)}
 .wire-tag em{font-style:normal;font-variant-numeric:tabular-nums}
-.wire-tag em.up{color:var(--green-ink)}
-.wire-tag em.down{color:var(--rose-ink)}
-.wire-tag em.flat{color:var(--ink4)}
 
-/* 关系明细：图上只留名字和关系词，好感基数、当前依据、变化时间这些字段
+/* 关系明细：图上只留名字和关系词，好感基数、当前依据、本轮变化这些字段
    收在这里，默认折起来，展开后按"字段名带图标上色 / 字段值深墨"的统一规格排。 */
 .ego-list{margin:0 18px;border-top:1px solid var(--rule)}
 .ego-list[hidden]{display:none}
@@ -174,9 +167,6 @@
 .erow-h .me{color:var(--ink5);font:400 14px/1.5 var(--ui)}
 .erow-h .t{color:var(--hue-ink);font:600 13px/1.6 var(--ui)}
 .erow-h .f{margin-left:auto;color:var(--ink4);font:13px/1.6 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
-.erow-h .f em{font-style:normal}
-.erow-h .f em.up{color:var(--green-ink)}
-.erow-h .f em.down{color:var(--rose-ink)}
 .erow-f{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 8px;margin:3px 0 0}
 .erow-f .k{flex:0 0 auto}
 .erow-f .v{flex:1 1 180px;margin-top:0;font-size:14px}
@@ -199,7 +189,7 @@
 .chg-i svg{width:16px;height:16px}
 .chg-b{min-width:0}
 .chg-b p{margin:0;color:var(--ink2);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
-.chg-b small{display:flex;align-items:center;gap:4px;margin-top:2px;color:var(--hue-ink);font:13px/1.45 var(--ui);overflow-wrap:anywhere}
+.chg-b small{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:2px;color:var(--hue-ink);font:13px/1.45 var(--ui);overflow-wrap:anywhere}
 .chg-b small svg{flex:0 0 auto;width:12px;height:12px;opacity:.7}
 .chg-t{color:var(--ink4);font:13px/1.7 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
 
@@ -363,7 +353,7 @@ const ACT_ICON={working:'i-hourglass',travelling:'i-walk',meeting:'i-chat',inves
                 resting:'i-rest',waiting:'i-clock',recovering:'i-heart',idle:'i-moon',other:'i-spark'};
 const CHANGE_HUE={task:'indigo',event:'rose',region:'teal',relation:'violet',effect:'amber'};
 const CHANGE_ICON={task:'i-scroll',event:'i-bell',region:'i-map',relation:'i-heart',effect:'i-spark'};
-const SOURCE_ICON={npc:'i-people',faction:'i-shield',task:'i-scroll',event:'i-bell',region:'i-map'};
+const SOURCE_ICON={npc:'i-people',candidate:'i-people',faction:'i-shield',task:'i-scroll',event:'i-bell',region:'i-map'};
 const CAT_ICON={main_task:'i-flag',side_task:'i-scroll',character_task:'i-people',
                 faction_project:'i-shield',personal_task:'i-heart',other:'i-spark'};
 const EVENT_HUE={conflict:'rose',disaster:'amber',infrastructure:'indigo',investigation:'violet',
@@ -390,8 +380,11 @@ function standing(p){
 const isLive=p=>!standing(p).far||standing(p).label==='视线外';
 let WORLD_TIME='', NOW=null;
 
-const taskHue=hueCycler();          // 同一委托方一个颜色
-arr(DATA.tasks).forEach(t=>taskHue(t.source||''));
+/* v1.0 的任务不再单独记委托方：它是参与者里 role 为「委托方」的那一项 */
+function clientOf(t){const p=arr(t&&t.participants).find(x=>x&&x.role==='委托方');return p&&p.name||''}
+const hueKey=t=>clientOf(t)||t.name||'';
+const taskHue=hueCycler();          // 同一委托方一个颜色，没有委托方的按任务名各占一色
+arr(DATA.tasks).forEach(t=>taskHue(hueKey(t)));
 const byName=n=>PEOPLE.find(p=>p.name===n);
 
 /* 世界时间带年份（王历312年霜月12日 22:00），日程只有「霜月12日 20:30」。
@@ -406,7 +399,7 @@ function allTimes(){
   const out=[];
   for(const p of PEOPLE){
     const c=p.current_state||{};
-    out.push(c.started_at,c.expected_end);
+    out.push(c.expected_end);
     for(const s of arr(p.schedule))out.push(s.start_time,s.end_time);
   }
   out.push(WORLD_TIME);
@@ -426,7 +419,7 @@ function renderRuler(){
 
   // 把所有出现过的时刻按刻度位置去重，均匀取 4 个当作标尺
   const uniq=[...new Set(
-    PEOPLE.flatMap(p=>[p.current_state?.started_at,p.current_state?.expected_end,
+    PEOPLE.flatMap(p=>[p.current_state?.expected_end,
       ...arr(p.schedule).flatMap(s=>[s.start_time,s.end_time])]).concat(WORLD_TIME)
       .map(s=>String(s||'').trim()).filter(s=>T(s)!==null)
   )].sort((a,b)=>T(a)-T(b));
@@ -489,36 +482,29 @@ function refreshLists(){
 refreshLists();
 
 function actList(){
-  const ps=PEOPLE.slice().sort(WTime.byNewest('updated_at'));
+  const ps=PEOPLE.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
   if(!keyOnly)return ps;
   // 「重要」= 当前行动确实挂在某条任务或事件上，不是主观判断
   return ps.filter(p=>(p.current_state||{}).related_task||(p.current_state||{}).related_event);
 }
 
-/** 当前行动的推进比例。缺 started_at 或 expected_end 时返回 null，界面上画成空槽而不是 0%。 */
-function actProgress(c){
-  const a=T(c.started_at),b=T(c.expected_end);
-  if(a===null||b===null||b<=a||NOW_T===null)return null;
-  return Math.max(0,Math.min(100,Math.round(((NOW_T-a)/(b-a))*100)));
-}
-
 function schedRow(s){
-  const when=[timeHH(s.start_time)||s.start_time,timeHH(s.end_time)||s.end_time].filter(Boolean).join('–')||'时间未记录';
-  const full=[s.start_time,s.end_time].filter(Boolean).join(' → ')||'时间未记录';
+  const when=[timeHH(s.start_time)||s.start_time,timeHH(s.end_time)||s.end_time].filter(Boolean).join('–');
+  const full=[s.start_time,s.end_time].filter(Boolean).join(' → ');
   const tail=[s.location,s.result].filter(Boolean).join('　·　');
   return '<div class="sched-row">'+
-    '<span class="sched-t" title="'+esc(full)+'">'+esc(when)+'</span>'+
-    '<span class="sched-b"><b>'+esc(s.action||'未记录行动')+'</b>'+
+    '<span class="sched-t"'+(full?' title="'+esc(full)+'"':'')+'>'+esc(when)+'</span>'+
+    '<span class="sched-b">'+(s.action?'<b>'+esc(s.action)+'</b>':'')+
       (tail?'<small>'+esc(tail)+'</small>':'')+
-      '<span class="chip line">'+esc(L('schedule.status',s.status))+'</span>'+
+      (s.status?'<span class="chip line">'+esc(L('schedule.status',s.status))+'</span>':'')+
     '</span></div>';
 }
 
 function actCard(p){
   const c=p.current_state||{};
   const st=standing(p);
-  const pct=actProgress(c);
-  const when=[timeHH(c.started_at),timeHH(c.expected_end)].filter(Boolean).join('–')||'时间未记录';
+  // 当前行动只记预计结束时间，没有起点，算不出进行到哪儿了，所以不画进度条
+  const due=c.expected_end?'预计到 '+(timeHH(c.expected_end)||c.expected_end):'';
   const link=c.related_task||c.related_event;
   return '<button class="act h-'+st.hue+(p.name===focusName?' on':'')+'" data-n="'+esc(p.name)+'">'+
     '<div class="act-top">'+avatarTag(p.name)+
@@ -533,15 +519,11 @@ function actCard(p){
       esc((c.related_task?'关联任务　':'关联事件　')+link)+'">'+esc(link)+'</span></div>':'')+
     '<span class="chip" style="margin-top:9px">'+esc(L('state.status',c.status))+'</span>'+
     // 卡面上只放 HH:MM，完整的「霜月12日 20:30」进 title——跨天时钟点本身是有歧义的
-    '<div class="act-foot" title="'+esc([c.started_at,c.expected_end].filter(Boolean).join(' → ')||'时间未记录')+'">'+
-      '<span class="act-when">'+esc(when)+'</span>'+
-      '<span class="bar'+(pct===null?' unknown':'')+'" style="--p:'+(pct??0)+'%" title="'+
-        (pct===null?'没有预计结束时间，算不出进行到哪儿了':'这段行动已过去 '+pct+'%')+'"><i></i></span>'+
-    '</div>'+
+    (due?'<div class="act-foot" title="'+esc(c.expected_end)+'">'+
+      '<span class="act-when">'+esc(due)+'</span>'+
+    '</div>':'')+
     (expanded?'<div class="sched">'+
-      [['i-eye','可观察状态',c.observable_state],
-       ['i-spark','已推演到',p.updated_at],
-       ['i-bell','下次检查',p.next_update]]
+      [['i-eye','可观察状态',c.observable_state]]
         .filter(r=>r[2]).map(r=>'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2])+'</b></div>').join('')+
       /* 现实条件直接决定这个人下一步能不能动，跟"在做什么"是一对。
          放进展开区而不是卡面：卡面是扫读面，四五条限制铺上去就糊了。 */
@@ -551,7 +533,6 @@ function actCard(p){
            '<div class="cond"><span class="cond-k">'+esc(L('condition.category',x.category))+'</span>'+
            '<span class="cond-b"><b>'+esc(x.fact)+'</b>'+
              (x.impact?'<small>'+esc(x.impact)+'</small>':'')+
-             (x.review_condition?'<small class="rev">解除条件：'+esc(x.review_condition)+'</small>':'')+
            '</span></div>').join('')+'</div>'
         :'')+
       fieldKey('i-clock','近期日程')+
@@ -574,7 +555,7 @@ function renderActs(){
     :'<p class="nodata">眼下没有人的行动挂在任务或事件上</p>';
 
   renderPager($('#actPager'),{page:actPage,pages,total:all.length,unit:'人',
-    note:'按推演时间倒序',onGo:n=>{actPage=n;renderActs()}});
+    note:'按名字排序',onGo:n=>{actPage=n;renderActs()}});
 
   $$('.act').forEach(el=>el.addEventListener('click',()=>{
     focusName=el.dataset.n;renderActs();renderEgo();
@@ -601,16 +582,17 @@ function nodeMark(r){
   if(f)return '<img class="pav crest" src="'+f+'" alt="">';
   return '<span class="pav crest ph">'+esc(String(r.target_name||'?').slice(0,1))+'</span>';
 }
-const changeTag=n=>n>0?'<em class="up">+'+n+'</em>':n<0?'<em class="down">'+n+'</em>':'<em class="flat">±0</em>';
+/* 好感只给当前值，没有记录就不出数字 */
+const favTag=v=>P.isBlank(v)?'':'<em>'+esc(v)+'</em>';
 
-/* 一条边上两个方向各记各的关系词、依据和本轮变化。图上只画得下关系词和好感变动，
+/* 一条边上两个方向各记各的关系词、依据和本轮变化。图上只画得下关系词和好感，
    依据和变化原文收进 title——线画成实线还是虚线（本轮动没动过）也由这段说清，
    所以图下面不再另写一行图例。 */
 function edgeTip(me,n){
   return [['out',n.out],['in',n.in]].filter(d=>d[1]).map(([dir,r])=>
     (dir==='out'?me.name+' → '+n.name:n.name+' → '+me.name)+'　'+L('relation.type',r.relation_type)+
     (r.current_basis?'：'+r.current_basis:'')+
-    (r.recent_change?'\n　本轮变化：'+r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):'')
+    (r.recent_change?'\n　本轮变化：'+r.recent_change:'')
   ).join('\n');
 }
 
@@ -630,8 +612,7 @@ function egoNeighbors(me){
   return [...m.values()].map(n=>{
     const rel=n.out||n.in;
     return Object.assign(n,{rel,hue:REL_HUE[rel.relation_type]||'indigo',
-      moved:!!(n.out&&(n.out.recent_change||n.out.favorability_change))||
-            !!(n.in&&(n.in.recent_change||n.in.favorability_change))});
+      moved:!!(n.out&&n.out.recent_change)||!!(n.in&&n.in.recent_change)});
   }).sort((a,b)=>(b.moved?1:0)-(a.moved?1:0)||(a.type==='person'?-1:1)-(b.type==='person'?-1:1));
 }
 
@@ -701,9 +682,9 @@ function renderEgo(){
        跟原型一样落在空处，不压节点也不压线。 */
     const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     const off=Math.abs(uy)<.3?{x:0,y:-20}:{x:(uy>0?-uy:uy)*22,y:(uy>0?ux:-ux)*22};
-    const fav=n.type==='person';
+    const fav=n.type==='person'&&!P.isBlank(n.rel.favorability);
     const word=L('relation.type',n.rel.relation_type);
-    /* 两个头像之间放不下"关系词 + 变动"时只留图标和数字——原型里的 ♥+10 就是这么写的，
+    /* 两个头像之间放不下"关系词 + 好感"时只留图标和数字——原型里的 ♥10 就是这么写的，
        完整措辞挪进 title，不丢字段。 */
     const room=Math.hypot(b.x-a.x,b.y-a.y)+(Math.abs(uy)<.3?0:60);
     const tight=fav&&20+word.length*13+34>room-6;   // 没有数字可留时再挤也得写字
@@ -711,7 +692,7 @@ function renderEgo(){
       ' title="'+esc(edgeTip(me,n))+'">'+
       '<svg><use href="#'+(REL_ICON[n.rel.relation_type]||'i-link')+'"/></svg>'+
       (tight?'':esc(word))+
-      (fav?changeTag(n.rel.favorability_change||0):'')+'</span>');
+      (fav?favTag(n.rel.favorability):'')+'</span>');
   });
 
   const marks=ns.map((n,i)=>{
@@ -734,7 +715,7 @@ function renderEgo(){
   }));
 }
 
-/* 图上只留名字和关系词，好感基数、当前依据、变化时间这些字段收在明细里。
+/* 图上只留名字和关系词，好感、当前依据、本轮变化这些字段收在明细里。
    两个方向各记各的分数和依据，所以一条边可能出两行。 */
 function renderEgoList(me,ns){
   const rows=[];
@@ -751,12 +732,13 @@ function renderEgoList(me,ns){
                      :'<b>'+esc(n.name)+'</b><i>→</i><span class="me">'+esc(me.name)+'</span>')+
           '<span class="t">'+esc(L('relation.type',r.relation_type))+'</span>'+
           '<span class="t" style="color:var(--ink5)">'+esc(L('relation.target',n.type))+'</span>'+
-          (person?'<span class="f">好感 '+(r.favorability??0)+' '+changeTag(r.favorability_change||0)+'</span>':'')+
+          (person&&!P.isBlank(r.favorability)?'<span class="f">好感 '+esc(r.favorability)+'</span>':'')+
         '</p>'+
-        '<p class="erow-f">'+fieldKey('i-link','当前依据')+'<span class="v">'+esc(r.current_basis||'未记录')+'</span></p>'+
+        (r.current_basis
+          ?'<p class="erow-f">'+fieldKey('i-link','当前依据')+'<span class="v">'+esc(r.current_basis)+'</span></p>'
+          :'')+
         (r.recent_change
-          ?'<p class="erow-f">'+fieldKey('i-spark','本轮变化')+'<span class="v">'+esc(r.recent_change)+
-            (r.changed_at?'<span style="color:var(--ink5)">　'+esc(r.changed_at)+'</span>':'')+'</span></p>'
+          ?'<p class="erow-f">'+fieldKey('i-spark','本轮变化')+'<span class="v">'+esc(r.recent_change)+'</span></p>'
           :'')+
       '</div></div>');
   }
@@ -816,7 +798,7 @@ function renderFull(){
     if(seen.has(key))continue;                      // 互相记录的同一条关系只画一次
     seen.add(key);
     const hue=REL_HUE[r.relation_type]||'indigo',col='var(--'+hue+')';
-    const quiet=!r.recent_change&&!r.favorability_change;
+    const quiet=!r.recent_change;
     // 主视图的连线规矩照搬过来：两端让开头像，箭头指向关系的记录方
     const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
     const s={x:a.x+ux*30,y:a.y+uy*30},e={x:b.x-ux*30,y:b.y-uy*30};
@@ -829,10 +811,10 @@ function renderFull(){
       'px;--y:'+((s.y+e.y)/2+ny*13).toFixed(1)+'px" title="'+
       esc(p.name+' → '+r.target_name+'　'+L('relation.type',r.relation_type)+
           (r.current_basis?'：'+r.current_basis:'')+
-          (r.recent_change?'\n　本轮变化：'+r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):''))+'">'+
+          (r.recent_change?'\n　本轮变化：'+r.recent_change:''))+'">'+
       '<svg><use href="#'+(REL_ICON[r.relation_type]||'i-link')+'"/></svg>'+
       esc(L('relation.type',r.relation_type))+
-      (r.target_type==='person'?changeTag(r.favorability_change||0):'')+'</span>');
+      (r.target_type==='person'?favTag(r.favorability):'')+'</span>');
   }
 
   const marks=[...pos].map(([name,p])=>{
@@ -866,11 +848,13 @@ function renderChanges(){
 
   $('#changes').innerHTML=page.length?page.map(c=>{
     const hue=CHANGE_HUE[c.kind]||'indigo';
-    const who=esc(c.source_name||'未记录')+(c.target_name?' → '+esc(c.target_name):'');
+    const who=[c.source_name,c.target_name].filter(Boolean).map(esc).join(' → ');
+    const meta=(who?'<svg><use href="#'+(SOURCE_ICON[c.source_type]||'i-spark')+'"/></svg>'+who:'')+
+      (c.location?'<svg><use href="#i-pin"/></svg>'+esc(c.location):'');
     return '<div class="chg h-'+hue+'">'+
       '<span class="chg-i" title="'+esc(L('change.kind',c.kind))+'"><svg><use href="#'+(CHANGE_ICON[c.kind]||'i-spark')+'"/></svg></span>'+
-      '<div class="chg-b"><p>'+esc(c.summary||'未记录变化内容')+'</p>'+
-        '<small><svg><use href="#'+(SOURCE_ICON[c.source_type]||'i-spark')+'"/></svg>'+who+'</small></div>'+
+      '<div class="chg-b">'+(c.summary?'<p>'+esc(c.summary)+'</p>':'')+
+        (meta?'<small>'+meta+'</small>':'')+'</div>'+
       '<span class="chg-t" title="'+esc(c.time)+'">'+esc(timeHH(c.time)||c.time)+'</span>'+
     '</div>';
   }).join(''):'<p class="nodata">本轮没有记录在案的变化</p>';
@@ -886,7 +870,7 @@ function renderChanges(){
 const EV_PAGE=4;
 let evPage=0;
 function renderEvents(){
-  const all=arr(DATA.events).slice().sort(WTime.byNewest('updated_at'));
+  const all=arr(DATA.events).slice().sort(WTime.byNewest('started_at'));
   const {items:page,pages,page:pg}=P.pageSlice(all,EV_PAGE,evPage);
   evPage=pg;
 
@@ -903,12 +887,11 @@ function renderEvents(){
       '<div class="ev-foot">'+
         '<span class="ev-tag">'+esc(L('event.category',e.category))+'</span>'+
         (arr(e.locations).length?'<span class="at"><svg><use href="#i-pin"/></svg><span>'+esc(arr(e.locations).join('、'))+'</span></span>':'')+
-        (e.next_update?'<span class="next"><svg><use href="#i-bell"/></svg><span><i>下次检查</i>'+esc(e.next_update)+'</span></span>':'')+
       '</div></button>';
   }).join('')||'<p class="nodata">本轮没有事件记录</p>';
 
   renderPager($('#evPager'),{page:evPage,pages,total:all.length,unit:'条',
-    note:'按更新时间倒序',onGo:n=>{evPage=n;renderEvents()}});
+    note:'按开始时间倒序',onGo:n=>{evPage=n;renderEvents()}});
 
   $$('#events .ev').forEach(el=>el.addEventListener('click',()=>{
     P.goto('tasks', { focus: el.dataset.n });
@@ -949,14 +932,16 @@ function renderSummary(){
 /* ---------- 任务进展 ---------- */
 const TP_PAGE=3;
 let tpPage=0;
+/* 排序时间：最近一个阶段的时间，没有阶段时间就用期限；都没有的沉到最后 */
+const taskTime=t=>WTime.latest(arr(t.stages),'time')||t.deadline||'';
 function renderTasks(){
-  const all=arr(DATA.tasks).slice().sort(WTime.byNewest('updated_at'));
+  const all=arr(DATA.tasks).slice().sort(WTime.byNewest(taskTime));
   const pages=Math.max(1,Math.ceil(all.length/TP_PAGE));
   tpPage=Math.min(tpPage,pages-1);
   const page=all.slice(tpPage*TP_PAGE,tpPage*TP_PAGE+TP_PAGE);
 
   $('#tasks').innerHTML=page.map(t=>{
-    const hue=taskHue(t.source||'');
+    const hue=taskHue(hueKey(t));
     const pct=progressOf(t);
     const cur=arr(t.stages).find(s=>['current','blocked'].includes(s.status));
     const stages=arr(t.stages),done=stages.filter(s=>s.status==='completed').length;
@@ -976,7 +961,7 @@ function renderTasks(){
   }).join('')||'<p class="nodata">本轮没有任务记录</p>';
 
   renderPager($('#tpPager'),{page:tpPage,pages,total:all.length,unit:'条',
-    note:'按更新时间倒序',onGo:n=>{tpPage=n;renderTasks()}});
+    note:'按最近进展倒序',onGo:n=>{tpPage=n;renderTasks()}});
 
   $$('.tp').forEach(el=>el.addEventListener('click',()=>{
     P.goto('tasks', { focus: el.dataset.n });

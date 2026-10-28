@@ -45,8 +45,13 @@
     tasks: '任务与事件.html',
   };
   const DEFAULT = 'overview';
-  const VIEW_ID = 'bg_world_structured_v09';
+  // v1.0 方案的视图优先；仍在用 v0.9 方案的存档读旧视图，进页面前转成 v1.0 形状。
+  // 旧版橱窗壳不认识的视图只会静默不回，所以两个视图同时订阅，谁有数据用谁。
+  const VIEW_ID = 'bg_world_structured_v10';
+  const LEGACY_VIEW_ID = 'bg_world_structured_v09';
   const WATCH_ID = 'bg-world-panel';
+  const LEGACY_WATCH_ID = 'bg-world-panel-v09';
+  let dataVersion = '';
   const bridgeEnabled = new URLSearchParams(location.search).get('acuBridge') === '1';
   const framesRoot = document.getElementById('frames');
   const status = document.getElementById('status');
@@ -75,8 +80,133 @@
     const meta = world.world[0];
     if (meta && !Object.prototype.hasOwnProperty.call(meta, 'world_time')
       && Object.prototype.hasOwnProperty.call(meta, '当前世界时间')) {
-      throw new Error('bg_world_structured_v09 仍在输出中文字段别名');
+      throw new Error('后台世界结构化视图仍在输出中文字段别名');
     }
+    return world;
+  }
+
+  // ---- v0.9 → v1.0：删掉的字段并进保留字段，各类「痕迹」统一进 changes ----
+  const SOURCE_TYPE_LABEL = { witnessed: '亲眼所见', record: '记录', reported: '转述', public: '公开消息', rumor: '传闻', inferred: '推断' };
+  function joinText() {
+    return Array.prototype.slice.call(arguments).map(function (x) { return String(x == null ? '' : x).trim(); }).filter(Boolean).join('；');
+  }
+  function arrOf(v) { return Array.isArray(v) ? v : []; }
+  function personToV10(p, isNpc, logs) {
+    const out = Object.assign({}, p);
+    const profile = Object.assign({}, out.profile || {});
+    if (profile.social_role) profile.occupation = joinText(profile.occupation, profile.social_role);
+    delete profile.social_role;
+    out.profile = profile;
+    const cs = Object.assign({}, out.current_state || {});
+    delete cs.started_at;
+    out.current_state = cs;
+    out.schedule = arrOf(out.schedule).map(function (s) {
+      const x = Object.assign({}, s); delete x.related_task; delete x.related_event; return x;
+    });
+    out.conditions = arrOf(out.conditions).map(function (c) {
+      const x = Object.assign({}, c);
+      x.impact = joinText(c.impact, c.review_condition && ('复核：' + c.review_condition));
+      delete x.review_condition; return x;
+    });
+    out.decisions = arrOf(out.decisions).map(function (d) {
+      return {
+        question: joinText(d.question, d.waiting_for && ('在等：' + d.waiting_for)),
+        options: arrOf(d.options).map(function (o) {
+          if (typeof o === 'string') return o;
+          return o && o.cost ? (o.choice || '') + '（' + o.cost + '）' : (o && o.choice) || '';
+        }).filter(Boolean),
+      };
+    });
+    out.relations = arrOf(out.relations).map(function (r) {
+      const x = Object.assign({}, r); delete x.changed_at; delete x.favorability_change; return x;
+    });
+    if (isNpc) {
+      out.commitments = arrOf(out.commitments).map(function (c) {
+        const x = Object.assign({}, c);
+        x.deadline = joinText(c.deadline, c.release_condition && ('解除：' + c.release_condition));
+        delete x.release_condition; return x;
+      });
+      out.knowledge = arrOf(out.knowledge).map(knowledgeToV10);
+      arrOf(out.visible_effects).forEach(function (v) {
+        logs.push({ time: v.time, kind: 'effect', source_type: 'npc', source_name: p.name, target_name: v.related_event || '', summary: v.effect, location: v.location || '' });
+      });
+      const se = out.scene_entry;
+      if (se && (se.reason || se.earliest_time || se.location)) {
+        out.schedule.push({ start_time: se.earliest_time || '', end_time: '', location: se.location || '', action: joinText('接触「我」：' + (se.reason || ''), se.condition), status: 'planned', result: '' });
+      }
+    } else {
+      out.observations = arrOf(out.observations).map(function (o) {
+        return o && o.content !== undefined ? o : { time: o && o.time || '', content: joinText(o && o.situation, o && o.action, o && o.result) };
+      });
+    }
+    delete out.visible_effects; delete out.scene_entry; delete out.retention;
+    delete out.updated_at; delete out.next_update;
+    return out;
+  }
+  function knowledgeToV10(k) {
+    const x = Object.assign({}, k);
+    x.source = joinText(k.source, SOURCE_TYPE_LABEL[k.source_type] || k.source_type, k.learned_at && (k.learned_at + '得知'));
+    delete x.source_type; delete x.learned_at;
+    return x;
+  }
+  function toV10(world) {
+    const logs = [];
+    world.npcs = world.npcs.map(function (p) { return personToV10(p, true, logs); });
+    world.candidates = world.candidates.map(function (p) { return personToV10(p, false, logs); });
+    world.factions = world.factions.map(function (f) {
+      const x = Object.assign({}, f);
+      x.areas = arrOf(f.areas).map(function (a) { const y = Object.assign({}, a); delete y.recent_change; return y; });
+      x.resources = arrOf(f.resources).map(function (r) {
+        const y = Object.assign({}, r);
+        y.current_use = joinText(r.current_use, r.constraint && ('限制：' + r.constraint));
+        delete y.constraint; delete y.recent_change; return y;
+      });
+      x.internal_groups = arrOf(f.internal_groups).map(function (g) {
+        const y = Object.assign({}, g); y.current_action = joinText(g.current_action, g.effect); delete y.effect; return y;
+      });
+      x.relations = arrOf(f.relations).map(function (r) { const y = Object.assign({}, r); delete y.changed_at; return y; });
+      x.knowledge = arrOf(f.knowledge).map(knowledgeToV10);
+      arrOf(f.visible_effects).forEach(function (v) {
+        logs.push({ time: v.time, kind: 'effect', source_type: 'faction', source_name: f.name, target_name: v.related_event || '', summary: v.effect, location: v.location || '' });
+      });
+      delete x.visible_effects; delete x.updated_at; delete x.next_update;
+      return x;
+    });
+    world.regions = world.regions.map(function (r) {
+      const x = Object.assign({}, r);
+      if (x.control) { x.control = Object.assign({}, x.control); delete x.control.contesting_factions; }
+      arrOf(r.recent_changes).forEach(function (c) {
+        logs.push({ time: c.time, kind: 'region', source_type: 'region', source_name: r.name, target_name: c.related_event || c.related_task || '', summary: c.fact, location: r.name });
+      });
+      delete x.present_factions; delete x.recent_changes; delete x.updated_at; delete x.next_update;
+      return x;
+    });
+    world.tasks = world.tasks.map(function (t) {
+      const x = Object.assign({}, t);
+      x.participants = arrOf(t.participants).map(function (p) { const y = Object.assign({}, p); delete y.type; return y; });
+      if (t.source) x.participants.unshift({ name: t.source, role: '委托方' });
+      if (t.failure_condition) x.completion_condition = joinText(t.completion_condition, '失败：' + t.failure_condition);
+      x.stages = arrOf(t.stages).map(function (s) { const y = Object.assign({}, s); delete y.parent_stage; return y; });
+      delete x.source; delete x.failure_condition; delete x.updated_at; delete x.next_update;
+      return x;
+    });
+    world.events = world.events.map(function (e) {
+      const x = Object.assign({}, e);
+      x.participants = arrOf(e.participants).map(function (p) { const y = Object.assign({}, p); delete y.type; return y; });
+      arrOf(e.visible_effects).forEach(function (v) {
+        logs.push({ time: v.time, kind: 'event', source_type: 'event', source_name: e.name, target_name: '', summary: v.effect, location: v.location || '' });
+      });
+      delete x.visible_effects; delete x.updated_at; delete x.next_update;
+      return x;
+    });
+    const seen = new Set(world.changes.map(function (c) { return [c.time, c.source_name, c.summary].join('|'); }));
+    logs.forEach(function (l) {
+      if (!l.summary) return;
+      const key = [l.time, l.source_name, l.summary].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      world.changes.push(l);
+    });
     return world;
   }
 
@@ -89,11 +219,9 @@
   }
 
   function npcToCandidate(p) {
-    return {
+    const row = {
       name: p.name,
       status: 'observe',
-      updated_at: p.updated_at || '',
-      next_update: p.next_update || '',
       profile: p.profile || {},
       current_state: p.current_state || {},
       schedule: Array.isArray(p.schedule) ? p.schedule : [],
@@ -101,12 +229,14 @@
       relations: Array.isArray(p.relations) ? p.relations : [],
       decisions: Array.isArray(p.decisions) ? p.decisions : [],
       observations: Array.isArray(p.observations) ? p.observations : [],
-      retention: {
-        status_basis: 'AI 误写入固定人物，已改回候选',
-        missing_evidence: '',
-        next_observation: p.next_update || '',
-      },
     };
+    // v0.9 存档的候选表还有这两列，照旧写上，免得旧方案下这条记录缺列。
+    if (dataVersion === 'v09') {
+      row.updated_at = p.updated_at || '';
+      row.next_update = p.next_update || '';
+      row.retention = { status_basis: 'AI 误写入固定人物，已改回候选', missing_evidence: '', next_observation: '' };
+    }
+    return row;
   }
 
   function markAiOutput(change) {
@@ -146,10 +276,14 @@
     return patches;
   }
 
-  function acceptData(result) {
+  function acceptData(result, version) {
     const world = extractWorld(result);
+    dataVersion = version;
+    // 先按原始形状改回候选（补丁写回的是该版本自己的表结构），再统一成 v1.0 形状给页面。
     const added = takeAiAddedNpcs(world);
     const patches = added.length ? applyAiNpcMovesLocally(world, added) : [];
+    if (version === 'v09') toV10(world);
+    world.__version = version;
     window.WE_WORLD_DATA = world;
     const first = !hasData;
     hasData = true;
@@ -174,16 +308,18 @@
     bridgeTimer = setTimeout(function () {
       if (!hasData) setStatus(
         '未收到后台世界数据',
-        '请确认当前方案包含 bg_world_structured_v09，且异步助手数据库桥已加载。',
+        '请确认当前方案包含 ' + VIEW_ID + '（或旧版 ' + LEGACY_VIEW_ID + '），且异步助手数据库桥已加载。',
       );
     }, 8000);
-    window.parent.postMessage({
-      type: 'we-watch-view',
-      watchId: WATCH_ID,
-      viewId: VIEW_ID,
-      params: {},
-      options: {},
-    }, '*');
+    [[WATCH_ID, VIEW_ID], [LEGACY_WATCH_ID, LEGACY_VIEW_ID]].forEach(function (pair) {
+      window.parent.postMessage({
+        type: 'we-watch-view',
+        watchId: pair[0],
+        viewId: pair[1],
+        params: {},
+        options: {},
+      }, '*');
+    });
     window.parent.postMessage({
       type: 'we-subscribe',
       subscribeId: WATCH_ID + '-changes',
@@ -341,12 +477,18 @@
       return;
     }
     if (e.source === window.parent && data.type === 'we-watch-view-result') {
+      const legacy = data.watchId === LEGACY_WATCH_ID;
+      // 两个视图都在时只认 v1.0；旧视图的错误也不打断 v1.0 数据。
+      if (legacy && dataVersion === 'v10') return;
       if (!data.ok) {
+        if (legacy) return;
         setStatus('读取后台世界数据失败', data.error || 'AcuData.watchView 返回错误。');
         return;
       }
+      // 视图不存在时 queryView 返回 ok:false 的空结果，不当成数据。
+      if (data.result && data.result.ok === false && !(data.result.data && data.result.data.background_world)) return;
       try {
-        acceptData(data.result);
+        acceptData(data.result, legacy ? 'v09' : 'v10');
       } catch (err) {
         setStatus('后台世界数据格式不匹配', String(err && err.message || err));
       }

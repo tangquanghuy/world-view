@@ -224,7 +224,7 @@
     'change.kind': { task: '任务', event: '事件', region: '地区', relation: '关系', effect: '影响' },
 
     // 契约：只使用 npc、faction、task、event、region。
-    'change.source': { npc: '人物', faction: '势力', task: '任务', event: '事件', region: '地区' },
+    'change.source': { npc: '人物', candidate: '候选人物', faction: '势力', task: '任务', event: '事件', region: '地区' },
   };
 
   const warned = new Set();
@@ -237,7 +237,7 @@
     const key = `${group}=${value}`;
     if (!warned.has(key)) {
       warned.add(key);
-      console.warn(`[vocab] "${value}" 不在契约枚举 ${group} 内，请核对 后台世界引擎-三类演进版-v0.9.json`);
+      console.warn(`[vocab] "${value}" 不在契约枚举 ${group} 内，请核对后台世界演进方案的字段结构`);
     }
     return fallback ?? value;
   }

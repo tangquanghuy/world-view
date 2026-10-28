@@ -224,7 +224,12 @@
 
   /* 两张表都按契约里的枚举一个不落地铺满：漏一项，那一类的势力／地区就会
      整页退成首字方块。resources[].type 与 conditions[].category 的取值见 v0.9 契约。 */
-  const isPerson = (p) => (p && p.type || 'person') === 'person';
+  /* v1.0 的参与者不再写 type：名字是已知势力就当势力，其余当人物。 */
+  const isPerson = (p) => {
+    if (p && p.type) return p.type === 'person';
+    const name = typeof p === 'string' ? p : (p && p.name) || '';
+    return !factionNames().has(name);
+  };
 
   /* 参与者的形状本身就是类型：人物是圆头像，势力和团体是盾形纹章。
      这样 type 不必再用「（人物·…）」这种文字占位，把版面让给真正有用的角色名。 */
@@ -251,7 +256,7 @@
     return '<div class="parts">' + ps.map((p) =>
       '<div class="part">' + avatarTag(p, 'pav') +
       '<span class="pinfo"><b>' + esc(p.name || '未记录') + '</b>' +
-      '<small>' + esc(p.role || L('participant.type', p.type)) + '</small></span></div>'
+      (p.role || p.type ? '<small>' + esc(p.role || L('participant.type', p.type)) + '</small>' : '') + '</span></div>'
     ).join('') + '</div>';
   }
 
@@ -260,9 +265,47 @@
      两者原来都是灰字、字号只差 1px，几项排在一起就是一堵没有落点的字墙。 */
   const fieldKey = (icon, text) => `<small class="k"><svg><use href="#${icon}"/></svg>${esc(text)}</small>`;
   const termRow = (r) => `<div${r[3] ? ' class="w"' : ''}>${fieldKey(r[0], r[1])}<b class="v">${esc(r[2] || '未记录')}</b></div>`;
-  /** rows = [[icon, 名, 值, 是否整行], ...]，cols 为空时用 CSS 默认三列 */
-  const kvGrid = (rows, cols) =>
-    `<div class="kv"${cols ? ` style="--kv-cols:${cols}"` : ''}>${rows.map(termRow).join('')}</div>`;
+  /** rows = [[icon, 名, 值, 是否整行], ...]，cols 为空时用 CSS 默认三列。
+      v1.0 里大部分字段可空：值为空的行直接不显示，不再满屏「未记录」；整组都空时返回空串。 */
+  const kvGrid = (rows, cols) => {
+    const filled = arr(rows).filter((r) => r && !isBlank(r[2]));
+    if (!filled.length) return '';
+    return `<div class="kv"${cols ? ` style="--kv-cols:${cols}"` : ''}>${filled.map(termRow).join('')}</div>`;
+  };
+  const isBlank = (v) => v === undefined || v === null || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length);
+
+  /* ---------- v1.0 派生数据 ----------
+     v1.0 删掉了各实体自带的「痕迹」「近期变化」「在场势力」，统一从世界变化记录与势力的地区联系推出来。 */
+  function factionNames() {
+    return new Set(arr(DATA.factions).map((f) => f && f.name).filter(Boolean));
+  }
+  const byNewestTime = (a, b) => {
+    const W = global.WTime;
+    if (W && typeof W.byNewest === 'function') return W.byNewest('time')(a, b);
+    return String(b.time || '').localeCompare(String(a.time || ''), 'zh-CN', { numeric: true });
+  };
+  /** 与某个实体有关的变化：它是主体或相关对象。opts.at 为真时，地点写着它的也算（地区用）。 */
+  function changesFor(name, opts = {}) {
+    const n = String(name || '').trim();
+    if (!n) return [];
+    return arr(DATA.changes).filter((c) => c && (c.source_name === n || c.target_name === n
+      || (opts.at && String(c.location || '').includes(n)))).slice().sort(byNewestTime);
+  }
+  /** 地区的在场势力 / 争夺方：来自各势力 areas 里写着这个地区的那一项。 */
+  function regionFactions(regionName) {
+    const n = String(regionName || '').trim();
+    const present = [];
+    const contesting = [];
+    for (const f of arr(DATA.factions)) {
+      for (const a of arr(f && f.areas)) {
+        if (!a || a.name !== n) continue;
+        const item = { name: f.name, relation_type: a.relation_type || '', current_state: a.current_state || '' };
+        present.push(item);
+        if (a.relation_type === 'contested') contesting.push(item);
+      }
+    }
+    return { present, contesting };
+  }
 
   /* ---------- 时间 ---------- */
   const timeHH = (t) => { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; };
@@ -411,7 +454,8 @@
     avatarFile, portraitFile, silhouetteFile, crestFile, sigilFile, isPerson,
     getCustomArt, setCustomArt, clearCustomArt, isAllowedImageUrl,
     avatarTag, avatarRow, participantList,
-    fieldKey, termRow, kvGrid,
+    fieldKey, termRow, kvGrid, isBlank,
+    changesFor, regionFactions,
     timeHH, progressOf, pageSlice, renderPager, toast, initChrome, updateWorldClock, adoptWorldData,
     ROUTES, goto,
   };

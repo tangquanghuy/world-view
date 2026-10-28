@@ -14,8 +14,8 @@
    本页最大的约束不是版面而是数据：原型上画的「基础属性 / 技能 LV / 持有物 /
    健康·体力·信任·好感四条槽」在契约里一个都没有，而且永远不会有——那些归角色卡管，
    后台世界引擎既不产出也不编造。所以这些位置不留占位、不画 0% 的槽，直接不出现。
-   页面上唯一合法的数值是 relations[].favorability 与 favorability_change。
-   固定人物与候选人物共用同一套 profile：职业／社会角色／年纪／性别／生计／常驻地／专长／外貌，
+   页面上唯一合法的数值是 relations[].favorability。
+   固定人物与候选人物共用同一套 profile：职业／年纪／性别／生计／常驻地／专长／外貌，
    另保留性格标签。profile 只服务角色档案面板，不进入 access 含 macro 的视图，因而不会回流主 API；
    后台世界引擎只产出动态状态，不产出角色卡属性、技能、物品或数值槽。
    ========================================================================== */
@@ -238,10 +238,6 @@
   display:flex;align-items:center;gap:5px;padding:2px 9px;border-radius:var(--r-chip);
   background:var(--paper);color:var(--hue-ink);font:600 14px/1.5 var(--ui);white-space:nowrap;box-shadow:var(--sh1);
 }
-.wtag em{font-style:normal;font-variant-numeric:tabular-nums}
-.wtag em.up{color:var(--green-ink)}
-.wtag em.down{color:var(--rose-ink)}
-.wtag em.flat{color:var(--ink4)}
 /* 画布窄到放不下两个并排的节点盒时（手机单栏），节点整体缩一档，
    排布也由 JS 换成「核心在下、往来的人在上」，否则名字会互相压。 */
 .rnet.tight .rnode{width:104px}
@@ -267,10 +263,6 @@
 .fav{display:flex;align-items:center;gap:10px;margin-top:8px}
 .fav .bar{flex:1 1 auto;max-width:210px}
 .fav .val{flex:0 0 auto;color:var(--ink2);font:600 17px/1 var(--serif);font-variant-numeric:tabular-nums}
-.fav .dv{flex:0 0 auto;padding:1px 8px;border-radius:var(--r-chip);font:600 14px/1.5 var(--ui);font-variant-numeric:tabular-nums}
-.fav .dv.up{background:var(--green-soft);color:var(--green-ink)}
-.fav .dv.down{background:var(--rose-soft);color:var(--rose-ink)}
-.fav .dv.flat{background:var(--sunken);color:var(--ink4)}
 
 /* ---------- 右栏「角色详情」 ----------
    不做内部滚动。旧稿的 rail 是 overflow:auto，1536 下直接吞掉九个区块里的四个，
@@ -285,12 +277,10 @@
 .item-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .stmt{margin:0;color:var(--ink2);font:14px/1.7 var(--ui);overflow-wrap:anywhere}
 .dcard .kv{gap:9px 16px;margin-top:8px}
-/* 待决选择的可选方向：一条一格，代价单独一行——「立即送交调查线索会暂时脱离掌控」
-   这种粘在一起的写法读起来是断句错误。 */
+/* 待决选择的可选方向：一条一格。每条是「方向（代价）」一句话，代价已在括号里。 */
 .opts{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:7px}
 .opt{padding:8px 11px;border-radius:var(--r-chip);background:var(--sunken)}
 .opt b{display:block;color:var(--ink2);font:600 14px/1.5 var(--ui);overflow-wrap:anywhere}
-.opt small{display:block;margin-top:2px;color:var(--ink4);font:14px/1.55 var(--ui);overflow-wrap:anywhere}
 
 /* 往来：只有 target_type=person 的关系才有好感度，契约里写死了。
    原来是 auto-fill 的等分网格，右栏够宽时切两格——大多数人本轮只有一位常来往的对象，
@@ -323,25 +313,6 @@
 .log-time{color:var(--hue-ink);font:600 14px/1.4 var(--ui);font-variant-numeric:tabular-nums}
 .log-tag{color:var(--ink5);font:14px/1.4 var(--ui)}
 .log-b p{margin:0;color:var(--ink2);font:14px/1.65 var(--ui);overflow-wrap:anywhere}
-/* ---------- 系统的事，收在栏底 ----------
-   `scene_entry`（这个人什么条件下能走进玩家的场景）和 `retention`（还值不值得继续
-   盯着这个候选人）是契约里唯二完全服务于「引擎自己怎么跑」的字段块，而候选人物
-   进主 API 走的是手动或随机，决策权根本不在副 API 手上——产出了也没人用。
-   数据一条不删，但它不该占「这人是谁」的位置，更不该顶着「登场时机」「为何还在观察」
-   这种半像人话的译名混在人物信息里。虚线描边是刻意的：这块是旁注，不是内容。 */
-.rail-sys{display:flex;justify-content:center;padding:2px 0 0}
-.sysmore{
-  margin:0;padding:7px 13px;border:1px dashed var(--rule);border-radius:var(--r-chip);
-  background:transparent;color:var(--ink4);font:14px/1.4 var(--ui);
-}
-.sysmore:hover{background:transparent;color:var(--ink2);border-color:var(--ink5)}
-.sysmore svg{flex:0 0 auto;width:15px;height:15px;opacity:.8}
-.sysmore i{font-size:16px}
-/* 浮层里这一节同样压一档：外框虚线、标题不上主色，跟上面几节的实底卡区分开 */
-.sheet-sec.sys{border:1px dashed var(--rule);background:transparent}
-.sheet-sec.sys .sech{color:var(--ink4)}
-.sheet-sec.sys>p{margin:0 0 11px;color:var(--ink4);font:14px/1.65 var(--ui)}
-
 /* 摘要栏里那一句夹到两行，浮层里（.sheet-sec 下）放开写全 */
 .rail-body .log-b>p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .log-b small{display:flex;align-items:flex-start;gap:5px;margin-top:3px;color:var(--ink4);font:14px/1.55 var(--ui);overflow-wrap:anywhere}
@@ -380,14 +351,10 @@
 .smeta span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .smeta.two span{-webkit-line-clamp:2}
 
-/* 往来细节的好感度：摘要里跟名字挤在同一行，只给数字和增减；
+/* 往来细节的好感度：摘要里跟名字挤在同一行，只给数字；
    进度条留给浮层和「往来」，同一个数不必在三处各画一根槽。 */
 .favmini{display:inline-flex;align-items:baseline;gap:5px;color:var(--ink4);font:14px/1.4 var(--ui)}
 .favmini b{color:var(--ink2);font:600 17px/1.1 var(--serif);font-variant-numeric:tabular-nums}
-.favmini em{font-style:normal;padding:1px 7px;border-radius:var(--r-chip);font:600 14px/1.45 var(--ui);font-variant-numeric:tabular-nums}
-.favmini em.up{background:var(--green-soft);color:var(--green-ink)}
-.favmini em.down{background:var(--rose-soft);color:var(--rose-ink)}
-.favmini em.flat{background:var(--sunken);color:var(--ink4)}
 
 /* ---------- 完整档案浮层 ----------
    外壳（.sheet / .sheet-box / .sheet-close）在 shared/console.css 里，四页共用，
@@ -625,7 +592,7 @@ const genderOf=p=>{const pr=profileOf(p);return pr?pr.gender||'':''};
    两者直接比较时年份会差出一整个量级，所以比大小之前先把年份剥掉。 */
 const stripYear=s=>String(s||'').replace(/^[^\d]*\d+\s*年\s*[·・]?\s*/,'');
 const T=s=>WTime.parse(stripYear(s));
-let WORLD_TIME='', NOW_T=null;
+let WORLD_TIME='';
 function refreshLists(){
   NPCS=arr(DATA.npcs);
   CANDS=arr(DATA.candidates);
@@ -633,7 +600,6 @@ function refreshLists(){
   PEOPLE=[...NPCS,...CANDS];
   CAND_NAMES=new Set(CANDS.map(c=>c&&c.name).filter(Boolean));
   WORLD_TIME=String(DATA.world?.[0]?.world_time||'');
-  NOW_T=T(WORLD_TIME);
 }
 refreshLists();
 
@@ -665,14 +631,14 @@ function pick(name){
 }
 
 /* ---------- 角色列表 ----------
-   七个人一屏摆得下，不做截断；真放不下时按 updated_at 倒序翻页。
-   固定人物和候选人物分两段排，不再按 updated_at 混在一起：契约里它们是两张表，
+   七个人一屏摆得下，不做截断；真放不下时按名字顺序翻页。
+   固定人物和候选人物分两段排，不混在一起：契约里它们是两张表，
    状态词也是两套（在附近／视线外 对 观察中／可启用），交错排会读成同一类记录
-   忽好忽坏。段内各自按 updated_at 倒序。 */
+   忽好忽坏。段内各自按名字排。 */
 const ROSTER_PAGE=8;
 let rosterPage=0;
-const byNew=list=>list.slice().sort(WTime.byNewest('updated_at'));
-const sortedPeople=()=>[...byNew(NPCS),...byNew(CANDS)];
+const byNameSort=list=>list.slice().sort((a,b)=>String(a&&a.name||'').localeCompare(String(b&&b.name||''),'zh-CN'));
+const sortedPeople=()=>[...byNameSort(NPCS),...byNameSort(CANDS)];
 const GROUP={
   npc :['indigo','i-people','固定人物','你点进来的人，后台会持续推演'],
   cand:['teal',  'i-eye',   '候选人物','AI 新加的人先待在这儿；删除会同时写入排除名单，后台不会再加回来'],
@@ -710,7 +676,7 @@ function renderRoster(){
   }).join('')||'<p class="nodata box">本轮没有人物记录</p>';
 
   renderPager($('#rosterPager'),{page:rosterPage,pages,total:all.length,unit:'人',
-    note:'按推演时间倒序',onGo:n=>{rosterPage=n;renderRoster()}});
+    note:'按名字排序',onGo:n=>{rosterPage=n;renderRoster()}});
 
   $$('.rcard').forEach(el=>el.addEventListener('click',()=>pick(el.dataset.n)));
   renderExclusionNote();
@@ -742,31 +708,23 @@ function affiliation(p){
   const fs=arr(p.relations).filter(r=>r.target_type==='faction');
   return fs.length?fs.map(r=>r.target_name+'（'+L('relation.type',r.relation_type)+'）').join('、'):'';
 }
-/** 当前行动已经过去多少。缺 started_at 或 expected_end 时返回 null，画成虚线槽而不是 0%。 */
-function actProgress(c){
-  const a=T(c.started_at),b=T(c.expected_end);
-  if(a===null||b===null||b<=a||NOW_T===null)return null;
-  return Math.max(0,Math.min(100,Math.round((NOW_T-a)/(b-a)*100)));
-}
-
 function renderHero(){
   const p=cur(),c=p.current_state||{},st=standing(p),pr=profileOf(p);
   const hue=st.hue;
   const aff=affiliation(p);
-  const pct=actProgress(c);
-  const span=[c.started_at,c.expected_end].filter(Boolean).join(' – ')||'时间未记录';
+  /* 当前行动只记了预计结束，没有起点，算不出进度——只说「预计到 X」，没写就不显示。 */
+  const until=c.expected_end?'预计到 '+c.expected_end:'';
 
   /* 立绘：自定义链接 > 正文美化内置名册 > 黄底剪影。同一个名字永远同一张。 */
   const face=portraitFile(p.name);
   const faceFallback=silhouetteFile(p.name);
 
   /* 身份。一份档案该先回答这个，所以这一节排在当前行动之前。
-     两类人物共用同一套 profile 字段，固定人物不再缺少社会资料；字段缺失时保留标签，
-     由 termRow 显示「未记录」。字段名使用普通名词，页面文案不直接暴露内部字段名。 */
+     两类人物共用同一套 profile 字段，固定人物不再缺少社会资料；值为空的行由 kvGrid
+     直接略去。字段名使用普通名词，页面文案不直接暴露内部字段名。 */
   const tags=pr?arr(pr.personality_tags):[];
   const rows=pr?[
     ['i-briefcase','职业',pr.occupation],
-    ['i-flag','社会角色',pr.social_role],
     ['i-hourglass','年纪',pr.age||pr.age===0?String(pr.age)+' 岁':''],
     ['i-gender','性别',pr.gender],
     ['i-coin','生计',pr.livelihood],
@@ -825,12 +783,9 @@ function renderHero(){
         '</div>'+
         '<p class="now-do">'+esc(c.action||'未记录当前行动')+'</p>'+
         /* 地点不在这里再说一遍：立绘下沿的浮标就写着「当前所在地」，两处相距不到一屏宽 */
-        '<div class="now-meta">'+
-          '<span><svg><use href="#i-clock"/></svg>'+esc(span)+'</span>'+
-          (pct===null
-            ?'<span title="没写下预计什么时候结束，算不出走到哪一步了"><svg><use href="#i-hourglass"/></svg>结束时间未定</span>'
-            :'<span title="按这件事的起止时间算，世界时间已经走过多少"><svg><use href="#i-hourglass"/></svg>已过去 '+pct+'%</span>')+
-        '</div>'+
+        (until
+          ?'<div class="now-meta"><span><svg><use href="#i-hourglass"/></svg>'+esc(until)+'</span></div>'
+          :'')+
         (c.observable_state
           /* observable_state 装的是伤势、疲劳、随身装备、伪装——「外显」是心理学的词，
              「外观」又只覆盖长相。字段名是名词，一眼认形状：眼睛图标已经说了是"看"，
@@ -845,8 +800,7 @@ function renderHero(){
           :'')+
       '</div>'+
     '</div>';
-    /* 档案主卡原来收在「已推演到 / 下次检查」两条时间戳上：一份人物档案的最后一句话
-       是引擎自己的排程，读完只记得这是台机器在跑。两条都归了栏底的推演记录。 */
+
 
   $$('#hero .lchip').forEach(el=>el.addEventListener('click',()=>{
     // 任务与剧本页目前不接收定位参数，先把名字寄存起来，那边接上了就能直接聚焦
@@ -862,15 +816,17 @@ function dayItems(p){
   const rows=arr(p.schedule).map(s=>({
     now:false,action:s.action,start:s.start_time,end:s.end_time,location:s.location,
     statusText:L('schedule.status',s.status),statusKey:s.status,
-    task:s.related_task,event:s.related_event,result:s.result,
+    result:s.result,
   }));
+  /* 当前行动没有起点，只有预计结束：排序按预计结束算，连它也没有就排在末尾。 */
   if(c.action||c.location)rows.push({
-    now:true,action:c.action,start:c.started_at,end:c.expected_end,location:c.location,
+    now:true,action:c.action,start:'',end:c.expected_end,location:c.location,
     statusText:L('state.status',c.status),statusKey:c.status,
     task:c.related_task,event:c.related_event,result:'',
   });
+  const key=r=>T(r.start||r.end);
   return rows.sort((a,b)=>{
-    const va=T(a.start),vb=T(b.start);
+    const va=key(a),vb=key(b);
     if(va===null&&vb===null)return 0;
     if(va===null)return 1;
     if(vb===null)return -1;
@@ -939,8 +895,11 @@ function renderSchedule(){
 
   $('#strip').innerHTML=rows.map(r=>{
     const hue=r.now?'amber':r.statusKey==='completed'?'green':r.statusKey==='cancelled'?'purple':'indigo';
-    const when=[timeHH(r.start)||r.start,timeHH(r.end)||r.end].filter(Boolean).join(' – ')||'时间未记录';
-    const day=dayOf(r.start);
+    // 当前行动没有起点，只写「预计到 X」；日程条目照旧写起止
+    const when=r.now&&!r.start
+      ?(r.end?'预计到 '+(timeHH(r.end)||r.end):'')
+      :[timeHH(r.start)||r.start,timeHH(r.end)||r.end].filter(Boolean).join(' – ');
+    const day=dayOf(r.start||r.end);
     /* 卡头（图标／标题／时间／状态）和元信息（地点／任务／事件／结果）分成两块，
        卡片一宽各自并成横排，见 .s-h / .s-m 的容器查询。 */
     return '<article class="scell h-'+hue+(r.now?' now':'')+'">'+
@@ -950,12 +909,14 @@ function renderSchedule(){
         /* 卡片上写的是「16:00 – 18:20　霜月12日」，契约里的原值是「霜月12日 16:00」。
            原值本来只落在时间尺刻度的 title 上，而刻度最多放四个、挤不开还要再减——
            那等于让一条数据的去留取决于版面。原值直接挂到这张卡自己身上。 */
-        '<span class="stime" title="'+esc([r.start,r.end].filter(Boolean).join(' – '))+'">'+
-          '<svg><use href="#i-clock"/></svg>'+esc(when)+(day?'　'+esc(day):'')+'</span>'+
+        (when
+          ?'<span class="stime" title="'+esc([r.start,r.end].filter(Boolean).join(' – '))+'">'+
+            '<svg><use href="#i-clock"/></svg>'+esc(when)+(day?'　'+esc(day):'')+'</span>'
+          :'')+
         '<span class="chip">'+esc(r.now?'当前行动':r.statusText)+'</span>'+
       '</div>'+
       '<div class="s-m">'+
-        '<span class="sline"><svg><use href="#i-pin"/></svg>'+esc(r.location||'地点未记录')+'</span>'+
+        (r.location?'<span class="sline"><svg><use href="#i-pin"/></svg>'+esc(r.location)+'</span>':'')+
         (r.task ?'<span class="sline"><svg><use href="#i-scroll"/></svg><i>任务</i>'+esc(r.task )+'</span>':'')+
         (r.event?'<span class="sline"><svg><use href="#i-bell"/></svg><i>事件</i>'+esc(r.event)+'</span>':'')+
         (r.result?'<span class="sline sres"><svg><use href="#i-check"/></svg>'+esc(r.result)+'</span>'
@@ -1015,7 +976,6 @@ function netLayout(n,W){
   }
   return {tight:true,H,core:[.50,(H-20-TIGHT_CORE/2)/H],slots};
 }
-const changeTag=n=>n>0?'<em class="up">+'+n+'</em>':n<0?'<em class="down">'+n+'</em>':'<em class="flat">±0</em>';
 
 function renderNet(){
   /* 面板副标题原来写「赛文　共 2 条直接关系（固定人物上限 8 条）」：
@@ -1056,7 +1016,7 @@ function renderNet(){
     const dx=n.x-cx,dy=n.y-cy;
     const ctl=[(cx+n.x)/2-dy*K,(cy+n.y)/2+dx*K];
     // 本轮没有任何变化的关系画细虚线，一眼分出「动过的边」
-    const quiet=!n.r.recent_change&&!n.r.favorability_change;
+    const quiet=!n.r.recent_change;
     return '<path d="M'+cx.toFixed(1)+' '+cy.toFixed(1)+' Q'+ctl[0].toFixed(1)+' '+ctl[1].toFixed(1)+' '+n.x.toFixed(1)+' '+n.y.toFixed(1)+'"'+
       ' fill="none" stroke="var(--'+hue+')" stroke-width="'+(quiet?1.5:2.4)+'" stroke-linecap="round"'+
       (quiet?' stroke-dasharray="5 6"':'')+' opacity="'+(quiet?.5:.85)+'"/>';
@@ -1067,8 +1027,7 @@ function renderNet(){
     const dx=n.x-cx,dy=n.y-cy;
     const mx=(cx+n.x)/2-dy*K/2,my=(cy+n.y)/2+dx*K/2;
     return '<span class="wtag h-'+hue+'" style="--x:'+mx.toFixed(1)+'px;--y:'+my.toFixed(1)+'px" title="'+esc(n.r.current_basis||'')+'">'+
-      esc(L('relation.type',n.r.relation_type))+
-      (n.r.target_type==='person'?changeTag(n.r.favorability_change||0):'')+'</span>';
+      esc(L('relation.type',n.r.relation_type))+'</span>';
   }).join('');
 
   const marks=nodes.map(n=>{
@@ -1104,11 +1063,9 @@ function renderNet(){
   renderRelList();
 }
 
-/* 图上的曲线只标得下类别和增减，「凭什么来往」得写出来。
-   原来每条关系在这儿占五行：名字一行、好感条一行、当前依据一行、最近变化和变化时间两行。
-   后三样里最近变化在图上方那行「本轮变化」里、变化时间在右栏近况记录里都已经在了，
-   同一句话第三遍出现只是把面板拉长。现在一条关系两行：名字＋类别＋好感数字，加一行依据，
-   排开的全文进「完整档案」。 */
+/* 图上的曲线只标得下类别，「凭什么来往」得写出来。
+   最近变化在图下那行「本轮变化」里、也进右栏近期动向，这里不再重复。
+   一条关系两行：名字＋类别＋好感数字，加一行依据，排开的全文进「完整档案」。 */
 const REL_PAGE=4;
 let relPage=0;
 function renderRelList(){
@@ -1122,7 +1079,6 @@ function renderRelList(){
     all.slice(from,from+REL_PAGE).map(r=>{
       const hue=REL_HUE[r.relation_type]||'indigo';
       const person=r.target_type==='person';
-      const d=r.favorability_change||0;
       return '<div class="relrow h-'+hue+'">'+targetFace(r)+
         '<div style="min-width:0">'+
           '<div class="rr-h"><b>'+esc(r.target_name)+'</b>'+
@@ -1132,16 +1088,16 @@ function renderRelList(){
                盾形纹章和「势力」胶囊已经说明了对面是谁，没有好感数这件事看得见，
                至于契约怎么规定的，那是写数据的人的事。 */
             (person
-              ?'<span class="favmini" title="好感度 0–100，50 为普通中性熟人；本轮变动由具体互动造成">'+
+              ?'<span class="favmini" title="好感度 0–100，50 为普通中性熟人">'+
                 '好感 <b>'+(r.favorability??0)+'</b>'+
-                '<em class="'+(d>0?'up':d<0?'down':'flat')+'">'+(d>0?'+'+d:d<0?String(d):'±0')+'</em>'+
               '</span>'
               :'')+
           '</div>'+
-          '<p class="smeta two"'+
-            (r.recent_change||r.changed_at
-              ?' title="'+esc(tipOf([['最近变化',r.recent_change],['变化时间',r.changed_at]]))+'"':'')+
-            '><svg><use href="#i-check"/></svg><span>'+esc(r.current_basis||'来往的由来未记录')+'</span></p>'+
+          (r.current_basis
+            ?'<p class="smeta two"'+
+              (r.recent_change?' title="'+esc(tipOf([['最近变化',r.recent_change]]))+'"':'')+
+              '><svg><use href="#i-check"/></svg><span>'+esc(r.current_basis)+'</span></p>'
+            :'')+
         '</div>'+
       '</div>';
     }).join('');
@@ -1179,17 +1135,23 @@ const srow=(o)=>
     '<div class="srow-b"><p'+(o.q?' class="q"':'')+'>'+esc(o.text||'未记录')+'</p>'+(o.extra||'')+'</div>'+
   '</div>';
 const tipOf=(rows)=>rows.filter(r=>r[1]).map(r=>r[0]+'：'+r[1]).join('\n');
+/* 抉择的方向：v1.0 里每项就是「方向（代价）」一句话，空项不摆。 */
+const optionsOf=x=>arr(x&&x.options).map(o=>String(o??'').trim()).filter(Boolean);
 
-/* 近况记录：把可见影响、观察片段和关系变动按时间并成一条流。
-   这三样在契约里各是一节，但它们回答的是同一个问题——「这个人最近留下了什么」，
-   分成三块小卡反而读不出先后。摘要里只留时刻和那一句，地点、处境、结果进浮层。 */
+/* 近况记录：把世界变化、观察片段和关系变动按时间并成一条流。
+   这三样在数据里各是一处，但它们回答的是同一个问题——「这个人最近留下了什么」，
+   分成三块小卡反而读不出先后。摘要里只留时刻和那一句，地点、相关对象进浮层。
+   世界变化来自 DATA.changes 里主体或相关对象是这个人的那些；关系变动没有时间，排在末尾。 */
 function recentFeed(p){
   const out=[];
-  arr(p.visible_effects).forEach(v=>out.push({time:v.time,hue:'amber',icon:'i-spark',tag:'留下的痕迹',
-    main:v.effect||'未记录',meta:[['i-pin','地点',v.location],['i-bell','关联事件',v.related_event]]}));
+  P.changesFor(p.name).forEach(c=>{
+    const other=[c.source_name,c.target_name].find(n=>n&&n!==p.name)||'';
+    out.push({time:c.time,hue:'amber',icon:'i-spark',tag:'世界变化',
+      main:c.summary||'未记录',meta:[['i-pin','地点',c.location],['i-link','相关',other]]});
+  });
   arr(p.observations).forEach(o=>out.push({time:o.time,hue:'teal',icon:'i-eye',tag:'观察片段',
-    main:o.action||'未记录',meta:[['i-ask','当时的处境',o.situation],['i-check','结果',o.result]]}));
-  arr(p.relations).filter(r=>r.recent_change).forEach(r=>out.push({time:r.changed_at,hue:'rose',icon:'i-heart',tag:'关系变化',
+    main:o.content||'未记录',meta:[]}));
+  arr(p.relations).filter(r=>r.recent_change).forEach(r=>out.push({time:'',hue:'rose',icon:'i-heart',tag:'关系变化',
     main:r.recent_change,meta:[['i-user','对象',r.target_name+'（'+L('relation.type',r.relation_type)+'）']]}));
   return out.sort(WTime.byNewest('time'));
 }
@@ -1198,7 +1160,7 @@ const logRow=(x,full)=>
       ?' title="'+esc(tipOf(x.meta.map(m=>[m[1],m[2]])))+'"':'')+'>'+
     '<span class="log-i"><svg><use href="#'+x.icon+'"/></svg></span>'+
     '<div class="log-b">'+
-      '<div class="log-t"><span class="log-time">'+esc(x.time||'时间未记录')+'</span><span class="log-tag">'+esc(x.tag)+'</span></div>'+
+      '<div class="log-t">'+(x.time?'<span class="log-time">'+esc(x.time)+'</span>':'')+'<span class="log-tag">'+esc(x.tag)+'</span></div>'+
       '<p>'+esc(x.main)+'</p>'+
       (full?x.meta.filter(m=>m[2]).map(m=>'<small><svg><use href="#'+m[0]+'"/></svg>'+esc(m[1]+'：'+m[2])+'</small>').join(''):'')+
     '</div>'+
@@ -1231,7 +1193,7 @@ function renderRail(){
         hue:KNOW_HUE[x.status],
         chip:esc(L('knowledge.status',x.status)),
         text:x.fact,
-        tip:tipOf([['来源',x.source],['途径',L('knowledge.source',x.source_type)],['知道的时间',x.learned_at]]),
+        tip:tipOf([['来源',x.source]]),
       })).join(''):emptyNote('本轮没有新掌握、且会影响后续判断的信息'),
       ks.length?EXIT('know'):''));
   }
@@ -1243,38 +1205,39 @@ function renderRail(){
     const cms=arr(p.commitments);
     put(cms.length,subCard('indigo','i-hand','承诺',
       cms.length?cms.map(x=>srow({
-        chip:esc(x.target||'未记录对象'),
+        chip:x.target?esc(x.target):'',
         text:x.content,
-        tip:tipOf([['期限',x.deadline],['解除条件',x.release_condition]]),
+        tip:tipOf([['期限',x.deadline]]),
       })).join(''):emptyNote('本轮没有成立的职责、承诺、债务或照顾义务'),
       cms.length?EXIT('cmt'):''));
   }
 
-  /* 3. 抉择：两张表都有（decisions）。「待决选择」是公文说法。 */
+  /* 3. 抉择：两张表都有（decisions）。「待决选择」是公文说法。
+        question 里已经写着「在等：…」，每个方向是「方向（代价）」一句话，原样摆成胶囊。 */
   const decs=arr(p.decisions);
   put(decs.length,subCard('rose','i-ask','抉择',
-    decs.length?decs.map(x=>srow({
-      q:true,
-      text:x.question||'未记录问题',
-      extra:'<div class="sline">'+arr(x.options).map(o=>
-        '<span class="chip line">'+esc(o.choice||'未记录方向')+'</span>').join('')+'</div>',
-      tip:tipOf(arr(x.options).map(o=>[o.choice||'方向',o.cost&&'代价 '+o.cost])
-        .concat([['在等',x.waiting_for]])),
-    })).join(''):emptyNote('本轮没有悬而未决的现实选择'),
+    decs.length?decs.map(x=>{
+      const opts=optionsOf(x);
+      return srow({
+        q:true,
+        text:x.question||'未记录问题',
+        extra:opts.length?'<div class="sline">'+opts.map(o=>'<span class="chip line">'+esc(o)+'</span>').join('')+'</div>':'',
+      });
+    }).join(''):emptyNote('本轮没有悬而未决的现实选择'),
     decs.length?EXIT('dec'):''));
 
   /* 4. 处境：两张表都有（conditions）。契约把这一节叫「现实条件」，
         而「条件」既能指限制也能指前提，摆在标题上等于什么都没说；
         字段本身的口径是「当前真正影响选择和行动的现实条件」，六个人的实际值
         （没有调兵权限、连续值班十小时、摊位费欠一半）全是绊脚的事。
-        摘要留「哪一类 + 事实」，影响和复核条件在浮层里各占一格。 */
+        摘要留「哪一类 + 事实」，影响在浮层里另占一格。 */
   const conds=arr(p.conditions);
   put(conds.length,subCard('amber','i-lock','处境',
     conds.length?conds.map(x=>srow({
       hue:COND_HUE[x.category],
       chip:'<svg><use href="#'+(COND_ICON[x.category]||'i-spark')+'"/></svg>'+esc(L('condition.category',x.category)),
       text:x.fact,
-      tip:tipOf([['影响',x.impact],['变数',x.review_condition]]),
+      tip:tipOf([['影响',x.impact]]),
     })).join(''):emptyNote('本轮没有真正限制这个人选择的现实条件'),
     conds.length?EXIT('cond'):''));
 
@@ -1287,27 +1250,26 @@ function renderRail(){
   put(contacts.length,subCard('rose','i-user','交际圈',
     contacts.length
       ?'<div class="contacts">'+contacts.map(r=>{
-        const d=r.favorability_change||0;
         return '<button class="contact" data-n="'+esc(r.target_name)+'" title="'+esc(r.current_basis||'')+'">'+
           faceOf(r.target_name)+
           '<b>'+esc(r.target_name)+'</b>'+
-          '<small>好感 '+(r.favorability??0)+'　'+(d>0?'+'+d:d<0?String(d):'±0')+'</small>'+
+          '<small>好感 '+(r.favorability??0)+'</small>'+
           '<span class="bar" style="--p:'+(r.favorability??0)+'%"><i></i></span>'+
         '</button>';
       }).join('')+'</div>'
       :emptyNote('本轮只跟势力、地区打交道，没有人对人的往来'),
     arr(p.relations).length?EXIT('rel'):''));
 
-  /* 6. 近期动向：摘要只留时刻和那一句，地点／处境／结果进浮层。
+  /* 6. 近期动向：摘要只留时刻和那一句，地点／相关对象进浮层。
         原来叫「近况记录」——「记录」是台账的说法，这一节其实是这个人最近做了什么、
-        身后留下了什么、跟谁的关系动了。 */
+        牵动了哪些世界变化、跟谁的关系动了。 */
   const feed=recentFeed(p);
   const pages=Math.max(1,Math.ceil(feed.length/LOG_PAGE));
   logPage=Math.min(logPage,pages-1);
   put(feed.length,subCard('indigo','i-clock','近期动向',
     (feed.length
       ?feed.slice(logPage*LOG_PAGE,logPage*LOG_PAGE+LOG_PAGE).map(x=>logRow(x,false)).join('')
-      :emptyNote('本轮没有留下可观察的痕迹、观察片段或关系变动'))+
+      :emptyNote('本轮没有相关的世界变化、观察片段或关系变动'))+
     '<div class="pager" id="logPager"></div>',
     feed.length?EXIT('log'):''));
 
@@ -1315,15 +1277,8 @@ function renderRail(){
      带 LV 的技能倾向、四格持有物，以及健康／体力／信任／好感四条槽。
      这些在契约里一个字段都没有，页面上曾经留了一张「角色卡」空态卡替它们占位。
      现在整张删掉：占位卡说的是「这儿本来该有东西」，而这些东西压根不归后台世界引擎管，
-     它既不产出也不会去编。一块永远不会填上的空位，留着只是每次都提醒一遍它是空的。
-
-     7. 系统的事：登场接口与去留判断收进栏底那一行，正文在浮层里。 */
-  const sysRow='<div class="rail-sys">'+
-    '<button class="dmore sysmore" data-open-sheet data-sec="sys">'+
-      '<svg><use href="#i-radar"/></svg>推演记录<i>›</i></button>'+
-  '</div>';
-
-  $('#rail').innerHTML=have.concat(none,[sysRow]).join('');
+     它既不产出也不会去编。一块永远不会填上的空位，留着只是每次都提醒一遍它是空的。 */
+  $('#rail').innerHTML=have.concat(none).join('');
 
   renderPager($('#logPager'),{page:logPage,pages,total:feed.length,unit:'条',
     note:'按时间倒序',onGo:n=>{logPage=n;renderRail()}});
@@ -1344,10 +1299,9 @@ function dossier(p,st){
     secs.push({sec:'know',hue:'teal',icon:'i-book',title:'情报',
       body:ks.length?ks.map(x=>
         '<div class="item h-'+(KNOW_HUE[x.status]||'indigo')+'">'+
-          '<div class="item-h"><span class="chip">'+esc(L('knowledge.status',x.status))+'</span>'+
-            '<span class="chip line">'+esc(L('knowledge.source',x.source_type))+'</span></div>'+
+          '<div class="item-h"><span class="chip">'+esc(L('knowledge.status',x.status))+'</span></div>'+
           '<p class="stmt">'+esc(x.fact||'未记录')+'</p>'+
-          kvGrid([['i-link','来源',x.source],['i-clock','知道的时间',x.learned_at]],2)+
+          kvGrid([['i-link','来源',x.source]],1)+
         '</div>').join(''):emptyNote('本轮没有新掌握、且会影响后续判断的信息')});
   }
 
@@ -1356,22 +1310,21 @@ function dossier(p,st){
     secs.push({sec:'cmt',hue:'indigo',icon:'i-hand',title:'承诺',
       body:cms.length?cms.map(x=>
         '<div class="item">'+
-          '<div class="item-h"><span class="chip">'+esc(x.target||'未记录对象')+'</span></div>'+
+          (x.target?'<div class="item-h"><span class="chip">'+esc(x.target)+'</span></div>':'')+
           '<p class="stmt">'+esc(x.content||'未记录')+'</p>'+
-          kvGrid([['i-hourglass','期限',x.deadline],['i-check','解除条件',x.release_condition]],2)+
+          kvGrid([['i-hourglass','期限',x.deadline]],1)+
         '</div>').join(''):emptyNote('本轮没有成立的职责、承诺、债务或照顾义务')});
   }
 
   const decs=arr(p.decisions);
   secs.push({sec:'dec',hue:'rose',icon:'i-ask',title:'抉择',
-    body:decs.length?decs.map(x=>
-      '<div class="item">'+
+    body:decs.length?decs.map(x=>{
+      const opts=optionsOf(x);
+      return '<div class="item">'+
         '<p class="stmt" style="font-weight:600">'+esc(x.question||'未记录问题')+'</p>'+
-        '<ul class="opts">'+arr(x.options).map(o=>
-          '<li class="opt"><b>'+esc(o.choice||'未记录方向')+'</b><small>代价：'+esc(o.cost||'未记录')+'</small></li>').join('')+
-        '</ul>'+
-        kvGrid([['i-clock','在等',x.waiting_for]],1)+
-      '</div>').join(''):emptyNote('本轮没有悬而未决的现实选择')});
+        (opts.length?'<ul class="opts">'+opts.map(o=>'<li class="opt"><b>'+esc(o)+'</b></li>').join('')+'</ul>':'')+
+      '</div>';
+    }).join(''):emptyNote('本轮没有悬而未决的现实选择')});
 
   const conds=arr(p.conditions);
   secs.push({sec:'cond',hue:'amber',icon:'i-lock',title:'处境',
@@ -1379,14 +1332,13 @@ function dossier(p,st){
       '<div class="item h-'+(COND_HUE[x.category]||'indigo')+'">'+
         '<div class="item-h"><span class="chip"><svg><use href="#'+(COND_ICON[x.category]||'i-spark')+'"/></svg>'+esc(L('condition.category',x.category))+'</span></div>'+
         '<p class="stmt">'+esc(x.fact||'未记录')+'</p>'+
-        kvGrid([['i-spark','影响',x.impact],['i-clock','变数',x.review_condition]],2)+
+        kvGrid([['i-spark','影响',x.impact]],1)+
       '</div>').join(''):emptyNote('本轮没有真正限制这个人选择的现实条件')});
 
   const rels=arr(p.relations);
   secs.push({sec:'rel',hue:'violet',icon:'i-link',title:'往来',wide:true,
     body:rels.length?rels.map(r=>{
       const person=r.target_type==='person';
-      const d=r.favorability_change||0;
       return '<div class="relrow h-'+(REL_HUE[r.relation_type]||'indigo')+'">'+targetFace(r)+
         '<div style="min-width:0">'+
           '<div class="rr-h"><b>'+esc(r.target_name)+'</b>'+
@@ -1394,18 +1346,15 @@ function dossier(p,st){
             '<span class="chip line"><svg><use href="#'+(TARGET_ICON[r.target_type]||'i-spark')+'"/></svg>'+esc(L('relation.target',r.target_type))+'</span>'+
           '</div>'+
           (person
-            ?'<div class="fav" title="好感度 0–100，50 为普通中性熟人；本轮变动由具体互动造成">'+
+            ?'<div class="fav" title="好感度 0–100，50 为普通中性熟人">'+
               '<span class="bar" style="--p:'+(r.favorability??0)+'%"><i></i></span>'+
               '<span class="val">'+(r.favorability??0)+'</span>'+
-              '<span class="dv '+(d>0?'up':d<0?'down':'flat')+'">'+(d>0?'+'+d:d<0?String(d):'±0')+'</span>'+
             '</div>'
             :'')+
-          /* 一段稳定的关系原来要占「最近变化：未记录」「变化时间：未记录」两格。
-             真变动了才铺开写，没动就一句带过——两种情况的信息量本来就不对等。 */
-          (r.recent_change||r.changed_at
+          /* 真变动了才铺开写，没动就一句带过——两种情况的信息量本来就不对等。 */
+          (r.recent_change
             ?kvGrid([['i-check','来往的由来',r.current_basis],
-                     ['i-spark','最近变化',r.recent_change],
-                     ['i-clock','变化时间',r.changed_at]],3)
+                     ['i-spark','最近变化',r.recent_change]],2)
             :kvGrid([['i-check','来往的由来',r.current_basis]],1)+'<p class="slot-note">本轮没有变动</p>')+
         '</div>'+
       '</div>';
@@ -1414,46 +1363,7 @@ function dossier(p,st){
   const feed=recentFeed(p);
   secs.push({sec:'log',hue:'indigo',icon:'i-clock',title:'近期动向',wide:true,
     body:feed.length?feed.map(x=>logRow(x,true)).join('')
-      :emptyNote('本轮没有留下可观察的痕迹、观察片段或关系变动')});
-
-  /* 系统的事，排在最后一节，样式压一档（.sys）。
-     固定人物给 scene_entry、候选人物给 retention，两块的共同点是：说的都不是这个人，
-     而是引擎自己下一步怎么办——什么条件放他进场、还要不要接着盯着看、什么时候再算一遍。
-     决定谁登场的是主 API 那边的手动或随机挑选，副 API 产出这两块也没人用；
-     一条不删，但既不摆在主视图，也不再套「登场时机」这类半像人话的译名。
-     `updated_at` 和 `next_update` 同族：一个是引擎算到哪儿了，一个是它下次什么时候再算。
-     它们原来收在档案主卡最底下，等于让一份人物档案以两条排程时间戳收尾。 */
-  /* 这一节的字段名可以直说引擎口径——整节已经挑明是给引擎看的账，
-     再套人话反倒是把系统的事伪装成人的事。 */
-  const sys=[
-    ['i-spark','推演到',p.updated_at],
-    ['i-bell','下次再算',p.next_update]
-  ];
-  let sysNote='';
-  if(st.cand){
-    const rt=p.retention||{};
-    sys.push(
-      ['i-check','留存依据',rt.status_basis],
-      ['i-ask','还缺的材料',rt.missing_evidence],
-      ['i-eye','下一次观察',rt.next_observation]
-    );
-  }else{
-    const se=p.scene_entry||{};
-    /* 契约原文：「没有接近时子字段均为空」。四条全空就说一句，不摆四行「未记录」。 */
-    if([se.reason,se.earliest_time,se.location,se.condition].some(Boolean))sys.push(
-      ['i-spark','接近原因',se.reason],
-      ['i-hourglass','最早进场',se.earliest_time],
-      ['i-pin','等候位置',se.location],
-      ['i-lock','进场条件',se.condition]
-    );else sysNote='这个人本轮没有往玩家所在的场景靠近，引擎没写进场那一段。';
-  }
-  secs.push({sec:'sys',hue:'indigo',icon:'i-radar',title:'推演记录',wide:true,cls:'sys',
-    body:'<p>这一节是后台世界引擎给自己留的账：算到了哪一刻、下次什么时候再算、'+
-      (st.cand?'还要不要接着观察这个人。'
-             :'什么条件下放他走到玩家面前。')+
-      '什么时候真的登场不在这儿定，也跟他是什么样的人无关，所以收在最后。</p>'+
-      kvGrid(sys,2)+
-      (sysNote?'<p class="slot-note">'+esc(sysNote)+'</p>':'')});
+      :emptyNote('本轮没有相关的世界变化、观察片段或关系变动')});
 
   return secs;
 }
@@ -1463,7 +1373,7 @@ function renderSheet(){
   $('#sheetBody').innerHTML=
     '<div class="sheet-head">'+faceOf(p)+
       '<div><h3>'+esc(p.name)+'</h3>'+
-      '<small>'+esc('完整档案'+(p.updated_at?'　推演至 '+p.updated_at:''))+'</small></div>'+
+      '<small>完整档案</small></div>'+
     '</div>'+
     '<div class="sheet-grid">'+(()=>{
       const secs=dossier(p,st);
@@ -1495,12 +1405,15 @@ function renderAll(){
   renderRoster();renderHero();renderSchedule();renderNet();renderRail();
 }
 
-function candidateToNpc(c){
-  return {
+/* 固定人物 ↔ 候选人物的行，都按 v1.0 形状产出。
+   forStore 为真且存档是旧方案（v09）时，额外补上旧表结构要求的几列空值，
+   只用于写回数据库；写进本地 DATA 的那一份（forStore 为假）保持 v1.0 形状。 */
+const isLegacyStore=()=>DATA.__version==='v09';
+
+function candidateToNpc(c, forStore){
+  const row = {
     name: c.name,
     presence: c.presence || 'offscreen',
-    updated_at: c.updated_at || '',
-    next_update: c.next_update || '',
     profile: c.profile || {},
     current_state: c.current_state || {},
     schedule: arr(c.schedule),
@@ -1509,19 +1422,20 @@ function candidateToNpc(c){
     decisions: arr(c.decisions),
     relations: arr(c.relations),
     knowledge: arr(c.knowledge),
-    visible_effects: arr(c.visible_effects),
-    scene_entry: c.scene_entry && typeof c.scene_entry === 'object'
-      ? c.scene_entry
-      : { reason: '', earliest_time: '', location: '', condition: '' },
   };
+  if (forStore && isLegacyStore()) Object.assign(row, {
+    updated_at: '',
+    next_update: '',
+    scene_entry: { reason: '', earliest_time: '', location: '', condition: '' },
+    visible_effects: [],
+  });
+  return row;
 }
 
-function npcToCandidate(p){
-  return {
+function npcToCandidate(p, forStore){
+  const row = {
     name: p.name,
     status: 'observe',
-    updated_at: p.updated_at || '',
-    next_update: p.next_update || '',
     profile: p.profile || {},
     current_state: p.current_state || {},
     schedule: arr(p.schedule),
@@ -1529,12 +1443,13 @@ function npcToCandidate(p){
     relations: arr(p.relations),
     decisions: arr(p.decisions),
     observations: arr(p.observations),
-    retention: {
-      status_basis: '用户从固定人物打回候选',
-      missing_evidence: '',
-      next_observation: p.next_update || '',
-    },
   };
+  if (forStore && isLegacyStore()) Object.assign(row, {
+    updated_at: '',
+    next_update: '',
+    retention: { status_basis: '用户从固定人物打回候选', missing_evidence: '', next_observation: '' },
+  });
+  return row;
 }
 
 function exclusionKey(kind, name){
@@ -1567,7 +1482,8 @@ function applyLocalPatches(patches){
   }
 }
 
-async function commitPatches(patches, okMsg){
+/* localPatches：写回本地 DATA 用的那一份；不给就用写库的同一份。 */
+async function commitPatches(patches, okMsg, localPatches){
   const api = window.parent && window.parent.WE_SPA;
   if (!api || typeof api.applyPatches !== 'function') {
     toast('请从异步助手橱窗打开后再管理角色');
@@ -1583,7 +1499,7 @@ async function commitPatches(patches, okMsg){
     toast(String(err && err.message || err || '写入失败'));
     return false;
   }
-  applyLocalPatches(patches);
+  applyLocalPatches(localPatches || patches);
   refreshLists();
   if (!byName(sel)) sel = (PEOPLE[0] || {}).name || '';
   renderAll();
@@ -1595,20 +1511,28 @@ async function promoteCandidate(name){
   const person = byName(name);
   if (!person || !isCand(person)) { toast('只能把候选人物移入固定角色'); return; }
   if (!confirm('把「'+name+'」移入固定角色？移入后后台会持续推演这个人。')) return;
+  const drop = { op: 'delete', table: CAND_TABLE, primaryKey: name };
   await commitPatches([
-    { op: 'write', table: NPC_TABLE, primaryKey: name, values: candidateToNpc(person) },
-    { op: 'delete', table: CAND_TABLE, primaryKey: name },
-  ], '已移入固定角色：'+name);
+    { op: 'write', table: NPC_TABLE, primaryKey: name, values: candidateToNpc(person, true) },
+    drop,
+  ], '已移入固定角色：'+name, [
+    { op: 'write', table: NPC_TABLE, primaryKey: name, values: candidateToNpc(person, false) },
+    drop,
+  ]);
 }
 
 async function demoteNpc(name){
   const person = byName(name);
   if (!person || isCand(person)) { toast('只能把固定角色打回候选'); return; }
   if (!confirm('把「'+name+'」打回候选？后台不再按固定人物持续推演，以后仍可再移入。')) return;
+  const drop = { op: 'delete', table: NPC_TABLE, primaryKey: name };
   await commitPatches([
-    { op: 'write', table: CAND_TABLE, primaryKey: name, values: npcToCandidate(person) },
-    { op: 'delete', table: NPC_TABLE, primaryKey: name },
-  ], '已打回候选：'+name);
+    { op: 'write', table: CAND_TABLE, primaryKey: name, values: npcToCandidate(person, true) },
+    drop,
+  ], '已打回候选：'+name, [
+    { op: 'write', table: CAND_TABLE, primaryKey: name, values: npcToCandidate(person, false) },
+    drop,
+  ]);
 }
 
 async function deleteCandidate(name){

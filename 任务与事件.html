@@ -30,7 +30,7 @@
 .tcard .avs{margin-top:11px}
 .tcard .prow{margin-top:11px}
 /* 底栏一行：小标签 + 值。原型这里也只有一行（预计耗时 2天14小时），
-   多铺几行会把卡片下半截糊成灰块。完整的期限／下次检查／最近演进在详情面板里。 */
+   多铺几行会把卡片下半截糊成灰块。只在有期限时出现，完整条款在详情面板里。 */
 .tfoot{
   display:flex;align-items:baseline;gap:8px;
   margin-top:auto;padding-top:11px;border-top:1px solid var(--rule);
@@ -196,11 +196,8 @@
 
       <!-- 原来这是「世界概况」面板，337px：三个计数（活跃任务 / 涉及地点 / 牵涉势力）
            加四条自己发明的等级（风险等级 / 世界氛围 / 民众情绪 / 资源状况）。
-           契约里没有这四个字段，是前端拿本轮记录套 if 算出来的，见 README。
-           整块删了，只留下面这一条——它是全场最早的一次待检查时间，
-           单条的 next_update 在各自卡片上，但"下一件事什么时候发生"得跨任务和
-           事件一起看，是这一页唯一真正看不见的信息。 -->
-      <div class="wstate" id="wState" hidden></div>
+           契约里没有这四个字段，是前端拿本轮记录套 if 算出来的，见 README。整块删了。
+           后来留过一条「下一次检查」汇总，v1.0 不再记录检查时间，也一并删了。 -->
 
     </div>
   </div>
@@ -229,27 +226,29 @@ const EVENT_ICON={conflict:'i-ship',disaster:'i-fire',infrastructure:'i-arch'};
 const STAGE_PHASE={completed:'done',current:'active',blocked:'key',available:'idle',waiting:'idle',cancelled:'idle'};
 
 const DATA=P.DATA;
+/* v1.0 的任务不再单独记委托方：它是参与者里 role 为「委托方」的那一项 */
+function clientOf(t){const p=arr(t&&t.participants).find(x=>x&&x.role==='委托方');return p&&p.name||''}
+const hueKey=t=>clientOf(t)||t.name||'';
 function refreshHues(){
   SOURCE_HUE.clear();
-  arr(DATA.tasks).forEach(t=>{const k=t.source||'';if(!SOURCE_HUE.has(k))SOURCE_HUE.set(k,HUES[SOURCE_HUE.size%HUES.length])});
+  arr(DATA.tasks).forEach(t=>{const k=hueKey(t);if(!SOURCE_HUE.has(k))SOURCE_HUE.set(k,HUES[SOURCE_HUE.size%HUES.length])});
 }
 // 详情面板给任务和事件共用，选中项要连类型一起记，否则翻页后下标会串到另一个列表
 let sel={kind:'task',i:0};
 
 /* 色相按委托方分配，不按 category。
    契约把 category 收敛成 character_task / faction_project 这几类，五条任务只会落进两三种，
-   拿它上色等于全页只剩两个颜色；而 source 是实际委托方，既有区分度又有意义：
-   同一个公会发出的两条委托共用一色，本身就是有用的信息。 */
+   拿它上色等于全页只剩两个颜色；而委托方既有区分度又有意义：
+   同一个公会发出的两条委托共用一色，本身就是有用的信息。没有委托方的任务按任务名各占一色。 */
 const HUES=['indigo','amber','violet','teal','green','purple','rose'];
 const SOURCE_HUE=new Map();
 refreshHues();
-function hueOf(t){return SOURCE_HUE.get(t.source||'')||'indigo'}
+function hueOf(t){return SOURCE_HUE.get(hueKey(t))||'indigo'}
 function timeHH(t){const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?m[1].padStart(2,'0')+':'+m[2]:''}
 /* 时间戳保留完整日期，不截成 HH:mm */
 function fullTime(t){const s=String(t||'').trim();return s||''}
 /* 参与者的形状本身就是类型：人物是圆头像，势力和团体是盾形纹章。
-   这样 participant.type 不必再用「（人物·…）」这种文字占位，把版面让给真正有用的角色名。 */
-const isPerson=p=>(p&&p.type||'person')==='person';
+   v1.0 的参与者没有 type，人物／势力由 P.isPerson 按名字判断（P.avatarTag 内部已用它）。 */
 function avatarTag(p,cls='av'){return P.avatarTag(p,cls)}
 function avatarRow(list,max=3,cls='av'){
   const p=arr(list);
@@ -263,7 +262,7 @@ function participantList(list){
   return '<div class="parts">'+ps.map(p=>
     '<div class="part">'+avatarTag(p,'pav')+
       '<span class="pinfo"><b>'+esc(p.name||'未记录')+'</b>'+
-      '<small>'+esc(p.role||L('participant.type',p.type))+'</small></span>'+
+      (p.role?'<small>'+esc(p.role)+'</small>':'')+'</span>'+
     '</div>').join('')+'</div>';
 }
 function progressOf(t){const s=arr(t.stages),d=s.filter(x=>x.status==='completed').length;return s.length?Math.round(d/s.length*100):(t.status==='completed'?100:0)}
@@ -313,7 +312,7 @@ function renderTimeline(){
 
 /* 按名字选中一条任务或事件，并把它所在的那一页翻出来。
    时间轴节点和跨页跳转都走这一条路：别处的页面只知道名字，不知道下标——
-   下标是本页按 updated_at 排完才有的东西。 */
+   下标是本页按时间排完才有的东西。 */
 function focusByName(name){
   if(!name)return false;
   const ti=sortedTasks().findIndex(t=>t.name===name);
@@ -326,29 +325,25 @@ function focusByName(name){
 /* ---------- 任务卡 ----------
    版面是四张卡一屏，但不能再用 slice(0,4) 按数组位置切：
    那样切掉哪条完全看运气，之前就把唯一一条受阻任务切没了，而且不留痕迹。
-   改成按 updated_at 倒序排，一页四条，早的翻页看，一条都不丢。
+   改成按时间倒序排（最近一个有时间的阶段，没有就看期限），一页四条，早的翻页看，一条都不丢。
    过期数据的真正清理在数据层做（世界书里存着，每轮都回填进上下文要花 token），
    见 数据层待办.md，页面这边只负责不隐瞒。 */
 const PAGE_SIZE=4;
 let taskPage=0;
-function sortedTasks(){return arr(DATA.tasks).slice().sort(WTime.byNewest('updated_at'))}
+const taskTime=t=>WTime.latest(arr(t.stages),'time')||t.deadline||'';
+function sortedTasks(){return arr(DATA.tasks).slice().sort(WTime.byNewest(taskTime))}
 
 /* 卡片是扫读面，详情面板是细读面。
-   原型的任务卡底部只有一行「预计耗时」，我一度把 deadline / next_update / blockers /
-   updated_at 四项全铺上去，卡片下半截成了一片 13px 灰字，反而什么都读不进去。
-   现在卡上只留一条最该看的时间和一枚阻塞角标，四项完整内容在详情面板里逐条列出，
-   点开就有——是分层，不是删减。 */
+   原型的任务卡底部只有一行「预计耗时」，卡上只留期限和一枚阻塞角标，
+   完整条款在详情面板里逐条列出，点开就有——是分层，不是删减。 */
 function taskCard(t,i,on){
   const p=progressOf(t),hue=hueOf(t);
   const blockers=arr(t.blockers);
-  // 有硬期限就看期限，没有就看下一个检查点；两者都缺才说"待条件触发"
-  const when=t.deadline?['i-hourglass','期限',t.deadline]
-            :t.next_update?['i-bell','下次检查',t.next_update]
-            :['i-spark','进度','待条件触发'];
+  const client=clientOf(t);
   return '<button class="tcard h-'+hue+(on?' on':'')+'" data-i="'+i+'">'+
     '<span class="chip">'+esc(L('task.category',t.category))+'</span>'+
     '<h3>'+esc(t.name)+'</h3>'+
-    '<div class="tsrc">委托方：'+esc(t.source||'未记录')+'</div>'+
+    (client?'<div class="tsrc">委托方：'+esc(client)+'</div>':'')+
     // 阻塞角标跟状态并排。放到底栏会跟时间抢那一行的宽度，把时间挤成「霜月13日 12…」
     '<div class="tstatus">'+
       '<span class="chip line">'+esc(L('task.status',t.status))+'</span>'+
@@ -357,10 +352,13 @@ function taskCard(t,i,on){
     '<p class="tobj">'+esc(t.objective||'未记录任务目标')+'</p>'+
     '<div class="avs">'+avatarRow(t.participants)+'</div>'+
     '<div class="prow"><b class="pct">'+p+'%</b><span class="bar" style="--p:'+p+'%"><i></i></span></div>'+
-    '<div class="tfoot" title="'+esc(when[2])+'">'+
-      '<span class="tfoot-k"><svg><use href="#'+when[0]+'"/></svg>'+when[1]+'</span>'+
-      '<span class="tfoot-v">'+esc(when[2])+'</span>'+
-    '</div>'+
+    // 只有硬期限才占这一行；没有期限就不显示
+    (t.deadline
+      ?'<div class="tfoot" title="'+esc(t.deadline)+'">'+
+        '<span class="tfoot-k"><svg><use href="#i-hourglass"/></svg>期限</span>'+
+        '<span class="tfoot-v">'+esc(t.deadline)+'</span>'+
+      '</div>'
+      :'')+
   '</button>';
 }
 function renderCards(){
@@ -389,13 +387,11 @@ function renderCards(){
   }));
 }
 
-/* ---------- 链路详情：按 parent_stage 还原真实 DAG ---------- */
+/* ---------- 链路详情：阶段按数组顺序连成一条链 ----------
+   v1.0 的阶段不再记父阶段，没有分叉：第 i 个阶段接在第 i-1 个后面。 */
 function buildGraph(stages){
-  const byName=new Map(stages.map((s,i)=>[s.name,i]));
-  const parent=stages.map(s=>byName.has(s.parent_stage)?byName.get(s.parent_stage):-1);
-  const depth=stages.map(()=>0);
-  for(let pass=0;pass<stages.length;pass++)
-    stages.forEach((_,i)=>{if(parent[i]>=0)depth[i]=Math.max(depth[i],depth[parent[i]]+1)});
+  const parent=stages.map((_,i)=>i-1);
+  const depth=stages.map((_,i)=>i);
   const cols=new Map();
   depth.forEach((d,i)=>{if(!cols.has(d))cols.set(d,[]);cols.get(d).push(i)});
   return{parent,depth,cols};
@@ -411,7 +407,8 @@ function renderTaskDetail(){
   $('#flowWrap').hidden=false;$('#evDetail').hidden=true;
   const hue=hueOf(t);
   $('#detailTitle').textContent='任务详情 · '+t.name;
-  $('#detailSub').textContent=L('task.category',t.category)+' · '+L('task.status',t.status)+' · 委托方 '+(t.source||'未记录');
+  const client=clientOf(t);
+  $('#detailSub').textContent=L('task.category',t.category)+' · '+L('task.status',t.status)+(client?' · 委托方 '+client:'');
 
   const stages=arr(t.stages);
   const{parent,depth,cols}=buildGraph(stages);
@@ -430,7 +427,7 @@ function renderTaskDetail(){
       '<b>'+esc(s.name||'未命名阶段')+'</b>'+
       '<span class="st">'+esc(L('stage.status',s.status))+'</span>'+
       (s.time?'<span class="tm">'+esc(s.time)+'</span>':'')+
-      '<p>'+esc(s.summary||'摘要未记录')+'</p>'+
+      (s.summary?'<p>'+esc(s.summary)+'</p>':'')+
       '<div class="mini">'+avatarRow(t.participants,3,'av')+'</div>'+
       badge+
     '</article>';
@@ -461,20 +458,17 @@ function renderTaskDetail(){
     '<defs><marker id="ah-'+hue+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'+
     '<path d="M0 0L8 4L0 8Z" fill="var(--'+hue+')" opacity=".62"/></marker></defs>'+edges+'</svg>');
 
-  /* 任务契约：条件类三项、时限类三项各成一组，参与者是名单，排版需求不同，分块。
-     卡片上只摆得下一条时间，这里必须把 deadline / next_update / updated_at 全给出来。 */
+  /* 任务契约：条款一组，参与者是名单，排版需求不同，分块。
+     完成条件里已经写着失败条件；值为空的条款整行不出。 */
   const blockers=arr(t.blockers);
   $('#contract').className='contract h-'+hue;
   $('#contract').innerHTML=
     outcomeBlock(t.outcome)+
-    '<div class="kv">'+[
+    kvBlock([
       ['i-check','完成条件',t.completion_condition],
-      ['i-warn','失败条件',t.failure_condition],
       ['i-pin','涉及地点',arr(t.locations).join('、')],
-      ['i-hourglass','期限',t.deadline],
-      ['i-bell','下次检查',t.next_update],
-      ['i-spark','最近演进',t.updated_at]
-    ].map(termRow).join('')+'</div>'+
+      ['i-hourglass','期限',t.deadline]
+    ])+
     // 条数不写：阻塞项就列在下面，数得出来。卡片上那枚「受阻 N」要留，
     // 因为卡片上根本没列内容，那个数字说的是看不见的东西。
     (blockers.length
@@ -485,15 +479,19 @@ function renderTaskDetail(){
 
   // 阶段状态在金色高亮的那张卡上已经写着，这里只报「走到哪儿了」，不再复述一遍
   const cur=stages.find(s=>['current','blocked'].includes(s.status));
-  $('#nowLine').textContent=t.outcome
+  const now=t.outcome
     ?'✧　任务已结束：'+L('task.status',t.status)+'　✧'
-    :'✧　当前进行到：'+(cur?cur.name:'未记录')+'　✧';
+    :cur?'✧　当前进行到：'+cur.name+'　✧':'';
+  $('#nowLine').textContent=now;
+  $('#nowLine').hidden=!now;
 }
 
 /* 字段名一律「图标 + 彩色小标签」，值用深墨色正文。
    之前标签和值都是灰字、字号只差 1px，六项挤在一起就是一片没有落点的文字墙。 */
 const fieldKey=(icon,text)=>'<small class="k"><svg><use href="#'+icon+'"/></svg>'+esc(text)+'</small>';
-const termRow=r=>'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2]||'未记录')+'</b></div>';
+// 值为空的行不输出，整组都空时连 .kv 外框也不出
+const termRow=r=>P.isBlank(r[2])?'':'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2])+'</b></div>';
+const kvBlock=rows=>{const h=rows.map(termRow).join('');return h?'<div class="kv">'+h+'</div>':''};
 
 /* outcome 只在任务／事件终止后才有值，当前 mock 里全为空。
    没有它页面上就没有任何地方交代"这件事最后怎么了"，所以照样留出位置。 */
@@ -501,8 +499,8 @@ function outcomeBlock(v){
   return v?'<div class="outcome">'+fieldKey('i-flag','结果')+'<b class="v">'+esc(v)+'</b></div>':'';
 }
 
-/* 事件详情。visible_effects 是玩家能观察到的公开后果，related_tasks 是它牵动的任务，
-   这两项此前在页面上完全没有出口，只能在数据里看得到。 */
+/* 事件详情。已显现的影响取自世界变化记录里与本事件有关的那几条（P.changesFor），
+   related_tasks 是它牵动的任务。 */
 function renderEventDetail(){
   const e=sortedEvents()[sel.i];
   if(!e)return;
@@ -511,9 +509,9 @@ function renderEventDetail(){
   $('#evDetail').hidden=false;
   $('#evDetail').className='evdetail h-'+hue;   // 小标题的图标和颜色跟着事件类别走
   $('#detailTitle').textContent='事件详情 · '+e.name;
-  $('#detailSub').textContent=L('event.category',e.category)+' · '+L('event.status',e.status)+' · 更新于 '+(e.updated_at||'未记录');
+  $('#detailSub').textContent=L('event.category',e.category)+' · '+L('event.status',e.status);
 
-  const effects=arr(e.visible_effects);
+  const effects=P.changesFor(e.name);
   // related_tasks 存的是任务名，对得上就能点进去，对不上也照实列出来，不吞
   const byName=new Map(sortedTasks().map((t,i)=>[t.name,i]));
   const rel=arr(e.related_tasks);
@@ -521,13 +519,14 @@ function renderEventDetail(){
   const edH=(icon,text)=>'<h3 class="ed-h"><svg><use href="#'+icon+'"/></svg>'+esc(text)+'</h3>';
   $('#evDetail').innerHTML=
     '<p class="ed-lead">'+esc(e.current_state||'当前事态未记录')+'</p>'+
-    edH('i-spark','起因')+
-    '<p class="ed-lead">'+esc(e.trigger||'触发条件未记录')+'</p>'+
+    (e.trigger?edH('i-spark','起因')+'<p class="ed-lead">'+esc(e.trigger)+'</p>':'')+
     edH('i-eye','已显现的影响')+
     (effects.length
-      ?'<ul class="effects h-'+hue+'">'+effects.map(v=>
-        '<li class="effect"><b>'+esc(v.effect||'未记录')+'</b>'+
-        '<small>'+esc([v.time,v.location].filter(Boolean).join('　·　')||'时间地点未记录')+'</small></li>').join('')+'</ul>'
+      ?'<ul class="effects h-'+hue+'">'+effects.map(v=>{
+        const meta=[v.time,v.location].filter(Boolean).join('　·　');
+        return '<li class="effect"><b>'+esc(v.summary)+'</b>'+
+          (meta?'<small>'+esc(meta)+'</small>':'')+'</li>';
+      }).join('')+'</ul>'
       :'<p class="nodata parts-empty">尚无对外显现的后果</p>')+
     edH('i-link','牵动的任务')+
     (rel.length
@@ -545,13 +544,13 @@ function renderEventDetail(){
   $('#contract').className='contract h-'+hue;
   $('#contract').innerHTML=
     outcomeBlock(e.outcome)+
-    '<div class="kv">'+[
+    kvBlock([
       ['i-pin','涉及地点',arr(e.locations).join('、')],
-      ['i-hourglass','预计结束',e.expected_end],
-      ['i-bell','下次检查',e.next_update]
-    ].map(termRow).join('')+'</div>'+
+      ['i-hourglass','预计结束',e.expected_end]
+    ])+
     '<div class="contract-parts">'+fieldKey('i-people','参与者')+participantList(e.participants)+'</div>';
 
+  $('#nowLine').hidden=false;
   $('#nowLine').textContent='✧　事件起始：'+(e.started_at||'未记录')+'　✧';
 }
 
@@ -562,7 +561,7 @@ function eventStatusHue(e){
   return'violet';
 }
 let evPage=0;
-function sortedEvents(){return arr(DATA.events).slice().sort(WTime.byNewest('updated_at'))}
+function sortedEvents(){return arr(DATA.events).slice().sort(WTime.byNewest('started_at'))}
 function renderEvents(){
   const all=sortedEvents();
   const pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));
@@ -575,21 +574,19 @@ function renderEvents(){
     const statusHue=eventStatusHue(e);
     const icon=EVENT_ICON[e.category]||'i-scroll';
     const on=sel.kind==='event'&&sel.i===i;
-    // 同样只留一行摘要，updated_at / expected_end / trigger / visible_effects
+    // 同样只留一行摘要，expected_end / trigger / 已显现的影响
     // 这些在详情面板里（点卡片展开）
+    const locs=arr(e.locations).join('、');
     return '<button class="ev h-'+hue+(on?' on':'')+'" data-i="'+i+'">'+
       '<div class="ev-top">'+
         '<span class="ev-mark"><svg><use href="#'+icon+'"/></svg></span>'+
         '<b>'+esc(e.name)+'</b><span class="chip h-'+statusHue+'">'+esc(L('event.status',e.status))+'</span></div>'+
       '<p>'+esc(e.current_state||e.trigger||'未记录当前事态')+'</p>'+
-      // 三项元信息各带图标：一个彩色小标签 + 两条带图标的灰行，
-      // 比三行同色文字叠在一起容易分辨得多
+      // 元信息：一个彩色类别标签 + 一条带图标的地点行（没有地点就不出）
       '<div class="ev-foot">'+
         '<span class="ev-tag">'+esc(L('event.category',e.category))+'</span>'+
-        '<span class="at" title="'+esc(arr(e.locations).join('、'))+'">'+
-          '<svg><use href="#i-pin"/></svg><span>'+esc(arr(e.locations).join('、')||'地点未记录')+'</span></span>'+
-        '<span class="next" title="'+esc(e.next_update||'')+'">'+
-          '<svg><use href="#i-bell"/></svg><span><i>下次检查</i>'+esc(e.next_update||'条件触发')+'</span></span>'+
+        (locs?'<span class="at" title="'+esc(locs)+'">'+
+          '<svg><use href="#i-pin"/></svg><span>'+esc(locs)+'</span></span>':'')+
       '</div>'+
     '</button>';
   }).join(''):'<p class="nodata">本轮没有活跃事件</p>';
@@ -607,23 +604,6 @@ function renderEvents(){
   }));
 }
 
-/* ---------- 下一次检查 ----------
-   原型在右栏底下有一条收尾横条，写的是「世界状态：动态演进中」——只要还有一条任务
-   就恒为真，等于没说。换成摆全场最早的一次待检查时间：单条的 next_update 在各自卡片上，
-   但「下一件事什么时候发生」得跨任务和事件一起看，是这一页唯一看不见的信息。 */
-function renderSummary(){
-  const ts=arr(DATA.tasks).filter(t=>!['completed','failed','cancelled'].includes(t.status));
-  const evs=arr(DATA.events);
-  const nexts=[...ts.map(t=>t.next_update),...evs.map(e=>e.next_update)].filter(Boolean);
-  const soon=nexts.map(s=>[WTime.parse(s),s]).filter(x=>x[0]!==null).sort((a,b)=>a[0]-b[0])[0];
-  const bar=$('#wState');
-  bar.hidden=!soon;
-  if(soon){
-    bar.textContent='下一次检查 · '+soon[1];
-    bar.title='全部任务与事件里最早的一个 next_update，共 '+nexts.length+' 项待检查';
-  }
-}
-
 /* ---------- 启动 ---------- */
 P.initChrome('任务与剧本');
 
@@ -638,7 +618,7 @@ try{takeFocus(sessionStorage.getItem('focusTask'))}catch(_e){}
 function paint(){
   P.initChrome('任务与剧本');
   refreshHues();
-  renderTimeline();renderCards();renderDetail();renderEvents();renderSummary();
+  renderTimeline();renderCards();renderDetail();renderEvents();
 }
 paint();
 addEventListener('we-world-refresh',paint);

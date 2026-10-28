@@ -528,9 +528,6 @@
 }
 .dchg svg{flex:0 0 auto;width:15px;height:15px;margin-top:3px;color:var(--hue-ink)}
 .dchg span{min-width:0;overflow-wrap:anywhere}
-/* 压到 --ink5 会掉到 4.35，过不了 AA 的 4.5。区别主要靠图标从主色变灰，
-   不靠把字压淡——字再淡一档就得拿可读性换。 */
-.dchg.none,.dchg.none svg{color:var(--ink4)}
 @media(max-width:560px){.dsheet{padding:14px 14px 18px}}
 
 /* ---------- 索引面板 ---------- */
@@ -743,7 +740,7 @@
 <script src="shared/wtime.js"></script>
 <script src="shared/panel.js"></script>
 <script>
-const {$,$$,arr,esc,L,fieldKey,termRow,kvGrid,renderPager,toast,crestFile,sigilFile,hueCycler,mode}=P;
+const {$,$$,arr,esc,L,fieldKey,termRow,kvGrid,renderPager,toast,crestFile,sigilFile,hueCycler,mode,changesFor,regionFactions,isBlank}=P;
 
 /* 真实数据由 index.html 从 AcuData 视图注入。压力测试会把 FACTIONS / REGIONS 换掉，
    所以这里用 let，不直接引用 P.DATA。 */
@@ -784,7 +781,6 @@ const REL_HUE={alliance:'green',cooperation:'teal',trade:'amber',employment:'ind
                service:'indigo',contact:'violet',friendship:'green',family:'green',
                rivalry:'amber',hostility:'rose',debt:'purple',influence:'violet'};
 const TARGET_ICON={person:'i-people',faction:'i-shield',region:'i-map',task:'i-scroll',event:'i-bell',other:'i-spark'};
-const KSRC_ICON={witnessed:'i-eye',record:'i-scroll',reported:'i-chat',public:'i-bell',rumor:'i-chat',inferred:'i-ask'};
 const KST_HUE={confirmed:'green',uncertain:'amber',disputed:'rose',outdated:'purple'};
 
 /* 暗底上的提亮色。tokens 的主色是给暖白底调的，直接用在画布上一律不过 AA。 */
@@ -811,8 +807,10 @@ const emptyNote=t=>'<p class="nodata box">'+esc(t)+'</p>';
    全在说"这儿没东西"。共享的 .nodata 底子本身就是一行字，不加 .box 修饰即可。 */
 const thinNote=t=>'<p class="nodata">'+esc(t)+'</p>';
 
-/** 字段名与字段值同一行。竖排每项 45px，横排 26px，右栏里差出一半高度。 */
-const kvi=(icon,name,val)=>'<div class="kvi">'+fieldKey(icon,name)+'<span>'+esc(val||'未记录')+'</span></div>';
+/** 字段名与字段值同一行。竖排每项 45px，横排 26px，右栏里差出一半高度。
+    可空字段为空时整行不出；必填字段由调用方传兜底文案 fb。 */
+const kvi=(icon,name,val,fb)=>isBlank(val)&&!fb?'':
+  '<div class="kvi">'+fieldKey(icon,name)+'<span>'+esc(isBlank(val)?fb:val)+'</span></div>';
 
 /** 摘要卡里的一条：小纹章 + 名字 + 状态胶囊（或一个关键值）。 */
 function frow(o){
@@ -836,24 +834,29 @@ function frow(o){
      head    这条记录的主句，一眼能认出说的是哪一条（数量、对象名、事实……）
      chips   枚举字段，本来就是词不是句，做成胶囊比做成表格格子省地方
      lines   [字段名, 值]，值给字符串就转义，给 {h:...} 按原样插
-     change  recent_change 一类的"本轮变了什么"，单独一行、跟正文隔开 */
+     change  recent_change 一类的"最近变了什么"，单独一行、跟正文隔开；没有就不出这一行
+   v1.0 里多数子字段可空：值为空的行、空的主句都不输出，不再补「未记录」。 */
 function drec(recs,empty){
   if(!recs.length)return thinNote(empty);
   return '<div class="drecs">'+recs.map(r=>{
-    const lines=(r.lines||[]).filter(l=>l&&l[1]);
+    const lines=(r.lines||[]).filter(l=>l&&!isBlank(l[1]));
     return '<article class="drec">'+
-      '<header><b>'+esc(r.head||'未记录')+'</b>'+(r.chips||'')+'</header>'+
+      (r.head||r.chips?'<header>'+(r.head?'<b>'+esc(r.head)+'</b>':'')+(r.chips||'')+'</header>':'')+
       (lines.length?'<div class="dls">'+lines.map(l=>
         '<span class="dk">'+esc(l[0])+'</span>'+
         '<span class="dv">'+(l[1]&&l[1].h!==undefined?l[1].h:esc(l[1]))+'</span>').join('')+'</div>':'')+
-      /* 「本轮无变化」是我们补的话，不是数据。跟真变化同一个重量摆着，
-         一屏扫下来分不清哪条动过——压成灰的。 */
-      (r.change?'<p class="dchg'+(r.hasChange?'':' none')+'"><svg><use href="#i-spark"/></svg><span>'+
+      (r.change?'<p class="dchg"><svg><use href="#i-spark"/></svg><span>'+
         (r.change.h!==undefined?r.change.h:esc(r.change))+'</span></p>':'')+
     '</article>';
   }).join('')+'</div>';
 }
 const raw=h=>({h});
+
+/* v1.0 地区不再自带在场势力 / 争夺方 / 近期变化：前两项由各势力 areas 推出，
+   后一项取世界变化记录里主体、相关对象或地点写着这个地区的那几条。 */
+const presentOf=r=>regionFactions(r&&r.name).present;
+const contestNames=r=>regionFactions(r&&r.name).contesting.map(x=>x.name);
+const regionChanges=r=>changesFor(r&&r.name,{at:true});
 
 /** 枚举档位条。只点亮第几格，不显示任何数字，推导口径写进 title。 */
 function steps(rank,total,hue,label,note){
@@ -952,7 +955,6 @@ function graphEdges(keys){
     if(same){                              // 双方各记一次的同一条关系，依据合并
       if(role.basis&&!same.basis.includes(role.basis))same.basis+='；'+role.basis;
       if(role.change&&!same.change.includes(role.change))same.change+='；'+role.change;
-      if(!same.at)same.at=role.at;
       return;
     }
     e.roles.push(role);
@@ -964,14 +966,14 @@ function graphEdges(keys){
         type:L('relation.target',r.target_type||'other'),label:L('relation.type',r.relation_type)});
       add('f:'+f.name,bk,{rank:3,label:L('relation.type',r.relation_type),
         hue:REL_HUE[r.relation_type]||'indigo',icon:'',
-        basis:r.current_basis||'',change:r.recent_change||'',at:r.changed_at||'',
+        basis:r.current_basis||'',change:r.recent_change||'',
         from:f.name,to:r.target_name,kind:'势力之间'});
     });
     arr(f.areas).forEach(a=>{
       add('f:'+f.name,'r:'+a.name,{rank:a.relation_type==='contested'?5:3,
         label:L('area.relation',a.relation_type),
         hue:AREA_HUE[a.relation_type]||'teal',icon:AREA_ICON[a.relation_type]||'',
-        basis:a.current_state||'',change:a.recent_change||'',at:'',
+        basis:a.current_state||'',change:'',
         from:f.name,to:a.name,kind:'势力与地区'});
     });
   });
@@ -979,11 +981,11 @@ function graphEdges(keys){
     const c=r.control||{};
     if(c.primary_faction)add('f:'+c.primary_faction,'r:'+r.name,{rank:4,label:'主控',
       hue:'green',icon:'i-crown',
-      basis:r.name+' 记在 '+c.primary_faction+' 名下',change:'',at:'',
+      basis:r.name+' 记在 '+c.primary_faction+' 名下',change:'',
       from:c.primary_faction,to:r.name,kind:'势力与地区'});
-    arr(c.contesting_factions).forEach(n=>add('f:'+n,'r:'+r.name,{rank:5,label:'争夺中',
+    regionFactions(r.name).contesting.map(x=>x.name).forEach(n=>add('f:'+n,'r:'+r.name,{rank:5,label:'争夺中',
       hue:'rose',icon:'i-swords',
-      basis:n+' 正在争夺 '+r.name,change:'',at:'',
+      basis:n+' 正在争夺 '+r.name,change:'',
       from:n,to:r.name,kind:'势力与地区'}));
   });
   return [...map.values()].map(e=>{
@@ -1177,11 +1179,11 @@ function arrowDefs(){
 function graphSubline(){
   const hot=REGIONS.filter(r=>{
     const c=r.control||{};
-    return c.status==='contested'||arr(c.contesting_factions).length;
+    return c.status==='contested'||contestNames(r).length;
   });
   const say=r=>{
     const c=r.control||{};
-    const who=[c.primary_faction,...arr(c.contesting_factions)].filter(Boolean);
+    const who=[...new Set([c.primary_faction,...contestNames(r)].filter(Boolean))];
     return r.name+(who.length>1?' 争夺中：'+who.join(' 对 '):' 争夺中');
   };
   let s=hot.length
@@ -1486,7 +1488,7 @@ function nodeHTML(n,cur,p){
   const r=n.data;
   const c=r.control||{},cs=c.status;
   const st=L('control.status',cs);
-  const calm=cs==='controlled'&&!arr(c.contesting_factions).length;
+  const calm=cs==='controlled'&&!contestNames(r).length;
   const hue=CONTROL_HUE[cs]||'indigo';
   return '<button class="gnode r" data-k="'+esc(n.key)+'"'+
     ' style="'+style+(calm?'':';--gl:'+DK[hue]+'55')+'"'+
@@ -1522,7 +1524,7 @@ function wirePath(e,g,i,isMain,sel,dash){
 
 /* 关系名摆放：一条边一个，绝不省略。两条带之间那条空走廊本来就是留给它们的，
    所以先在 t≈0.5 附近找位置，实在撞上了再沿线滑、沿法线偏。
-   契约允许一个势力挂 10 条 relations、一个地区挂 8 个 present_factions，
+   契约允许一个势力挂 10 条 relations、8 条 areas，
    节点一多边数是平方级涨的，几十上百个文字标签物理上摆不开——这时整体切成
    圆点，每条边照样有自己的标记，文字挪到悬停／点选时出，是做成可交互，
    不是静默丢弃。 */
@@ -1615,16 +1617,13 @@ function frame(W,H){
 function edgeIndex(){
   if(!EDGES.length)return -1;
   if(selEdge>=0&&selEdge<EDGES.length)return selEdge;
-  let best=-1,bt=-1;
-  EDGES.forEach((e,i)=>e.roles.forEach(r=>{
-    const t=r.at?(WTime.parse(r.at)||0):0;
-    if(t>bt){bt=t;best=i}
-  }));
+  // v1.0 的关系不再带变化时间：有 recent_change 的那条就算最近动过
+  let best=EDGES.findIndex(e=>e.roles.some(r=>r.change));
   if(best<0)best=EDGES.findIndex(e=>e.label==='争夺中');
   return best<0?0:best;
 }
 
-/* relations[].current_basis / recent_change / changed_at、areas[].current_state、
+/* relations[].current_basis / recent_change、areas[].current_state、
    control.primary_faction 这几项在图上没地方写，逐条收在这里。
    一对节点合成一条线之后，它身上的每个角色都在这块列出来，一条不少。 */
 function renderEdgeFoot(){
@@ -1640,9 +1639,10 @@ function renderEdgeFoot(){
     '<span class="who">'+esc(e.from)+(e.kind==='ff'?' ⇌ ':' → ')+esc(e.to)+
       e.roles.map(r=>chip(r.hue,r.icon||'',r.label)).join('')+'</span>'+
     // 只有一种关系时，上面那枚 chip 已经把名字写过了，下面不再重复一遍
-    e.roles.map(r=>'<p>'+(e.roles.length>1?'<em>'+esc(r.label)+'</em>':'')+esc(r.basis||'未记录依据')+
-      (r.change?'　·　最近变化：'+esc(r.change):'　·　本轮无变化')+
-      (r.at?'　'+esc(r.at):'')+'</p>').join('');
+    e.roles.map(r=>{
+      const txt=[r.basis,r.change?'最近变化：'+r.change:''].filter(Boolean).join('　·　');
+      return txt||e.roles.length>1?'<p>'+(e.roles.length>1?'<em>'+esc(r.label)+'</em>':'')+esc(txt)+'</p>':'';
+    }).join('');
 }
 
 function pickNode(key){
@@ -1672,13 +1672,33 @@ function pickNode(key){
    六个收起的地区行约 540px，接近一屏；再多就得滚着找。 */
 const REGION_PAGE=6;
 const COND_PAGE=3, CHG_PAGE=3;
-const sortedRegions=()=>REGIONS.slice().sort(WTime.byNewest('updated_at'));
+const sortedRegions=()=>REGIONS.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
 
 function taskLink(name,kind){
   if(!name)return '';
   return '<button class="linkbtn" data-task="'+esc(kind==='task'?name:'')+'" data-name="'+esc(name)+'">'+
     '<svg><use href="#'+(kind==='task'?'i-scroll':'i-bell')+'"/></svg>'+
     (kind==='task'?'关联任务':'关联事件')+'　'+esc(name)+'</button>';
+}
+/** 一条世界变化的关联按钮：相关对象（target_name）是已知任务或事件就跳任务页，
+    是别的势力就切过去；主体本身是任务或事件时也给一个入口。self 是当前所看的势力／地区名。 */
+function changeLinked(x,self){
+  const out=[],seen=new Set();
+  const isTask=n=>arr(P.DATA.tasks).some(t=>t&&t.name===n);
+  const isEvent=n=>arr(P.DATA.events).some(e=>e&&e.name===n);
+  [x&&x.target_name,x&&x.source_name].forEach(n=>{
+    if(!n||n===self||seen.has(n))return;
+    seen.add(n);
+    if(isTask(n))out.push({kind:'task',name:n});
+    else if(isEvent(n))out.push({kind:'event',name:n});
+    else if(n===x.target_name&&FACTION_BY.has(n))out.push({kind:'faction',name:n});
+  });
+  return out;
+}
+function changeLinks(x,self){
+  return changeLinked(x,self).map(l=>l.kind==='faction'
+    ?'<button class="linkbtn" data-fac="'+esc(l.name)+'"><svg><use href="#i-shield"/></svg>'+esc(l.name)+'</button>'
+    :taskLink(l.name,l.kind)).join('');
 }
 
 /* 地区行的底色一律走 indigo，不再是 hueOf('r:'+名字) 轮转出来的那一档。
@@ -1699,12 +1719,12 @@ function regionRow(r){
   const rank=CONTROL_RANK[c.status]||0;
   const open=rowOpen.has(r.name);
   const cur=curFaction();
-  const mine=cur&&(c.primary_faction===cur.name||arr(c.contesting_factions).includes(cur.name)||
-                   arr(r.present_factions).includes(cur.name));
+  const present=presentOf(r),contest=contestNames(r);
+  const mine=cur&&(c.primary_faction===cur.name||present.some(x=>x.name===cur.name));
   const pf=c.primary_faction?FACTION_BY.get(c.primary_faction):null;
-  const conds=arr(r.conditions),present=arr(r.present_factions);
-  // 收起态只露最新一条，所以这里必须按架空历法排一次，不能信数组原顺序
-  const chgs=arr(r.recent_changes).slice().sort(WTime.byNewest('time'));
+  const conds=arr(r.conditions);
+  // 收起态只露最新一条；P.changesFor 已按架空历法新的在前排好
+  const chgs=regionChanges(r);
   const pg=rowPage.get(r.name)||{c:0,g:0};
 
   let exp='';
@@ -1719,8 +1739,8 @@ function regionRow(r){
           const ch2=COND_HUE[x.category]||'purple';
           return '<li class="factit h-'+ch2+'"><span class="ft">'+
             chip(ch2,COND_ICON[x.category]||'i-spark',L('region.condition',x.category))+'</span>'+
-            '<b>'+esc(x.fact||'未记录事实')+'</b>'+
-            '<small>影响：'+esc(x.impact||'未记录影响')+'</small></li>';
+            (x.fact?'<b>'+esc(x.fact)+'</b>':'')+
+            (x.impact?'<small>影响：'+esc(x.impact)+'</small>':'')+'</li>';
         }).join('')+'</ul>'+
          '<div class="pager" data-pg="c" data-n="'+esc(r.name)+'"></div>'
         :emptyNote('本轮没有记录在案的地区条件'))+
@@ -1729,12 +1749,13 @@ function regionRow(r){
       '<div class="rx">'+
       sectionH('i-spark','近期变化',hiddenCount(chgs.length,CHG_PAGE))+
       (chgs.length
-        ?'<ul class="facts">'+chgs.slice(gpi*CHG_PAGE,gpi*CHG_PAGE+CHG_PAGE).map(x=>
-          '<li class="factit h-'+hue+'"><span class="ft"><span class="tm">'+esc(x.time||'时间未记录')+'</span></span>'+
-          '<b>'+esc(x.fact||'未记录变化')+'</b>'+
-          (x.related_task||x.related_event
-            ?'<span class="linkrow">'+taskLink(x.related_task,'task')+taskLink(x.related_event,'event')+'</span>'
-            :'<small>未关联任务或事件</small>')+'</li>').join('')+'</ul>'+
+        ?'<ul class="facts">'+chgs.slice(gpi*CHG_PAGE,gpi*CHG_PAGE+CHG_PAGE).map(x=>{
+          const links=changeLinks(x,r.name);
+          return '<li class="factit h-'+hue+'"><span class="ft"><span class="tm">'+esc(x.time||'时间未记录')+'</span></span>'+
+          '<b>'+esc(x.summary||'未记录变化')+'</b>'+
+          (x.location&&x.location!==r.name?'<small>地点：'+esc(x.location)+'</small>':'')+
+          (links?'<span class="linkrow">'+links+'</span>':'')+'</li>';
+        }).join('')+'</ul>'+
          '<div class="pager" data-pg="g" data-n="'+esc(r.name)+'"></div>'
         :emptyNote('本轮这个地区没有值得展示的变化'))+
       '</div>'+
@@ -1743,18 +1764,18 @@ function regionRow(r){
       sectionH('i-people','在场与争夺')+
       '<div style="margin-top:8px">'+
         (present.length
-          ?'<div class="linkrow">'+present.map(n=>'<button class="linkbtn" data-fac="'+esc(n)+'">'+
-            '<svg><use href="#i-shield"/></svg>'+esc(n)+'</button>').join('')+'</div>'
+          ?'<div class="linkrow">'+present.map(x=>'<button class="linkbtn" data-fac="'+esc(x.name)+'"'+
+            (x.current_state?' title="'+esc(x.current_state)+'"':'')+'>'+
+            '<svg><use href="#i-shield"/></svg>'+esc(x.name)+
+            (x.relation_type?'　'+esc(L('area.relation',x.relation_type)):'')+'</button>').join('')+'</div>'
           :emptyNote('没有记录在场势力'))+
-        (arr(c.contesting_factions).length
-          ?'<div class="linkrow" style="margin-top:7px">'+arr(c.contesting_factions).map(n=>
+        (contest.length
+          ?'<div class="linkrow" style="margin-top:7px">'+contest.map(n=>
             '<button class="linkbtn h-rose" data-fac="'+esc(n)+'"><svg><use href="#i-swords"/></svg>争夺方　'+esc(n)+'</button>').join('')+'</div>'
           :'')+
       '</div>'+
       '<div style="margin-top:12px">'+kvGrid([
-        ['i-crown','主要控制势力',c.primary_faction],
-        ['i-spark','已推演到',r.updated_at],
-        ['i-bell','下次检查',r.next_update]
+        ['i-crown','主要控制势力',c.primary_faction]
       ],3)+'</div>'+
       '</div>'+
     '</div>';
@@ -1780,7 +1801,7 @@ function regionRow(r){
          所以这里写清"共几条"，让人知道底下还有东西，不是只有这一句。 */
       '<span class="rcell wide">'+fieldKey('i-spark','近期变化')+
         '<span class="rchg">'+(chgs.length
-          ? esc(chgs[0].fact||'未记录内容')+(chgs.length>1?'<em>　还有 '+(chgs.length-1)+' 条</em>':'')
+          ? esc(chgs[0].summary||'未记录内容')+(chgs.length>1?'<em>　还有 '+(chgs.length-1)+' 条</em>':'')
           : '<em>本轮无变化记录</em>')+'</span></span>'+
       '<span class="rmore">'+(open?'收起 ⌃':'查看详情 ⌄')+'</span>'+
     '</button>'+exp+
@@ -1798,13 +1819,13 @@ function renderRegions(){
 
   $('#regions').innerHTML=page.length?page.map(regionRow).join(''):emptyNote('本轮没有地区记录');
   renderPager($('#regionPager'),{page:regionPage,pages,total:all.length,unit:'个地区',
-    note:'按更新时间倒序',onGo:n=>{regionPage=n;renderRegions()}});
+    note:'按名称排序',onGo:n=>{regionPage=n;renderRegions()}});
 
   // 展开区里两个列表各自的翻页条
   $$('#regions .pager[data-pg]').forEach(el=>{
     const name=el.dataset.n,which=el.dataset.pg;
     const r=REGION_BY.get(name);if(!r)return;
-    const list=which==='c'?arr(r.conditions):arr(r.recent_changes);
+    const list=which==='c'?arr(r.conditions):regionChanges(r);
     const size=which==='c'?COND_PAGE:CHG_PAGE;
     const pgs=Math.max(1,Math.ceil(list.length/size));
     const st=rowPage.get(name)||{c:0,g:0};
@@ -1863,15 +1884,15 @@ function renderStance(){
   const fh=FACTION_HUE[f.status]||'indigo';
   const focus=f.current_focus||{};
   const areas=arr(f.areas),res=arr(f.resources),grp=arr(f.internal_groups);
-  const rel=arr(f.relations),know=arr(f.knowledge),eff=arr(f.visible_effects);
+  const rel=arr(f.relations),know=arr(f.knowledge),eff=changesFor(f.name);
   const defer=arr(focus.deferred_items);
 
   /* 这里原来挂着一句「共 4 个势力　点选拓扑图上的盾形节点切换」：势力有几个上面
      那张图里摆着，"点哪里能切换"该由光标、悬停抬起和选中的金圈自己说，
      不该写成一行小字教人操作。整行删掉。 */
 
-  // 摘要卡里只放最近两条动向；全部 visible_effects 在浮层和底部「世界动向」里
-  const effNew=eff.slice().sort(WTime.byNewest('time'));
+  // 摘要卡里只放最近两条动向；全部相关变化在浮层和底部「世界动向」里（changesFor 已新的在前）
+  const effNew=eff;
   const rest=(n,unit)=>n>SUM_MAX?'<p class="nodata" style="margin-top:7px">还有 '+(n-SUM_MAX)+
     ' '+unit+'在完整档案里</p>':'';
 
@@ -1890,8 +1911,8 @@ function renderStance(){
     '<div class="sect h-'+hue+'" style="padding-top:14px">'+
       sectionH('i-flag','当前焦点')+
       '<div style="margin-top:8px">'+
-        kvi('i-warn','问题',focus.issue)+
-        kvi('i-hand','行动',focus.action)+
+        kvi('i-warn','问题',focus.issue,'未记录')+
+        kvi('i-hand','行动',focus.action,'未记录')+
         /* 暂缓事项原来是两张带色条的事实卡，一张 41px。它们本来就是短语，
            不是成句的事实陈述，做成胶囊一行能摆两个。 */
         '<div class="kvi" style="margin-top:6px">'+fieldKey('i-hourglass','暂缓')+
@@ -1908,10 +1929,10 @@ function renderStance(){
       (res.length
         ?'<div class="rline">'+res.map(x=>{
           const rh=RES_HUE[x.type]||'teal';
-          return '<span class="ritem h-'+rh+'" title="'+esc(L('resource.type',x.type)+'：'+(x.quantity||'数量未记录'))+'">'+
+          return '<span class="ritem h-'+rh+'" title="'+esc(L('resource.type',x.type)+(x.quantity?'：'+x.quantity:''))+'">'+
             '<svg><use href="#'+(RES_ICON[x.type]||'i-spark')+'"/></svg>'+
             '<b>'+esc(L('resource.type',x.type))+'</b>'+
-            '<span>'+esc(x.quantity||'数量未记录')+'</span></span>';
+            (x.quantity?'<span>'+esc(x.quantity)+'</span>':'')+'</span>';
         }).join('')+'</div>'
         :thinNote('本轮没有记录在案的资源'))+
     '</div>'+
@@ -1961,7 +1982,7 @@ function renderStance(){
         ?'<div style="margin-top:4px">'+grp.slice(0,SUM_MAX).map(g=>
           frow({hue:'purple',shape:'crest',inner:'<span>'+esc(String(g.name||'?').slice(0,1))+'</span>',
             name:g.name,val:g.position,
-            title:(g.name||'')+'　立场：'+(g.position||'未记录')}))
+            title:(g.name||'')+(g.position?'　立场：'+g.position:'')}))
           .join('')+'</div>'+rest(grp.length,'个群体')
         :thinNote('这个势力没有登记与当前问题相关的内部群体'))+
     '</div>'+
@@ -1973,11 +1994,11 @@ function renderStance(){
       (effNew.length
         ?'<div style="margin-top:4px">'+effNew.slice(0,2).map(v=>
           frow({hue:'teal',shape:'rd',inner:'<svg><use href="#i-eye"/></svg>',
-            name:P.timeHH(v.time)||v.time||'时间未记录',val:v.effect||'未记录后果',
-            title:(v.time||'')+'　'+(v.location||'')+'　'+(v.effect||'')}))
+            name:P.timeHH(v.time)||v.time||'时间未记录',val:v.summary||'未记录变化',
+            title:[v.time,v.location,v.summary].filter(Boolean).join('　')}))
           .join('')+'</div>'+
           (effNew.length>2?'<p class="nodata" style="margin-top:7px">还有 '+(effNew.length-2)+' 条在完整档案里</p>':'')
-        :thinNote('这个势力本轮没有对外显现的公开后果'))+
+        :thinNote('这个势力最近没有记录在案的变化'))+
     '</div>'+
 
     /* 通往完整档案。按钮上写清里面装着什么，而不是"展开更多"——
@@ -1986,14 +2007,8 @@ function renderStance(){
       '<button class="paction" id="dossierBtn" data-open-sheet style="margin:0;width:100%;justify-content:center;'+
         'background:var(--sunken)" title="'+
         esc('资源 '+res.length+' 项 · 对外关系 '+rel.length+' 条 · 地区 '+areas.length+' 处 · 内部群体 '+
-            grp.length+' 个 · 情报 '+know.length+' 条 · 公开后果 '+eff.length+' 条')+'">'+
-        '翻开完整档案 ⤢</button></div>'+
-
-    /* 中日文没有词间空格，浏览器可以在任意两字之间断行——右栏 344px 下这一行原来
-       折在「下次检 / 查」中间。给两个前缀各上一道 nowrap，断点就只能落在冒号后面。 */
-    '<div class="nowline">✧　<span style="white-space:nowrap">已推演到 '+esc(f.updated_at||'未记录')+
-      '</span>　·　<span style="white-space:nowrap">下次检查：</span>'+
-      esc(f.next_update||'待条件触发')+'　✧</div>';
+            grp.length+' 个 · 情报 '+know.length+' 条 · 近期变化 '+eff.length+' 条')+'">'+
+        '翻开完整档案 ⤢</button></div>';
 
   $('#dossierBtn').addEventListener('click',openDossier);
   wireLinks(el);
@@ -2003,14 +2018,14 @@ function renderStance(){
    完整档案浮层
    1080px 宽，一条记录一个块，一行摆两块，不折叠、不翻页。
    摘要卡里没地方放的十七个子字段全在这里：
-     resources  current_use / constraint / recent_change
-     relations  target_type / current_basis / recent_change / changed_at
-     areas      current_state / recent_change（外加由 relation_type 推的关系深浅）
-     internal_groups  name / position / current_action / effect
-     knowledge  fact / source / source_type / learned_at / status
-     visible_effects  location / related_event
+     resources  current_use（已含限制）
+     relations  target_type / current_basis / recent_change
+     areas      current_state（外加由 relation_type 推的关系深浅）
+     internal_groups  name / position / current_action
+     knowledge  fact / source / status
+     近期变化   P.changesFor(势力名)：time / summary / location / target_name
 
-   字段名一律取两个字的普通名词：用途、限制、依据、现状、立场、行动、影响。
+   字段名一律取两个字的普通名词：用途、依据、现状、立场、行动。
    契约里那些名字带「当前」前缀（current_use / current_basis / current_state），
    是拿来跟历史值区分的——界面本来就只显示当前值，把前缀照抄过来只剩公文腔。
    ========================================================================== */
@@ -2022,7 +2037,7 @@ function renderDossier(){
   const fh=FACTION_HUE[f.status]||'indigo';
   const focus=f.current_focus||{};
   const areas=arr(f.areas),res=arr(f.resources),grp=arr(f.internal_groups);
-  const rel=arr(f.relations),know=arr(f.knowledge),eff=arr(f.visible_effects);
+  const rel=arr(f.relations),know=arr(f.knowledge),eff=changesFor(f.name);
   const defer=arr(focus.deferred_items);
 
   const sec=(icon,title,body)=>'<section class="dsec h-'+hue+'">'+sectionH(icon,title)+body+'</section>';
@@ -2031,14 +2046,7 @@ function renderDossier(){
     '<div class="fhead h-'+hue+'" style="padding:0 0 12px">'+
       '<span class="fcrest" title="'+esc(crestBasis(f))+'">'+crestInner(f)+'</span>'+
       '<span class="fmeta"><h3>'+esc(f.name)+
-        chip(fh,FACTION_ICON[f.status]||'i-spark',L('faction.status',f.status))+'</h3>'+
-        /* 这一段整个包进一个 span。.fmeta p 是 flex 容器，裸文本节点会各自变成
-           flex item 被单独压缩——390 档下「海盗代表答复停火文本时」被压成了
-           一列竖排的字。flex 里只留图标和这一个 span，文字就照常折行。 */
-        '<p><svg><use href="#i-spark"/></svg><span>'+
-          '<span style="white-space:nowrap">已推演到 '+esc(f.updated_at||'未记录')+'</span>　·　'+
-          '<span style="white-space:nowrap">下次检查：</span>'+
-          esc(f.next_update||'待条件触发')+'</span></p></span>'+
+        chip(fh,FACTION_ICON[f.status]||'i-spark',L('faction.status',f.status))+'</h3></span>'+
     '</div>'+
 
     /* 当前焦点只有一条记录，主句就是那个问题本身；行动和暂缓挂在它下面。 */
@@ -2058,10 +2066,9 @@ function renderDossier(){
        反过来把类型当主句，两条资源的开头就都是一个干巴巴的词。 */
     sec('i-coin','资源储备',drec(
       res.map(x=>({
-        head:x.quantity||'数量未记录',
+        head:x.quantity,
         chips:chip(RES_HUE[x.type]||'teal',RES_ICON[x.type]||'i-spark',L('resource.type',x.type)),
-        lines:[['用途',x.current_use||'未记录用途'],['限制',x.constraint||'未记录限制']],
-        hasChange:!!x.recent_change,change:x.recent_change||'本轮无变化',
+        lines:[['用途',x.current_use]],
       })),
       '本轮没有记录在案的资源'))+
 
@@ -2072,9 +2079,8 @@ function renderDossier(){
         head:r.target_name,
         chips:chip('teal',TARGET_ICON[r.target_type||'other']||'i-spark',L('relation.target',r.target_type||'other'))+
               chip(REL_HUE[r.relation_type]||'indigo','',L('relation.type',r.relation_type)),
-        lines:[['依据',r.current_basis||'未记录依据']],
-        hasChange:!!r.recent_change,
-        change:r.recent_change?r.recent_change+(r.changed_at?'（'+r.changed_at+'）':''):'本轮无变化',
+        lines:[['依据',r.current_basis]],
+        change:r.recent_change||'',
       })),
       '本轮没有记录在案的对外关系'))+
 
@@ -2086,11 +2092,10 @@ function renderDossier(){
           chips:chip(AREA_HUE[a.relation_type]||'teal',AREA_ICON[a.relation_type]||'i-map',L('area.relation',a.relation_type))+
                 (REGION_BY.get(a.name)?'':chip('amber','i-warn','未登记为地区记录')),
           lines:[
-            ['现状',a.current_state||'未记录现状'],
+            ['现状',a.current_state],
             ['深浅',raw(steps(rank,6,AREA_HUE[a.relation_type]||'teal','',
               AREA_RANK_NOTE+'；当前第 '+rank+' 档，由 relation_type 推导，不是评分也不是百分比'))],
           ],
-          hasChange:!!a.recent_change,change:a.recent_change||'本轮无变化',
         };
       }),
       '这个势力目前没有与任何地区的直接联系'))+
@@ -2098,37 +2103,34 @@ function renderDossier(){
     sec('i-people','内部群体',drec(
       grp.map(g=>({
         head:g.name,
-        lines:[['立场',g.position||'未记录立场'],['行动',g.current_action||'未记录行动'],
-               ['影响',g.effect||'未记录影响']],
+        lines:[['立场',g.position],['行动',g.current_action]],
       })),
       '这个势力没有登记与当前问题相关的内部群体'))+
 
     /* 情报的主句是那条事实本身，可信度紧跟着它——一条不可信的消息，
-       可信度跟内容分开摆就等于没说。来源和获知时间是佐证，放下面。 */
+       可信度跟内容分开摆就等于没说。来源是佐证，放下面（v1.0 的途径与获知时间已并进来源）。 */
     sec('i-ask','已掌握情报',drec(
       know.map(k=>({
         head:k.fact,
         chips:chip(KST_HUE[k.status]||'indigo','',L('knowledge.status',k.status)),
-        lines:[
-          ['来源',raw(esc(k.source||'未记录来源')+
-            chip('teal',KSRC_ICON[k.source_type]||'i-ask',L('knowledge.source',k.source_type)))],
-          ['获知',raw('<span class="tm">'+esc(k.learned_at||'获知时间未记录')+'</span>')],
-        ],
+        lines:[['来源',k.source]],
       })),
       '本轮没有探到值得记下的消息'))+
 
-    sec('i-eye','已显现的公开后果',drec(
-      eff.slice().sort(WTime.byNewest('time')).map(v=>({
-        head:v.effect,
-        lines:[
-          ['时刻',raw('<span class="tm">'+esc(v.time||'时间未记录')+'</span>')],
-          ['地点',v.location||'地点未记录'],
-          ['关联',v.related_event
-            ?raw('<span class="linkrow" style="margin-top:0">'+taskLink(v.related_event,'event')+'</span>')
-            :'未关联事件'],
-        ],
-      })),
-      '这个势力本轮没有对外显现的公开后果'));
+    /* 与这个势力有关的世界变化（P.changesFor，新的在前）。 */
+    sec('i-eye','近期变化',drec(
+      eff.map(v=>{
+        const links=changeLinks(v,f.name);
+        return {
+          head:v.summary,
+          lines:[
+            ['时刻',v.time?raw('<span class="tm">'+esc(v.time)+'</span>'):''],
+            ['地点',v.location],
+            ['关联',links?raw('<span class="linkrow" style="margin-top:0">'+links+'</span>'):''],
+          ],
+        };
+      }),
+      '这个势力最近没有记录在案的变化'));
 
   wireLinks(box);
 }
@@ -2160,7 +2162,7 @@ function renderIdxNav(page,pages,onGo){
   $$('#idxNav button').forEach(b=>b.addEventListener('click',()=>onGo(page+Number(b.dataset.d))));
 }
 
-/** 热点：地区变化与势力公开后果里出现过的任务与事件，按牵动面归并。 */
+/** 热点：与各势力、各地区有关的世界变化里牵到的任务与事件，按牵动面归并。 */
 function hotspots(){
   const m=new Map();
   const put=(kind,name,where,fact,time)=>{
@@ -2169,15 +2171,14 @@ function hotspots(){
     if(!m.has(k))m.set(k,{kind,name,where:new Set(),facts:[],time:''});
     const it=m.get(k);
     if(where)it.where.add(where);
-    if(fact)it.facts.push(fact);
+    if(fact&&!it.facts.includes(fact))it.facts.push(fact);
     if(time&&(!it.time||(WTime.parse(time)||0)>(WTime.parse(it.time)||0)))it.time=time;
   };
-  REGIONS.forEach(r=>arr(r.recent_changes).forEach(c=>{
-    put('event',c.related_event,r.name,c.fact,c.time);
-    put('task',c.related_task,r.name,c.fact,c.time);
-  }));
-  FACTIONS.forEach(f=>arr(f.visible_effects).forEach(v=>
-    put('event',v.related_event,v.location||f.name,v.effect,v.time)));
+  const putChange=(c,self,where)=>changeLinked(c,self).forEach(l=>{
+    if(l.kind==='task'||l.kind==='event')put(l.kind,l.name,where,c.summary,c.time);
+  });
+  REGIONS.forEach(r=>regionChanges(r).forEach(c=>putChange(c,r.name,r.name)));
+  FACTIONS.forEach(f=>changesFor(f.name).forEach(c=>putChange(c,f.name,c.location||f.name)));
   return [...m.values()].sort(WTime.byNewest('time'));
 }
 
@@ -2189,7 +2190,7 @@ function relSummary(){
     if(seen.has(k))return;
     seen.add(k);
     out.push({from:f.name,to:r.target_name,type:r.relation_type,target:r.target_type,
-      basis:r.current_basis,change:r.recent_change,at:r.changed_at});
+      basis:r.current_basis,change:r.recent_change});
   }));
   return out;
 }
@@ -2225,14 +2226,14 @@ function renderIdx(){
     }).join('')||emptyNote('本轮没有地区记录');
   }else if(idxTab===1){
     all=hotspots();
-    $('#idxSub').textContent='地区变化与势力公开后果里牵到的任务和事件';
+    $('#idxSub').textContent='势力与地区相关的世界变化里牵到的任务和事件';
     html=pageOf(all).map(h=>{
       const hue=h.kind==='event'?'rose':'indigo';
       return '<button class="idx h-'+hue+'" data-name="'+esc(h.name)+'" data-kind="'+h.kind+'">'+
         '<span class="idx-i"><svg><use href="#'+(h.kind==='event'?'i-bell':'i-scroll')+'"/></svg></span>'+
         '<span class="idx-n">'+esc(h.name)+'</span>'+
         chip(hue,'',h.kind==='event'?'事件':'任务')+
-        '<p>'+esc([...h.where].join('、'))+'　·　'+esc(h.time||'时间未记录')+'<br>'+esc(h.facts[0]||'')+'</p>'+
+        '<p>'+esc([[...h.where].join('、'),h.time].filter(Boolean).join('　·　'))+'<br>'+esc(h.facts[0]||'')+'</p>'+
       '</button>';
     }).join('')||emptyNote('本轮的地区变化没有关联到任务或事件');
   }else{
@@ -2244,8 +2245,7 @@ function renderIdx(){
         '<span class="idx-i"><svg><use href="#'+(TARGET_ICON[r.target]||'i-spark')+'"/></svg></span>'+
         '<span class="idx-n">'+esc(r.from+' → '+r.to)+'</span>'+
         chip(hue,'',L('relation.type',r.type))+
-        '<p>'+esc(r.basis||'未记录依据')+'　·　'+
-          esc(r.change?r.change+(r.at?'（'+r.at+'）':''):'本轮无变化')+'</p>'+
+        ([r.basis,r.change].some(Boolean)?'<p>'+esc([r.basis,r.change].filter(Boolean).join('　·　'))+'</p>':'')+
       '</button>';
     }).join('')||emptyNote('本轮没有势力关系记录');
   }
@@ -2266,7 +2266,7 @@ function renderIdx(){
 
 /* =============================================================================
    底部通栏：世界演进时间线
-   由 faction.visible_effects 与 region.recent_changes 合流，都是已发生的事实。
+   取世界变化记录（DATA.changes）里与势力、地区有关的那些，都是已发生的事实。
    ========================================================================== */
 const WTL_PAGE=5;
 /* auto-fill 摆得下几格，一页就放几条。固定 5 条时 1280 只排得下 4 格，
@@ -2278,16 +2278,24 @@ function wtlPageSize(){
   const cols=t&&t!=='none'?t.split(' ').filter(Boolean).length:1;
   return cols>=3?cols:WTL_PAGE;   // 单列／双列是堆叠，本来就没有空当
 }
+/* 取 DATA.changes 里主体是势力或地区、或主体名／地点写着某个势力或地区的那些变化。 */
 function wtlItems(){
-  const out=[];
-  FACTIONS.forEach(f=>arr(f.visible_effects).forEach(v=>out.push({
-    time:v.time,title:v.effect,who:f.name,kind:'faction',where:v.location,
-    link:v.related_event,linkKind:'event',hue:hueOf('f:'+f.name)})));
-  REGIONS.forEach(r=>arr(r.recent_changes).forEach(c=>out.push({
-    time:c.time,title:c.fact,who:r.name,kind:'region',where:r.name,
-    link:c.related_event||c.related_task,linkKind:c.related_event?'event':'task',
-    hue:hueOf('r:'+r.name)})));
-  return out.sort(WTime.byNewest('time'));
+  const names=[...FACTION_BY.keys(),...REGION_BY.keys()];
+  const at=loc=>names.find(n=>String(loc||'').includes(n))||'';
+  return arr(P.DATA.changes).filter(c=>c&&(
+    c.source_type==='faction'||c.source_type==='region'||
+    FACTION_BY.has(c.source_name)||REGION_BY.has(c.source_name)||at(c.location)
+  )).map(c=>{
+    const isF=c.source_type==='faction'||FACTION_BY.has(c.source_name);
+    const isR=!isF&&(c.source_type==='region'||REGION_BY.has(c.source_name));
+    // 主体既不是势力也不是地区时，按地点命中的那一个上色
+    const hit=isF||isR?'':at(c.location);
+    const hk=isF?'f:'+c.source_name:isR?'r:'+c.source_name:hit?(FACTION_BY.has(hit)?'f:':'r:')+hit:'';
+    const link=changeLinked(c,'').find(l=>l.kind==='task'||l.kind==='event');
+    return {
+      time:c.time,title:c.summary,who:c.source_name||hit,kind:isF?'faction':isR?'region':(c.source_type||''),where:c.location,
+      link:link?link.name:'',linkKind:link?link.kind:'',hue:hk?hueOf(hk):'indigo'};
+  }).sort(WTime.byNewest('time'));
 }
 function renderWtl(){
   const all=wtlItems(),size=wtlPageSize();
@@ -2297,13 +2305,13 @@ function renderWtl(){
   const page=slice(all,size,wtlPage).slice().reverse();
   const newest=all[0];
   // 条数和排序在下面的翻页条上，这里只说这条线是由哪两路数据汇起来的
-  $('#wtlSub').textContent='势力已显现的公开后果，与各地区的近期变化，合在一条线上';
+  $('#wtlSub').textContent='势力与地区相关的世界变化，合在一条线上';
 
   $('#wtl').innerHTML=page.length?page.map(x=>
     '<button class="wti h-'+x.hue+(newest&&x===newest?' now':'')+'" '+
       (x.link?'data-name="'+esc(x.link)+'"':'')+'>'+
       '<span class="wt"><time>'+esc(P.timeHH(x.time)||x.time||'—')+'</time>'+
-        '<span class="wsrc"><svg><use href="#'+(x.kind==='faction'?'i-shield':'i-map')+'"/></svg>'+esc(x.who)+'</span></span>'+
+        '<span class="wsrc"><svg><use href="#'+({faction:'i-shield',region:'i-map',task:'i-scroll',event:'i-bell'}[x.kind]||'i-spark')+'"/></svg>'+esc(x.who)+'</span></span>'+
       '<b>'+esc(x.title||'未记录变化')+'</b>'+
       (x.link?'<small><svg><use href="#'+(x.linkKind==='event'?'i-bell':'i-scroll')+'"/></svg>'+esc(x.link)+'</small>'
              :'<small style="color:var(--ink4)"><svg><use href="#i-ask"/></svg>未关联任务或事件</small>')+
@@ -2355,7 +2363,7 @@ let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{
   if(!$('#dossier').hidden)renderDossier();
 },160)});
 
-/* 压力测试钩子：契约对 areas / relations / present_factions 这些数组给了上限，
+/* 压力测试钩子：契约对 areas / relations 这些数组给了上限，
    但没限制势力和地区的条数，所以布局必须在"节点很多"时也不叠字。
    _tools/graph-stress.cjs 通过这个钩子灌一组假数据，不动 mock 文件。 */
 window.__stressGraph=function(nf,nr,d){
@@ -2368,33 +2376,45 @@ window.__stressGraph=function(nf,nr,d){
   const AR=['control','operate','garrison','influence','contested','transit'];
   const RT=['funds','personnel','supplies','transport','information','sites','authority'];
   const CT=['commerce','order','access','population','infrastructure','supply'];
+  const fName=j=>'第'+(j+1)+'联合行会总议事厅',rName=j=>'第'+(j+1)+'远境要塞城邦';
   FACTIONS=Array.from({length:nf},(_,i)=>({
-    name:'第'+(i+1)+'联合行会总议事厅',status:'active',updated_at:'霜月12日 22:00',
-    next_update:'下一次例会时',
+    name:fName(i),status:'active',
     current_focus:{issue:'压力测试用问题'+i,action:'压力测试用行动'+i,deferred_items:['暂缓一','暂缓二','暂缓三','暂缓四']},
-    areas:Array.from({length:nArea},(_,k)=>({name:'第'+((i+k)%nr+1)+'远境要塞城邦',relation_type:AR[k%6],
-      current_state:'压力测试事实',recent_change:k%2?'':'压力测试变化'})),
-    resources:Array.from({length:8},(_,k)=>({type:RT[k%7],quantity:'数量'+k,current_use:'占用'+k,constraint:'限制'+k,recent_change:''})),
-    internal_groups:Array.from({length:6},(_,k)=>({name:'内部群体'+k,position:'立场'+k,current_action:'行动'+k,effect:'影响'+k})),
+    areas:Array.from({length:nArea},(_,k)=>({name:rName((i+k)%nr),relation_type:AR[k%6],
+      current_state:'压力测试事实'})),
+    resources:Array.from({length:8},(_,k)=>({type:RT[k%7],quantity:'数量'+k,current_use:'占用'+k+'；限制：限制'+k})),
+    internal_groups:Array.from({length:6},(_,k)=>({name:'内部群体'+k,position:'立场'+k,current_action:'行动'+k+'；影响'+k})),
     /* 契约允许 target_type 是 person / task / event，格局图上没有这三类的节点。
        每第四条造一个，好让"图上不画、档案里记"这条出口在压测里真的被走到。 */
     relations:Array.from({length:nRel},(_,k)=>({
       // 三类场外目标要都出现，不能只造出人物一种：换势力就换一类
       target_type:k%4===3?['person','task','event'][(i+Math.floor(k/4))%3]:(k%3===2?'region':'faction'),
-      target_name:k%4===3?'场外对象'+k:(k%3===2?'第'+((i+k)%nr+1)+'远境要塞城邦':'第'+((i+k+1)%nf+1)+'联合行会总议事厅'),
-      relation_type:REL[k%8],current_basis:'依据'+k,recent_change:'',changed_at:''})),
-    knowledge:Array.from({length:10},(_,k)=>({fact:'情报'+k,source:'来源'+k,source_type:'reported',learned_at:'霜月12日 20:00',status:'uncertain'})),
-    visible_effects:Array.from({length:6},(_,k)=>({time:'霜月12日 2'+(k%10)+':00',location:'地点'+k,effect:'后果'+k,related_event:''})),
+      target_name:k%4===3?'场外对象'+k:(k%3===2?rName((i+k)%nr):fName((i+k+1)%nf)),
+      relation_type:REL[k%8],current_basis:'依据'+k,recent_change:''})),
+    knowledge:Array.from({length:10},(_,k)=>({fact:'情报'+k,source:'来源'+k+'；(reported)',status:'uncertain'})),
   }));
   REGIONS=Array.from({length:nr},(_,i)=>({
-    name:'第'+(i+1)+'远境要塞城邦',updated_at:'霜月12日 22:00',next_update:'下一次巡查时',
+    name:rName(i),
     control:{status:['controlled','shared','contested','unclaimed','unclear'][i%5],
-      primary_faction:'第'+(i%nf+1)+'联合行会总议事厅',
-      contesting_factions:Array.from({length:nContest},(_,k)=>'第'+((i+k+1)%nf+1)+'联合行会总议事厅')},
-    present_factions:Array.from({length:nPresent},(_,k)=>'第'+((i+k)%nf+1)+'联合行会总议事厅'),
+      primary_faction:fName(i%nf)},
     conditions:Array.from({length:6},(_,k)=>({category:CT[k%6],fact:'条件'+k,impact:'影响'+k})),
-    recent_changes:Array.from({length:6},(_,k)=>({time:'霜月12日 1'+(k%10)+':00',fact:'变化'+k,related_task:'',related_event:''})),
   }));
+  /* v1.0 的在场势力 / 争夺方由势力 areas 推出：补上原来 present / contest 那几档对应的地区联系。 */
+  REGIONS.forEach((r,i)=>{
+    const need=(j,type)=>{
+      const f=FACTIONS[j%nf];
+      if(f&&!f.areas.some(a=>a.name===r.name))f.areas.push({name:r.name,relation_type:type,current_state:'压力测试事实'});
+    };
+    for(let k=0;k<nContest;k++)need(i+k+1,'contested');
+    for(let k=0;k<nPresent;k++)need(i+k,'influence');
+  });
+  /* 世界变化只换本页这份 DATA 的引用，不改父页面那份数组。 */
+  P.DATA.changes=[
+    ...FACTIONS.flatMap(f=>Array.from({length:6},(_,k)=>({time:'霜月12日 2'+(k%10)+':00',kind:'faction',
+      source_type:'faction',source_name:f.name,target_name:'',summary:'后果'+k,location:'地点'+k}))),
+    ...REGIONS.flatMap(r=>Array.from({length:6},(_,k)=>({time:'霜月12日 1'+(k%10)+':00',kind:'region',
+      source_type:'region',source_name:r.name,target_name:'',summary:'变化'+k,location:r.name}))),
+  ];
   selFaction=0;selEdge=-1;regionPage=0;idxPage=0;wtlPage=0;rowOpen.clear();
   renderAll();
   return {factions:FACTIONS.length,regions:REGIONS.length,edges:EDGES.length};
