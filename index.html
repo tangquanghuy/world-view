@@ -45,13 +45,17 @@
     tasks: '任务与事件.html',
   };
   const DEFAULT = 'overview';
-  // v1.0 方案的视图优先；仍在用 v0.9 方案的存档读旧视图，进页面前转成 v1.0 形状。
-  // 旧版橱窗壳不认识的视图只会静默不回，所以两个视图同时订阅，谁有数据用谁。
-  const VIEW_ID = 'bg_world_structured_v10';
-  const LEGACY_VIEW_ID = 'bg_world_structured_v09';
-  const WATCH_ID = 'bg-world-panel';
-  const LEGACY_WATCH_ID = 'bg-world-panel-v09';
+  // 同时订阅各版本方案的视图，排位高的有数据就用它：v1.1 > v1.0 > v0.9。
+  // v1.1 只改了字段说明，数据形状和 v1.0 相同；v0.9 进页面前转成 v1.0 形状。
+  // 方案里没有的视图只会静默不回，所以全部订阅也不会报错。
+  const VIEWS = [
+    { watchId: 'bg-world-panel-v11', viewId: 'bg_world_structured_v11', shape: 'v10', rank: 3 },
+    { watchId: 'bg-world-panel', viewId: 'bg_world_structured_v10', shape: 'v10', rank: 2 },
+    { watchId: 'bg-world-panel-v09', viewId: 'bg_world_structured_v09', shape: 'v09', rank: 1 },
+  ];
+  const WATCH_ID = VIEWS[1].watchId;
   let dataVersion = '';
+  let dataRank = 0;
   const bridgeEnabled = new URLSearchParams(location.search).get('acuBridge') === '1';
   const framesRoot = document.getElementById('frames');
   const status = document.getElementById('status');
@@ -318,14 +322,14 @@
     bridgeTimer = setTimeout(function () {
       if (!hasData) setStatus(
         '未收到后台世界数据',
-        '请确认当前方案包含 ' + VIEW_ID + '（或旧版 ' + LEGACY_VIEW_ID + '），且异步助手数据库桥已加载。',
+        '请确认当前方案包含 ' + VIEWS.map(function (v) { return v.viewId; }).join(' / ') + ' 中的一个，且异步助手数据库桥已加载。',
       );
     }, 8000);
-    [[WATCH_ID, VIEW_ID], [LEGACY_WATCH_ID, LEGACY_VIEW_ID]].forEach(function (pair) {
+    VIEWS.forEach(function (v) {
       window.parent.postMessage({
         type: 'we-watch-view',
-        watchId: pair[0],
-        viewId: pair[1],
+        watchId: v.watchId,
+        viewId: v.viewId,
         params: {},
         options: {},
       }, '*');
@@ -487,18 +491,19 @@
       return;
     }
     if (e.source === window.parent && data.type === 'we-watch-view-result') {
-      const legacy = data.watchId === LEGACY_WATCH_ID;
-      // 两个视图都在时只认 v1.0；旧视图的错误也不打断 v1.0 数据。
-      if (legacy && dataVersion === 'v10') return;
+      const view = VIEWS.find(function (v) { return v.watchId === data.watchId; });
+      if (!view) return;
+      // 已经在用排位更高的视图时，低版本视图的数据和错误都不理会。
+      if (view.rank < dataRank) return;
       if (!data.ok) {
-        if (legacy) return;
-        setStatus('读取后台世界数据失败', data.error || 'AcuData.watchView 返回错误。');
+        if (!hasData) setStatus('读取后台世界数据失败', data.error || 'AcuData.watchView 返回错误。');
         return;
       }
       // 视图不存在时 queryView 返回 ok:false 的空结果，不当成数据。
       if (data.result && data.result.ok === false && !(data.result.data && data.result.data.background_world)) return;
       try {
-        acceptData(data.result, legacy ? 'v09' : 'v10');
+        acceptData(data.result, view.shape);
+        dataRank = view.rank;
       } catch (err) {
         setStatus('后台世界数据格式不匹配', String(err && err.message || err));
       }

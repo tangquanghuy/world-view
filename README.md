@@ -7,18 +7,18 @@
 ## 数据链
 
 ```text
-副 API：bg_world_tick_v10
+副 API：bg_world_tick_v11（v1.0 方案是 bg_world_tick_v10）
   → 补丁合并进 8 张持久表
-  → dataView：bg_world_structured_v10（英文原始键）
+  → dataView：bg_world_structured_v11 / _v10（英文原始键）
   → 橱窗壳：window.top.AcuData.watchView
   → postMessage 跨域桥
   → index.html 注入真实数据
   → 四个展示页
 ```
 
-v0.9 方案（`bg_world_structured_v09`）仍然能看：`index.html` 同时订阅两个视图，有 v1.0 数据就用 v1.0，
-否则把 v0.9 数据转成 v1.0 形状再交给页面（并掉的字段并进保留字段，各实体的痕迹与近期变化并进 `changes`）。
-四个页面只认 v1.0 形状。
+`index.html` 同时订阅三个视图，按 v1.1 > v1.0 > v0.9 取有数据的那个。
+v1.1 只改了字段说明，数据形状和 v1.0 相同；v0.9（`bg_world_structured_v09`）的数据先转成 v1.0 形状再交给页面
+（并掉的字段并进保留字段，各实体的痕迹与近期变化并进 `changes`）。四个页面只认 v1.0 形状。
 
 本仓库**不包含 mock 数据**。直接访问 GitHub Pages 只会提示从异步助手橱窗打开；
 导入配套配置方案后，橱窗才会展示当前数据库中的真实世界状态。
