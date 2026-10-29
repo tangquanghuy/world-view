@@ -161,6 +161,9 @@
 .xban-del:hover{color:var(--hue-ink);background:var(--sunken)}
 
 /* 日程时间尺本体在 shared/console.css，本页只是刻度取的是这个人自己的时间跨度 */
+/* 只剩世界当前时间可画时整条尺子不出（见 renderRuler），卡片带补回尺子原来让出的那点上边距 */
+.ruler.off{display:none}
+.ruler.off+.strip{padding-top:10px}
 
 /* ---------- 日程卡片带 ----------
    不做甘特图：按时间跨度分配宽度的话，半小时的行动只剩六十来像素，
@@ -286,7 +289,9 @@
    原来是 auto-fill 的等分网格，右栏够宽时切两格——大多数人本轮只有一位常来往的对象，
    于是一张卡里一个人靠左站着、右边空着半格。改成居中的 flex，一个人也站得住。 */
 .contacts{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 16px}
-.contact{flex:0 1 118px;min-width:96px;display:grid;justify-items:center;gap:3px;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
+/* 基准宽 108 而不是 118：1180–1440 档右栏卡内只剩 250px，两个 118 加间距是 252，
+   差两像素就折成一人一行，两位往来对象竖着摞出 290px 高。 */
+.contact{flex:0 1 108px;min-width:96px;display:grid;justify-items:center;gap:3px;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
 .contact .av{width:48px;height:48px;transition:box-shadow .2s ease,transform .2s ease}
 .contact:hover .av,.contact:focus-visible .av{transform:translateY(-2px);box-shadow:0 0 0 2px #fff,0 0 0 5px var(--hue-track),0 8px 18px rgba(72,66,52,.18)}
 .contact:hover b,.contact:focus-visible b{color:var(--hue-ink)}
@@ -344,8 +349,25 @@
 .srow-b>p{margin:0;color:var(--ink2);font:14px/1.6 var(--ui);overflow-wrap:anywhere;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .srow-b>p.q{font-weight:600}
-/* 待决选择的几个方向横着排成一行胶囊，代价留给浮层——窄条里一个方向占三行太贵 */
-.sline{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+/* 待决选择的几个方向横着排成一行胶囊，代价留给浮层——窄条里一个方向占三行太贵。
+   原来也叫 .sline，跟日程卡的元信息行撞名：这条的 flex-wrap 落到日程卡上，
+   「结果」那行的长句整段被挤到图标下面另起一行，图标孤零零挂在上头。 */
+.schips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+/* 方向是「方向（代价）」一整句，v1.0 把代价并进来之后常有二三十个字。
+   胶囊全局不换行，长的那枚会顶出 352px 的窄条，整页跟着出横向滚动条
+   （迪亚贝尔：1536 档页面宽到 1569px）。这里的胶囊允许折行。 */
+.schips .chip{white-space:normal;overflow-wrap:anywhere}
+
+/* 本轮空着的几节并成一张卡，一节一行。原来每节各占一张空态卡（一张一百出头），
+   三四张摞在栏底，把第一行撑得比档案主卡高出三百多像素，主卡底下空一大截。
+   节名和那句「本轮没有…」都还在，只是不再各自占一张卡的外壳。 */
+.nrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:4px 10px;padding:8px 0}
+.nrow:first-of-type{padding-top:0}
+.nrow+.nrow{border-top:1px solid var(--rule)}
+.nrow-k{display:inline-flex;align-items:center;gap:5px;color:var(--hue-ink);font:600 14px/1.6 var(--ui);white-space:nowrap}
+.nrow-k svg{flex:0 0 auto;width:15px;height:15px;opacity:.9}
+.nrow p{margin:0;color:var(--ink4);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
+.nrow .dmore{margin-top:-2px}
 .smeta{display:flex;align-items:flex-start;gap:5px;margin:6px 0 0;color:var(--ink4);font:14px/1.55 var(--ui)}
 .smeta svg{flex:0 0 auto;width:13px;height:13px;margin-top:4px;color:var(--hue);opacity:.85}
 .smeta span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
@@ -372,6 +394,9 @@
 .sheet-sec{padding:13px 15px 14px;border-radius:var(--r-card);background:var(--sunken)}
 .sheet-sec .kv{gap:9px 16px;margin-top:8px}
 .sheet-sec .card{background:var(--card)}
+/* 抉择的方向格本来是 sunken 底，浮层里每节自己也是 sunken 底，格子融进节里看不见，
+   两个方向读成两行缩进的粗体字。浮层里换成卡片底。 */
+.sheet-sec .opt{background:var(--card)}
 /* 从哪个出口进来就点亮那一节，免得在两列十几块里自己找 */
 .sheet-sec.hit{box-shadow:0 0 0 2px var(--hue)}
 
@@ -731,14 +756,23 @@ function renderHero(){
     ['i-pin','常驻地',pr.main_location],
     ['i-medal','专长',pr.capability_basis,true],
     ['i-eye','外貌',pr.appearance,true],
-  ]:[];
+  ].filter(r=>!P.isBlank(r[2])):[];
+  /* 两列网格里短字段是奇数时，最后一个落单，右半格空着（空项不显示之后常见）。
+     这时把最长的那个短字段提成通栏、挪到短字段末尾——多半是「职业」，
+     v1.0 把社会角色并进了职业，它本来就是半格里折三行的那个。 */
+  const shorts=rows.filter(r=>!r[3]);
+  if(shorts.length%2){
+    const lg=shorts.reduce((a,b)=>String(b[2]).length>String(a[2]).length?b:a);
+    rows.splice(rows.indexOf(lg),1);
+    rows.splice(rows.findIndex(r=>r[3])<0?rows.length:rows.findIndex(r=>r[3]),0,[lg[0],lg[1],lg[2],true]);
+  }
 
   const whoBlock=
     '<h4 class="sech"><svg><use href="#i-scroll"/></svg>身份</h4>'+
     (pr
       ? kvGrid(rows,2)+
         (tags.length
-          ?'<div class="sline" style="margin-top:11px">'+fieldKey('i-tag','性格')+
+          ?'<div class="schips" style="margin-top:11px">'+fieldKey('i-tag','性格')+
             tags.map(t=>'<span class="chip">'+esc(t)+'</span>').join('')+'</div>'
           :'<p class="slot-note">本轮没有给这个人写下性格</p>')
       /* 「所属」不在这儿再列一行：它是从 relations 里推出来的，名字旁边那排
@@ -849,12 +883,36 @@ const glyphOf=r=>r.now?(ACT_ICON[r.statusKey]||'i-spark')
 
 const hourOf=t=>{const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?Number(m[1]):null};
 const dayIcon=h=>h===null?'i-spark':h<5?'i-moon':h<16?'i-sun':h<19?'i-dusk':'i-moon';
-const dayOf=s=>{const m=String(s||'').match(/([^\d\s]{0,4}月\s*\d+\s*日)/);return m?m[1]:''};
+/* 月份可能是名字（霜月12日）也可能是序号（12月3日）。原来只认名字，
+   序号月被截成「月3日」，刻度底下就挂着一个残字。 */
+const DAY_RE=/((?:\d{1,2}|[^\d\s]{1,4})月\s*\d+\s*日)/;
+const dayOf=s=>{const m=String(s||'').match(DAY_RE);return m?m[1]:''};
+/* 刻度和卡片上的「钟点」：有 HH:MM 用它，没有就用日期后面那截时段词（上午／傍晚）。
+   原来没有钟点时整串「12月1日 上午」都塞进刻度的主文字，下面再挂一遍日期，
+   390 档三组刻度互相压、两头探出面板。 */
+const clockOf=s=>{
+  const t=String(s||'').trim();
+  return timeHH(t)||t.replace(/^.*?\d+\s*年\s*[·・]?\s*/,'').replace(DAY_RE,'').trim()||t;
+};
+/* 一段起止写成一句：同一天只写一次日期，起止相同只写一个。
+   原来是「12月1日 上午 – 12月1日 上午　月1日」——同一个时刻说两遍，后面再缀一个残字。 */
+function spanText(a,b){
+  a=String(a||'').trim();b=String(b||'').trim();
+  if(!a||!b||a===b)return a||b;
+  const da=dayOf(a);
+  return da&&da===dayOf(b)?da+' '+clockOf(a)+' – '+clockOf(b):a+' – '+b;
+}
 
 function renderRuler(rows){
   const el=$('#ruler');
   const stamps=[...new Set(rows.flatMap(r=>[r.start,r.end]).concat(WORLD_TIME&&stripYear(WORLD_TIME))
     .map(s=>String(s||'').trim()).filter(s=>T(s)!==null))].sort((a,b)=>T(a)-T(b));
+  /* 这个人自己一个时间都没有（只有当前行动、也没写预计结束），能落到尺子上的
+     只剩世界当前时间：一枚刻度钉在左端 12%，后面一整条空轨道，读起来像日程没加载完，
+     而那个时间页头的时钟已经写着。这时整条尺子不出。 */
+  const onlyNow=stamps.length===1&&stamps[0]===stripYear(WORLD_TIME);
+  el.classList.toggle('off',onlyNow);
+  if(onlyNow){el.innerHTML='';return}
   if(!stamps.length){el.innerHTML='<span class="tick" style="--x:50%"><small>本轮没有记下时间</small></span>';return}
 
   const lo=T(stamps[0]),hi=T(stamps[stamps.length-1]),span=hi-lo||1;
@@ -877,13 +935,13 @@ function renderRuler(rows){
   el.innerHTML=picks.map(s=>{
     // 两端各留 12%：刻度是 translate(-50%) 居中的，日期标签有六十来像素宽，
     // 贴着轨道端点摆的话在 390 档会探出面板外
-    const x=12+((T(s)-lo)/span)*76;
+    const x=hi===lo?50:12+((T(s)-lo)/span)*76;    // 只有一个时刻时没有跨度可言，放中间
     const d=dayOf(s),label=d&&d!==lastDay?d:'';
     lastDay=d||lastDay;
     const isNow=s===stripYear(WORLD_TIME);
     return '<span class="tick'+(isNow?' now':'')+'" style="--x:'+x.toFixed(2)+'%" title="'+esc(s)+(isNow?'　世界当前时间':'')+'">'+
       '<svg><use href="#'+dayIcon(hourOf(s))+'"/></svg>'+
-      '<b>'+esc(timeHH(s)||s)+'</b>'+
+      '<b>'+esc(clockOf(s))+'</b>'+
       (label?'<small>'+esc(label)+'</small>':'')+
       '<i></i></span>';
   }).join('');
@@ -897,21 +955,20 @@ function renderSchedule(){
     const hue=r.now?'amber':r.statusKey==='completed'?'green':r.statusKey==='cancelled'?'purple':'indigo';
     // 当前行动没有起点，只写「预计到 X」；日程条目照旧写起止
     const when=r.now&&!r.start
-      ?(r.end?'预计到 '+(timeHH(r.end)||r.end):'')
-      :[timeHH(r.start)||r.start,timeHH(r.end)||r.end].filter(Boolean).join(' – ');
-    const day=dayOf(r.start||r.end);
+      ?(r.end?'预计到 '+r.end:'')
+      :spanText(r.start,r.end);
     /* 卡头（图标／标题／时间／状态）和元信息（地点／任务／事件／结果）分成两块，
        卡片一宽各自并成横排，见 .s-h / .s-m 的容器查询。 */
     return '<article class="scell h-'+hue+(r.now?' now':'')+'">'+
       '<div class="s-h">'+
         '<span class="sglyph"><svg><use href="#'+glyphOf(r)+'"/></svg></span>'+
         '<b>'+esc(r.action||'未记录行动')+'</b>'+
-        /* 卡片上写的是「16:00 – 18:20　霜月12日」，契约里的原值是「霜月12日 16:00」。
+        /* 卡片上写的是缩过的「霜月12日 16:00 – 18:20」，契约里的原值是「霜月12日 16:00」。
            原值本来只落在时间尺刻度的 title 上，而刻度最多放四个、挤不开还要再减——
            那等于让一条数据的去留取决于版面。原值直接挂到这张卡自己身上。 */
         (when
           ?'<span class="stime" title="'+esc([r.start,r.end].filter(Boolean).join(' – '))+'">'+
-            '<svg><use href="#i-clock"/></svg>'+esc(when)+(day?'　'+esc(day):'')+'</span>'
+            '<svg><use href="#i-clock"/></svg>'+esc(when)+'</span>'
           :'')+
         '<span class="chip">'+esc(r.now?'当前行动':r.statusText)+'</span>'+
       '</div>'+
@@ -987,7 +1044,9 @@ function renderNet(){
   if(!rs.length){
     wrap.classList.remove('side');
     box.className='rnet';
-    box.style.setProperty('--nh','150px');
+    /* 只有一句话，不必留 150px 的画布：整块面板原来 216px 高，句子悬在正中，
+       上下各空六十来像素，看着像图没加载出来 */
+    box.style.setProperty('--nh','92px');
     box.innerHTML='<div class="nodata mid">本轮没有谁跟'+esc(p.name)+'打上交道</div>';
     $('#netNote').textContent='';
     $('#relList').innerHTML='';$('#relPager').innerHTML='';
@@ -1178,24 +1237,27 @@ function renderRail(){
      → 被什么绊住 → 常跟谁来往 → 最近做了什么。原来打头的是「角色卡」——
      一张一个数都没有的空态卡占着最显眼的位置，等于开篇先说一句「这儿没东西」。
 
-     空态卡一律沉到栏底（put 的第一个参数就是「这一节有没有内容」）。
+     空着的节一律沉到栏底（put 的第一个参数就是「这一节有没有内容」），
+     而且并成一张「本轮没有」，一节一行，不再一节一张空卡。
      六个人里每个人空的都不是同一节：赛文没有承诺，露西没有纠结也没有人对人的往来。
      照声明顺序硬排的话，谁的档案打头都可能是一句「本轮没有」。 */
   const have=[],none=[];
-  const put=(ok,html)=>(ok?have:none).push(html);
+  /* 空着的节不再各占一张卡：只记下节名和那句空文案，最后并成一张「本轮没有」。 */
+  const put=(ok,html,empty)=>ok?have.push(html):none.push(empty);
 
   /* 1. 情报：只有固定人物有（npc_updates.knowledge）。
         原来叫「知道的事」——不算术语，但读起来是个名词分类；换成问句就成了一句话。 */
   if(!st.cand){
     const ks=arr(p.knowledge);
-    put(ks.length,subCard('teal','i-book','情报',
-      ks.length?ks.map(x=>srow({
+    put(ks.length,ks.length&&subCard('teal','i-book','情报',
+      ks.map(x=>srow({
         hue:KNOW_HUE[x.status],
         chip:esc(L('knowledge.status',x.status)),
         text:x.fact,
         tip:tipOf([['来源',x.source]]),
-      })).join(''):emptyNote('本轮没有新掌握、且会影响后续判断的信息'),
-      ks.length?EXIT('know'):''));
+      })).join(''),
+      EXIT('know')),
+      ['teal','i-book','情报','本轮没有新掌握、且会影响后续判断的信息']);
   }
 
   /* 2. 承诺：只有固定人物有（npc_updates.commitments）。
@@ -1203,28 +1265,30 @@ function renderRail(){
         缩完谁都能读懂字，却读不出这一节在问什么。 */
   if(!st.cand){
     const cms=arr(p.commitments);
-    put(cms.length,subCard('indigo','i-hand','承诺',
-      cms.length?cms.map(x=>srow({
+    put(cms.length,cms.length&&subCard('indigo','i-hand','承诺',
+      cms.map(x=>srow({
         chip:x.target?esc(x.target):'',
         text:x.content,
         tip:tipOf([['期限',x.deadline]]),
-      })).join(''):emptyNote('本轮没有成立的职责、承诺、债务或照顾义务'),
-      cms.length?EXIT('cmt'):''));
+      })).join(''),
+      EXIT('cmt')),
+      ['indigo','i-hand','承诺','本轮没有成立的职责、承诺、债务或照顾义务']);
   }
 
   /* 3. 抉择：两张表都有（decisions）。「待决选择」是公文说法。
         question 里已经写着「在等：…」，每个方向是「方向（代价）」一句话，原样摆成胶囊。 */
   const decs=arr(p.decisions);
-  put(decs.length,subCard('rose','i-ask','抉择',
-    decs.length?decs.map(x=>{
+  put(decs.length,decs.length&&subCard('rose','i-ask','抉择',
+    decs.map(x=>{
       const opts=optionsOf(x);
       return srow({
         q:true,
         text:x.question||'未记录问题',
-        extra:opts.length?'<div class="sline">'+opts.map(o=>'<span class="chip line">'+esc(o)+'</span>').join('')+'</div>':'',
+        extra:opts.length?'<div class="schips">'+opts.map(o=>'<span class="chip line">'+esc(o)+'</span>').join('')+'</div>':'',
       });
-    }).join(''):emptyNote('本轮没有悬而未决的现实选择'),
-    decs.length?EXIT('dec'):''));
+    }).join(''),
+    EXIT('dec')),
+    ['rose','i-ask','抉择','本轮没有悬而未决的现实选择']);
 
   /* 4. 处境：两张表都有（conditions）。契约把这一节叫「现实条件」，
         而「条件」既能指限制也能指前提，摆在标题上等于什么都没说；
@@ -1232,14 +1296,15 @@ function renderRail(){
         （没有调兵权限、连续值班十小时、摊位费欠一半）全是绊脚的事。
         摘要留「哪一类 + 事实」，影响在浮层里另占一格。 */
   const conds=arr(p.conditions);
-  put(conds.length,subCard('amber','i-lock','处境',
-    conds.length?conds.map(x=>srow({
+  put(conds.length,conds.length&&subCard('amber','i-lock','处境',
+    conds.map(x=>srow({
       hue:COND_HUE[x.category],
       chip:'<svg><use href="#'+(COND_ICON[x.category]||'i-spark')+'"/></svg>'+esc(L('condition.category',x.category)),
       text:x.fact,
       tip:tipOf([['影响',x.impact]]),
-    })).join(''):emptyNote('本轮没有真正限制这个人选择的现实条件'),
-    conds.length?EXIT('cond'):''));
+    })).join(''),
+    EXIT('cond')),
+    ['amber','i-lock','处境','本轮没有真正限制这个人选择的现实条件']);
 
   /* 5. 往来：好感度只在 target_type=person 的关系上成立。
         原型这一节就是横着一行头像，本来不用改结构，只把头像收小一档。 */
@@ -1247,18 +1312,22 @@ function renderRail(){
   /* 名字不能跟中栏「人际关系」底下那份「往来」清单撞——两块在 1536 下并排出现，
      各带一个「详情」，同名会读成同一份东西写了两遍。这一节只取 target_type=person，
      叫「交际圈」正好把范围说清：势力和地区不在这儿。 */
-  put(contacts.length,subCard('rose','i-user','交际圈',
-    contacts.length
-      ?'<div class="contacts">'+contacts.map(r=>{
-        return '<button class="contact" data-n="'+esc(r.target_name)+'" title="'+esc(r.current_basis||'')+'">'+
-          faceOf(r.target_name)+
-          '<b>'+esc(r.target_name)+'</b>'+
-          '<small>好感 '+(r.favorability??0)+'</small>'+
-          '<span class="bar" style="--p:'+(r.favorability??0)+'%"><i></i></span>'+
-        '</button>';
-      }).join('')+'</div>'
-      :emptyNote('本轮只跟势力、地区打交道，没有人对人的往来'),
-    arr(p.relations).length?EXIT('rel'):''));
+  const anyRel=arr(p.relations).length>0;
+  /* 一条往来都没有的人不在这儿再说一遍：中栏「人际关系」整块就写着
+     「本轮没有谁跟 X 打上交道」，两处并排出现。 */
+  if(contacts.length||anyRel)put(contacts.length,contacts.length&&subCard('rose','i-user','交际圈',
+    '<div class="contacts">'+contacts.map(r=>{
+      return '<button class="contact" data-n="'+esc(r.target_name)+'" title="'+esc(r.current_basis||'')+'">'+
+        faceOf(r.target_name)+
+        '<b>'+esc(r.target_name)+'</b>'+
+        '<small>好感 '+(r.favorability??0)+'</small>'+
+        '<span class="bar" style="--p:'+(r.favorability??0)+'%"><i></i></span>'+
+      '</button>';
+    }).join('')+'</div>',
+    EXIT('rel')),
+    /* 原来一条往来都没有的人也写「只跟势力、地区打交道」，跟中栏自相矛盾；
+       现在走到这句的一定有势力或地区往来。 */
+    ['rose','i-user','交际圈','本轮只跟势力、地区打交道，没有人对人的往来',EXIT('rel')]);
 
   /* 6. 近期动向：摘要只留时刻和那一句，地点／相关对象进浮层。
         原来叫「近况记录」——「记录」是台账的说法，这一节其实是这个人最近做了什么、
@@ -1266,21 +1335,24 @@ function renderRail(){
   const feed=recentFeed(p);
   const pages=Math.max(1,Math.ceil(feed.length/LOG_PAGE));
   logPage=Math.min(logPage,pages-1);
-  put(feed.length,subCard('indigo','i-clock','近期动向',
-    (feed.length
-      ?feed.slice(logPage*LOG_PAGE,logPage*LOG_PAGE+LOG_PAGE).map(x=>logRow(x,false)).join('')
-      :emptyNote('本轮没有相关的世界变化、观察片段或关系变动'))+
+  put(feed.length,feed.length&&subCard('indigo','i-clock','近期动向',
+    feed.slice(logPage*LOG_PAGE,logPage*LOG_PAGE+LOG_PAGE).map(x=>logRow(x,false)).join('')+
     '<div class="pager" id="logPager"></div>',
-    feed.length?EXIT('log'):''));
+    EXIT('log')),
+    ['indigo','i-clock','近期动向','本轮没有相关的世界变化、观察片段或关系变动']);
 
   /* 原型右栏顶上还画了基础属性（智力／感知／魅力／意志／敏捷／幸运六项）、
      带 LV 的技能倾向、四格持有物，以及健康／体力／信任／好感四条槽。
      这些在契约里一个字段都没有，页面上曾经留了一张「角色卡」空态卡替它们占位。
      现在整张删掉：占位卡说的是「这儿本来该有东西」，而这些东西压根不归后台世界引擎管，
      它既不产出也不会去编。一块永远不会填上的空位，留着只是每次都提醒一遍它是空的。 */
-  $('#rail').innerHTML=have.concat(none).join('');
+  $('#rail').innerHTML=have.join('')+(none.length
+    ?subCard('indigo','i-moon','本轮没有',none.map(([hue,icon,title,note,exit])=>
+        '<div class="nrow h-'+hue+'"><span class="nrow-k"><svg><use href="#'+icon+'"/></svg>'+esc(title)+'</span>'+
+        '<p>'+esc(note)+'</p>'+(exit||'')+'</div>').join(''))
+    :'');
 
-  renderPager($('#logPager'),{page:logPage,pages,total:feed.length,unit:'条',
+  if($('#logPager'))renderPager($('#logPager'),{page:logPage,pages,total:feed.length,unit:'条',
     note:'按时间倒序',onGo:n=>{logPage=n;renderRail()}});
   $$('#rail .contact').forEach(el=>el.addEventListener('click',()=>pick(el.dataset.n)));
 }

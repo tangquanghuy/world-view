@@ -22,7 +22,9 @@
 }
 .tcard:hover{transform:translateY(-2px);box-shadow:var(--sh3)}
 .tcard.on{box-shadow:var(--sh3),0 0 0 1.5px var(--gold),0 0 22px var(--gold-glow)}
-.tcard.on::after{content:"✦";position:absolute;right:13px;bottom:11px;color:var(--gold);font-size:15px;line-height:1}
+/* 选中星标放右上角，跟类别胶囊同一行。原来在右下角，靠底栏那行「期限」垫着；
+   v1.0 没有期限的任务不出底栏，星标就压在进度条的右端上。 */
+.tcard.on::after{content:"✦";position:absolute;right:13px;top:21px;color:var(--gold);font-size:15px;line-height:1}
 .tcard h3{margin:10px 0 0;color:var(--ink2);font:600 19px/1.35 var(--serif);overflow-wrap:anywhere}
 .tsrc{margin:6px 0 0;color:var(--ink5);font:14px/1.5 var(--ui)}
 .tstatus{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:10px}
@@ -49,9 +51,10 @@
 .flow{position:relative;min-height:var(--fh,190px)}
 .flow svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 /* 节点 176px 宽：里面的文字统一提到 14px 后，158px 一行只剩十个字，
-   摘要两行截断会把话切在半截上。改宽度必须同步改 JS 里的 CW。 */
+   摘要两行截断会把话切在半截上。改默认宽度必须同步改 JS 里的 CW0。
+   一行只摆得下一张时 JS 把 --cw 设成面板宽，链条改成竖着走。 */
 .fnode{
-  position:absolute;left:var(--x);top:var(--y);width:176px;
+  position:absolute;left:var(--x);top:var(--y);width:var(--cw,176px);
   display:grid;gap:5px;padding:13px;border-radius:var(--r-card);
   background:var(--card);box-shadow:var(--sh1);
 }
@@ -81,6 +84,10 @@
 }
 .contract-block li::before{content:'';position:absolute;left:4px;top:.6em;width:5px;height:5px;border-radius:50%;background:currentColor}
 .contract-parts{margin-top:11px;padding-top:11px;border-top:1px solid var(--rule)}
+/* 列模板由 kvBlock 按有值的项算好塞进 --terms；窄屏退回共享 .kv 的两列／一列 */
+.kv.terms{grid-template-columns:var(--terms)}
+@media(max-width:860px){.kv.terms{grid-template-columns:repeat(2,minmax(0,1fr))}.kv.terms>.lead{grid-column:1/-1}}
+@media(max-width:560px){.kv.terms{grid-template-columns:minmax(0,1fr)}}
 
 /* ---------- 事件详情：与任务链共用这块面板 ----------
    事件没有阶段图，取而代之的是"已经发生的公开后果"这条时间线。 */
@@ -388,14 +395,25 @@ function renderCards(){
 }
 
 /* ---------- 链路详情：阶段按数组顺序连成一条链 ----------
-   v1.0 的阶段不再记父阶段，没有分叉：第 i 个阶段接在第 i-1 个后面。 */
-function buildGraph(stages){
-  const parent=stages.map((_,i)=>i-1);
-  const depth=stages.map((_,i)=>i);
-  const cols=new Map();
-  depth.forEach((d,i)=>{if(!cols.has(d))cols.set(d,[]);cols.get(d).push(i)});
-  return{parent,depth,cols};
+   v1.0 的阶段不再记父阶段，没有分叉：第 i 个阶段接在第 i-1 个后面。
+   以前有分叉时，子阶段跟下一个主阶段同列，五个阶段只占四列；拉直之后五列
+   要 1136px，1536 下最后一个阶段也被挤到横向滚动条后面，390 下只看得见一个半。
+   所以按面板宽度折行：一行摆得下几张就摆几张，下一行从左边接着读，
+   行尾用一条「下—左—下」的折线接回下一行行首。一行只摆得下一张时（窄屏），
+   节点撑满面板宽，读起来是一条竖链。 */
+const CW0=176,GX=64;   // CW0 必须和 .fnode 的默认宽度一致
+function chainLayout(n,avail){
+  const fit=Math.max(1,Math.floor((avail+GX)/(CW0+GX)));
+  const cw=fit===1?Math.max(CW0,Math.floor(avail)):CW0;
+  // 行间距：横排折行时要容下「下—左—下」的折线，竖链只是一根短箭头
+  return{perRow:Math.max(1,Math.min(n,fit)),cw,gy:fit===1?26:40};
 }
+// 折行数取决于面板宽度，窗口宽度变了要重排；只认宽度变化，高度变化不触发
+let flowWidth=0;
+new ResizeObserver(()=>{
+  const w=$('#flowWrap').clientWidth;
+  if(sel.kind==='task'&&!$('#flowWrap').hidden&&w&&w!==flowWidth)renderTaskDetail();
+}).observe(document.getElementById('flowWrap'));
 /* 详情面板由任务链和事件共用，按当前选中的是哪一类分流 */
 function renderDetail(){
   if(sel.kind==='event')renderEventDetail();
@@ -407,23 +425,27 @@ function renderTaskDetail(){
   $('#flowWrap').hidden=false;$('#evDetail').hidden=true;
   const hue=hueOf(t);
   $('#detailTitle').textContent='任务详情 · '+t.name;
-  const client=clientOf(t);
-  $('#detailSub').textContent=L('task.category',t.category)+' · '+L('task.status',t.status)+(client?' · 委托方 '+client:'');
+  // 委托方不再写进副标题：v1.0 里它就是参与者名单里 role=委托方 的那一格，下面名单里已经列着
+  $('#detailSub').textContent=L('task.category',t.category)+' · '+L('task.status',t.status);
 
   const stages=arr(t.stages);
-  const{parent,depth,cols}=buildGraph(stages);
-  const CW=176,GX=64,GY=16;   // CW 必须和 .fnode 的 width 一致，否则连线和容器宽度会算错
-  const maxDepth=Math.max(...depth);
-  const W=(maxDepth+1)*CW+maxDepth*GX;
-  const flow=$('#flow');
+  const flow=$('#flow'),wrap=$('#flowWrap');
+  const cs=getComputedStyle(wrap);
+  const avail=wrap.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const{perRow,cw:CW,gy:GY}=chainLayout(stages.length,avail);
+  flowWidth=wrap.clientWidth;
+  const col=i=>i%perRow,row=i=>Math.floor(i/perRow);
+  const cols=Math.min(perRow,stages.length);
+  const W=cols*CW+(cols-1)*GX;
 
   /* 第一遍：只插入节点并按列定 x，高度交给内容决定 */
   flow.style.width=W+'px';
+  flow.style.setProperty('--cw',CW+'px');
   flow.innerHTML=stages.map((s,i)=>{
     const cls=s.status==='completed'?'done':['current','blocked'].includes(s.status)?'now':'';
     const mark=s.status==='completed'?'i-check':['current','blocked'].includes(s.status)?'i-spark':'';
     const badge=mark?'<span class="badge"><svg><use href="#'+mark+'"/></svg></span>':'';
-    return '<article class="fnode h-'+hue+' '+cls+'" style="--x:'+depth[i]*(CW+GX)+'px;--y:0px">'+
+    return '<article class="fnode h-'+hue+' '+cls+'" style="--x:'+col(i)*(CW+GX)+'px;--y:0px">'+
       '<b>'+esc(s.name||'未命名阶段')+'</b>'+
       '<span class="st">'+esc(L('stage.status',s.status))+'</span>'+
       (s.time?'<span class="tm">'+esc(s.time)+'</span>':'')+
@@ -433,25 +455,31 @@ function renderTaskDetail(){
     '</article>';
   }).join('');
 
-  /* 第二遍：量出真实高度后再定 y，避免节点被容器裁切 */
+  /* 第二遍：量出真实高度后再定 y。同一行的节点按行高居中，行与行之间留 GY 给折线 */
   const els=[...flow.querySelectorAll('.fnode')];
   const h=els.map(el=>el.offsetHeight);
-  const colH=new Map();
-  cols.forEach((list,d)=>colH.set(d,list.reduce((a,i)=>a+h[i],0)+(list.length-1)*GY));
-  const H=Math.max(...colH.values());
-  const pos=[];
-  cols.forEach((list,d)=>{
-    let y=(H-colH.get(d))/2;
-    list.forEach(i=>{pos[i]={x:d*(CW+GX),y};y+=h[i]+GY});
-  });
+  const rows=Math.ceil(stages.length/perRow)||0;
+  const rowH=[],rowY=[];
+  for(let r=0,y=0;r<rows;r++){
+    rowH[r]=Math.max(...h.filter((_,i)=>row(i)===r));
+    rowY[r]=y;y+=rowH[r]+GY;
+  }
+  const H=rows?rowY[rows-1]+rowH[rows-1]:0;
+  const pos=h.map((hh,i)=>({x:col(i)*(CW+GX),y:rowY[row(i)]+(rowH[row(i)]-hh)/2}));
   els.forEach((el,i)=>el.style.setProperty('--y',pos[i].y+'px'));
   flow.style.setProperty('--fh',H+'px');
 
+  const stroke='fill="none" stroke="var(--'+hue+')" stroke-width="1.8" opacity=".62" marker-end="url(#ah-'+hue+')"';
   const edges=stages.map((s,i)=>{
-    if(parent[i]<0)return '';
-    const a=pos[parent[i]],b=pos[i];
-    const x1=a.x+CW,y1=a.y+h[parent[i]]/2,x2=b.x,y2=b.y+h[i]/2,mx=(x1+x2)/2;
-    return '<path d="M'+x1+' '+y1+' C'+mx+' '+y1+','+mx+' '+y2+','+x2+' '+y2+'" fill="none" stroke="var(--'+hue+')" stroke-width="1.8" opacity=".62" marker-end="url(#ah-'+hue+')"/>';
+    if(i===0)return '';
+    const a=pos[i-1],b=pos[i];
+    if(row(i)===row(i-1)){
+      const x1=a.x+CW,y1=a.y+h[i-1]/2,x2=b.x,y2=b.y+h[i]/2,mx=(x1+x2)/2;
+      return '<path d="M'+x1+' '+y1+' C'+mx+' '+y1+','+mx+' '+y2+','+x2+' '+y2+'" '+stroke+'/>';
+    }
+    // 换行：从上一行行尾节点的底边出发，落到行间空隙，横着回到下一行行首，再下到节点顶边
+    const x1=a.x+CW/2,y1=a.y+h[i-1],x2=b.x+CW/2,y2=b.y,my=rowY[row(i)]-GY/2;
+    return '<path d="M'+x1+' '+y1+' V'+my+' H'+x2+' V'+y2+'" '+stroke+'/>';
   }).join('');
   flow.insertAdjacentHTML('afterbegin',
     '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'+
@@ -465,7 +493,7 @@ function renderTaskDetail(){
   $('#contract').innerHTML=
     outcomeBlock(t.outcome)+
     kvBlock([
-      ['i-check','完成条件',t.completion_condition],
+      ['i-check','完成条件',t.completion_condition,'lead'],
       ['i-pin','涉及地点',arr(t.locations).join('、')],
       ['i-hourglass','期限',t.deadline]
     ])+
@@ -490,8 +518,16 @@ function renderTaskDetail(){
    之前标签和值都是灰字、字号只差 1px，六项挤在一起就是一片没有落点的文字墙。 */
 const fieldKey=(icon,text)=>'<small class="k"><svg><use href="#'+icon+'"/></svg>'+esc(text)+'</small>';
 // 值为空的行不输出，整组都空时连 .kv 外框也不出
-const termRow=r=>P.isBlank(r[2])?'':'<div>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2])+'</b></div>';
-const kvBlock=rows=>{const h=rows.map(termRow).join('');return h?'<div class="kv">'+h+'</div>':''};
+const termRow=r=>P.isBlank(r[2])?'':'<div'+(r[3]==='lead'?' class="lead"':'')+'>'+fieldKey(r[0],r[1])+'<b class="v">'+esc(r[2])+'</b></div>';
+/* 列数跟着实际有值的项走，不再固定三列。v1.0 把失败条件并进了完成条件，
+   这一格是整句话（「……；失败：……」），三等分里它要折三行，旁边的「期限」只占一行；
+   期限为空时右边三分之一干脆空着。所以句子那格（第四项标 lead）给两份宽，其余各一份。 */
+const kvBlock=rows=>{
+  const live=rows.filter(r=>!P.isBlank(r[2]));
+  if(!live.length)return '';
+  const tpl=live.map(r=>r[3]==='lead'?'minmax(0,2fr)':'minmax(0,1fr)').join(' ');
+  return '<div class="kv terms" style="--terms:'+tpl+'">'+live.map(termRow).join('')+'</div>';
+};
 
 /* outcome 只在任务／事件终止后才有值，当前 mock 里全为空。
    没有它页面上就没有任何地方交代"这件事最后怎么了"，所以照样留出位置。 */
@@ -523,7 +559,13 @@ function renderEventDetail(){
     edH('i-eye','已显现的影响')+
     (effects.length
       ?'<ul class="effects h-'+hue+'">'+effects.map(v=>{
-        const meta=[v.time,v.location].filter(Boolean).join('　·　');
+        /* 变化记录的 summary 常常省掉主语（「通过阿尔戈放出攻略会议消息」是谁放的？），
+           主语在 source_name / target_name 里。v0.9 的 visible_effects 每句自带主语，
+           改从变化记录推出之后得把另一方补回来；另一方就是本事件自己时不写。 */
+        // 另一方是地区时它往往就是 location（「托尔巴纳 · … · 托尔巴纳」），那就只留地点
+        const loc=String(v.location||'');
+        const who=[v.source_name,v.target_name].find(n=>n&&n!==e.name&&!loc.includes(n))||'';
+        const meta=[who,v.time,loc].filter(Boolean).join(' · ');
         return '<li class="effect"><b>'+esc(v.summary)+'</b>'+
           (meta?'<small>'+esc(meta)+'</small>':'')+'</li>';
       }).join('')+'</ul>'

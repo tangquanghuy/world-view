@@ -61,11 +61,19 @@
    所以改成余量落到卡片末尾——短卡就短一截，不在腰上开个天窗。 */
 .act-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:10px}
 .acts.open .act-foot{margin-top:0}
+/* 光把余量挪到卡尾还不够：网格默认把同一行的卡拉成等高，日程一长一短时
+   （六条日程对「没有记录在案的日程」），短卡底下照样拖着四五百像素的空白卡面。
+   展开态各卡按自己的内容高度收住。 */
+.acts.open{align-items:start}
 .act-when{flex:0 0 auto;color:var(--hue-ink);font:600 13px/1.4 var(--ui);font-variant-numeric:tabular-nums}
 
 /* 展开后的日程。schedule 是"近期已完成或已安排"的行动，当前行动不在里面。 */
 .sched{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);display:grid;gap:8px}
 .sched-row{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 9px}
+/* 没有钟点的时间（「12月2日 下午 – 傍晚」）放在左列有一百多像素宽，正文被挤成一窄条，
+   一句话折五六行。这种行把时间提到正文上面。 */
+.sched-row.stack{grid-template-columns:minmax(0,1fr);gap:1px}
+.sched-row.stack .sched-t{white-space:normal}
 .sched-t{color:var(--ink4);font:13px/1.5 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
 .sched-b{min-width:0}
 .sched-b b{display:block;color:var(--ink2);font:400 14px/1.55 var(--ui);overflow-wrap:anywhere}
@@ -101,6 +109,16 @@
    而是由 egoFit() 量出来直接加到图的高度上，让星图整体撑开。 */
 .duo .ego{flex:0 0 auto}
 .duo .ego-foot{margin-top:auto}
+/* 右栏只有活跃事件和任务进展两块，条目少的时候（v1.0 一轮常常各只有一条）
+   只有三百来像素，左栏一千一，右边空出一整段。这时 balance() 把「近期变化」挪到右栏，
+   关系变动独占这一行：图不跟着拉宽（两三个节点摊在一千像素上只剩一段长线），
+   明细两列铺在图下面。 */
+.duo.solo{grid-template-columns:minmax(0,1fr)}
+.duo.solo .ego{width:min(640px,calc(100% - 12px));margin:2px auto 0}
+/* :not([hidden]) 不能省：这条的权重（0,3,0）压过 .ego-list[hidden]（0,2,0），
+   省了的话明细收不起来，按钮写着「关系明细 ▾」底下却摊着整份明细 */
+.duo.solo .ego-list:not([hidden]){display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));column-gap:28px;border-top:0}
+.duo.solo .ego-list .erow{border-top:1px solid var(--rule)}
 
 /* ---------- 谁跟谁在打交道（关系星图） ----------
    原型是"中心一个人 + 四周头像 + 连线挂关系"的星图，主视图照它复刻：
@@ -189,9 +207,20 @@
 .chg-i svg{width:16px;height:16px}
 .chg-b{min-width:0}
 .chg-b p{margin:0;color:var(--ink2);font:14px/1.6 var(--ui);overflow-wrap:anywhere}
-.chg-b small{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:2px;color:var(--hue-ink);font:13px/1.45 var(--ui);overflow-wrap:anywhere}
-.chg-b small svg{flex:0 0 auto;width:12px;height:12px;opacity:.7}
+/* 「谁 → 谁」和地点各自成一组，图标跟着自己那段字走。原来图标和文字是同一层的
+   弹性项，地点一长，图钉留在上一行行尾、地名掉到下一行，看着像两个图标挂空。 */
+.chg-b small{display:flex;flex-wrap:wrap;align-items:flex-start;gap:2px 10px;margin-top:2px;color:var(--hue-ink);font:13px/1.45 var(--ui);overflow-wrap:anywhere}
+.chg-b small>span{display:inline-flex;align-items:flex-start;gap:4px;min-width:0}
+.chg-b small svg{flex:0 0 auto;width:12px;height:12px;margin-top:3px;opacity:.7}
 .chg-t{color:var(--ink4);font:13px/1.7 var(--ui);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* 面板窄（挪进右栏，或 1180–1440 的双栏）时，右侧的时间列会把正文挤到一百多像素。
+   时间提到正文上面一行。 */
+@container (max-width:440px){
+  .chg{grid-template-columns:26px minmax(0,1fr);row-gap:0}
+  .chg-i{grid-row:1/3}
+  .chg-t{grid-column:2;grid-row:1;line-height:1.5}
+  .chg-b{grid-column:2;grid-row:2}
+}
 
 /* ---------- 任务进展 ---------- */
 .tp{
@@ -265,7 +294,7 @@
         </div>
       </section>
 
-      <div class="duo">
+      <div class="duo" id="duo">
         <section class="panel">
           <header class="phead">
             <span class="pmark h-rose"><svg><use href="#i-heart"/></svg></span>
@@ -279,7 +308,7 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="chgPanel">
           <header class="phead">
             <span class="pmark h-amber"><svg><use href="#i-list"/></svg></span>
             <div><h2>近期变化</h2></div>
@@ -291,7 +320,7 @@
 
     </div>
 
-    <div class="col">
+    <div class="col" id="colR">
 
       <section class="panel">
         <header class="phead">
@@ -408,7 +437,23 @@ function allTimes(){
 function hourOf(t){const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?Number(m[1]):null}
 const dayIcon=h=>h===null?'i-spark':h<5?'i-moon':h<10?'i-sun':h<16?'i-sun':h<19?'i-dusk':'i-moon';
 /** 「霜月12日 20:30」→ 日期部分，用来判断刻度是否跨天 */
-const dayOf=s=>{const m=String(s||'').match(/([^\d\s]{0,4}月\s*\d+\s*日)/);return m?m[1]:''};
+/* 月份可能是名字（霜月12日）也可能是序号（12月3日）；原来只认名字，序号月被截成「月3日」 */
+const DAY_RE=/((?:\d{1,2}|[^\d\s]{1,4})月\s*\d+\s*日)/;
+const dayOf=s=>{const m=String(s||'').match(DAY_RE);return m?m[1]:''};
+/* 刻度上的「钟点」：有 HH:MM 用它，没有就用日期后面那截时段词（上午／傍晚）。
+   原来没有钟点时整串「12月1日 上午」塞进刻度主文字、下面再挂一遍日期，
+   「现在」那枚则因为取不到 HH:MM 只剩一个「现在」，390 档几组刻度互相压、探出面板。 */
+const clockOf=s=>{
+  const t=String(s||'').trim();
+  return timeHH(t)||t.replace(/^.*?\d+\s*年\s*[·・]?\s*/,'').replace(DAY_RE,'').trim()||t;
+};
+/** 一段起止写成一句：同一天只写一次日期，起止相同只写一个 */
+function spanText(a,b){
+  a=String(a||'').trim();b=String(b||'').trim();
+  if(!a||!b||a===b)return a||b;
+  const da=dayOf(a);
+  return da&&da===dayOf(b)?da+' '+clockOf(a)+'–'+clockOf(b):a+' – '+b;
+}
 
 function renderRuler(){
   const vs=allTimes();
@@ -438,7 +483,7 @@ function renderRuler(){
     lastDay=d||lastDay;
     return '<span class="tick" style="--x:'+at(T(s)).toFixed(2)+'%" title="'+esc(s)+'">'+
       '<svg><use href="#'+dayIcon(h)+'"/></svg>'+
-      '<b>'+esc(timeHH(s)||s)+'</b>'+
+      '<b>'+esc(clockOf(s))+'</b>'+
       (label?'<small>'+esc(label)+'</small>':'')+
       '<i></i></span>';
   }).join('');
@@ -446,7 +491,7 @@ function renderRuler(){
   // 世界当前时间单独标出来。它未必落在任何一个刻度上，但它是读这条尺子的基准。
   const nowMark=NOW_T===null?'':
     '<span class="tick now" style="--x:'+at(Math.max(lo,Math.min(hi,NOW_T))).toFixed(2)+'%" title="'+esc(WORLD_TIME)+'">'+
-      '<b>'+esc(timeHH(WORLD_TIME))+'</b><small>现在</small><i></i></span>';
+      '<b>'+esc(clockOf(WORLD_TIME))+'</b><small>现在</small><i></i></span>';
 
   el.innerHTML=ticks+nowMark;
 }
@@ -488,11 +533,25 @@ function actList(){
   return ps.filter(p=>(p.current_state||{}).related_task||(p.current_state||{}).related_event);
 }
 
+/* 日程按开始时间正序排（跟角色档案的日程带同一个读法）。数据里的顺序是写入顺序，
+   原样铺会出现「12月3日 傍晚」排在「12月3日 中午–傍晚」前面。解析不出时间的沉到最后。 */
+function schedSorted(p){
+  const key=s=>T(s.start_time||s.end_time);
+  return arr(p.schedule).slice().sort((a,b)=>{
+    const va=key(a),vb=key(b);
+    if(va===null||vb===null)return (va===null)-(vb===null);
+    return va-vb;
+  });
+}
 function schedRow(s){
-  const when=[timeHH(s.start_time)||s.start_time,timeHH(s.end_time)||s.end_time].filter(Boolean).join('–');
+  // 有钟点照旧只写「16:00–18:20」；没有钟点的同一天只写一次日期，起止相同只写一个
+  const hh=timeHH(s.start_time)||timeHH(s.end_time);
+  const when=hh
+    ?[timeHH(s.start_time)||s.start_time,timeHH(s.end_time)||s.end_time].filter(Boolean).join('–')
+    :spanText(s.start_time,s.end_time);
   const full=[s.start_time,s.end_time].filter(Boolean).join(' → ');
   const tail=[s.location,s.result].filter(Boolean).join('　·　');
-  return '<div class="sched-row">'+
+  return '<div class="sched-row'+(hh?'':' stack')+'">'+
     '<span class="sched-t"'+(full?' title="'+esc(full)+'"':'')+'>'+esc(when)+'</span>'+
     '<span class="sched-b">'+(s.action?'<b>'+esc(s.action)+'</b>':'')+
       (tail?'<small>'+esc(tail)+'</small>':'')+
@@ -536,7 +595,7 @@ function actCard(p){
            '</span></div>').join('')+'</div>'
         :'')+
       fieldKey('i-clock','近期日程')+
-      (arr(p.schedule).length?arr(p.schedule).map(schedRow).join(''):'<p class="nodata">当前行动之外没有记录在案的日程</p>')+
+      (arr(p.schedule).length?schedSorted(p).map(schedRow).join(''):'<p class="nodata">当前行动之外没有记录在案的日程</p>')+
     '</div>':'')+
   '</button>';
 }
@@ -627,6 +686,7 @@ function arrowHead(x,y,ux,uy,col){
 /* 左右两块面板等高，关系图这边内容短，余量原来摊成图上下两块空白。
    改成：先把图压到自然高度，量出面板还空多少，再把余量（最多 120px）加回图上，
    所有纵坐标按同一个系数放大——星图整体撑开，构图比例不变。 */
+let EGO_NAT=0;                     // 星图本身的自然高度，配平时用来算面板还空多少
 function egoFit(natural){
   const box=$('#ego'),panel=box.closest('.panel');
   box.style.height=natural+'px';
@@ -644,6 +704,7 @@ function renderEgo(){
   const ns=egoNeighbors(me);
 
   if(!ns.length){
+    EGO_NAT=150;
     box.style.height=egoFit(150)+'px';
     box.innerHTML='<div class="nodata mid">'+esc(me.name)+'目前没有记录在案的直接关系</div>';
     $('#egoList').innerHTML='';return;
@@ -656,6 +717,7 @@ function renderEgo(){
   const keys=SLOTS[ns.length]||null;
   const hasT=!!keys&&keys.some(k=>k[0]==='T'),hasB=!!keys&&keys.some(k=>k[0]==='B');
   const H0=!keys?320:hasT?300:hasB?224:142;
+  EGO_NAT=H0;
   const H=egoFit(H0),k=H/H0;
   const cx=W/2,cy=(!keys?H0/2:hasT?150:hasB?72:68)*k;
   box.style.height=H+'px';
@@ -790,7 +852,15 @@ function renderFull(){
     used.push({x:p.x,y:p.y});
   });
 
-  const seen=new Set(),wires=[],tags=[];
+  const seen=new Set(),pairs=new Set(),wires=[],tags=[];
+  // 同一对节点之间要画几枚标签（互记的关系词不同才会是 2），下面错开标签时用
+  const dup=new Map(),kinds=new Set();
+  for(const p of inner)for(const r of arr(p.relations)){
+    if(!pos.get(p.name)||!pos.get(r.target_name))continue;
+    const pk=[p.name,r.target_name].sort().join('|');
+    if(kinds.has(pk+r.relation_type))continue;
+    kinds.add(pk+r.relation_type);dup.set(pk,(dup.get(pk)||0)+1);
+  }
   for(const p of inner)for(const r of arr(p.relations)){
     const a=pos.get(p.name),b=pos.get(r.target_name);
     if(!a||!b)continue;
@@ -807,8 +877,21 @@ function renderFull(){
       (quiet?' stroke-dasharray="5 5"':'')+' opacity="'+(quiet?.45:.85)+'"/>');
     wires.push(arrowHead(e.x,e.y,ux,uy,col));
     let nx=-uy,ny=ux;if(ny>0){nx=uy;ny=-ux}          // 标签挑连线上方那一侧，别压在线上
-    tags.push('<span class="wire-tag h-'+hue+'" style="--x:'+((s.x+e.x)/2+nx*13).toFixed(1)+
-      'px;--y:'+((s.y+e.y)/2+ny*13).toFixed(1)+'px" title="'+
+    /* 两人互相记了不同的关系（阿尔戈 → 迪亚贝尔「效力」、迪亚贝尔 → 阿尔戈「联络」）时
+       两条线是同一段，标签也落在同一点，后画的整枚盖住先画的。两枚顺着线各往一头挪，
+       第二枚再换到线的另一侧——只换侧不挪的话，线陡时两侧只差二十来像素，还是摞在一起。 */
+    const ends=[p.name,r.target_name].sort(),pair=ends.join('|');
+    let ax=0,ay=0;
+    if(dup.get(pair)>1){
+      // 顺着线的方向统一按名字排序后的那一头算，两枚各往一头挪，不会挪到同一边去
+      const c0=pos.get(ends[0]),c1=pos.get(ends[1]),cd=Math.hypot(c1.x-c0.x,c1.y-c0.y)||1;
+      const sgn=pairs.has(pair)?1:-1;
+      ax=sgn*34*(c1.x-c0.x)/cd;ay=sgn*34*(c1.y-c0.y)/cd;
+      if(pairs.has(pair)){nx=-nx;ny=-ny}
+    }
+    pairs.add(pair);
+    tags.push('<span class="wire-tag h-'+hue+'" style="--x:'+((s.x+e.x)/2+nx*13+ax).toFixed(1)+
+      'px;--y:'+((s.y+e.y)/2+ny*13+ay).toFixed(1)+'px" title="'+
       esc(p.name+' → '+r.target_name+'　'+L('relation.type',r.relation_type)+
           (r.current_basis?'：'+r.current_basis:'')+
           (r.recent_change?'\n　本轮变化：'+r.recent_change:''))+'">'+
@@ -849,8 +932,8 @@ function renderChanges(){
   $('#changes').innerHTML=page.length?page.map(c=>{
     const hue=CHANGE_HUE[c.kind]||'indigo';
     const who=[c.source_name,c.target_name].filter(Boolean).map(esc).join(' → ');
-    const meta=(who?'<svg><use href="#'+(SOURCE_ICON[c.source_type]||'i-spark')+'"/></svg>'+who:'')+
-      (c.location?'<svg><use href="#i-pin"/></svg>'+esc(c.location):'');
+    const meta=(who?'<span><svg><use href="#'+(SOURCE_ICON[c.source_type]||'i-spark')+'"/></svg><span>'+who+'</span></span>':'')+
+      (c.location?'<span><svg><use href="#i-pin"/></svg><span>'+esc(c.location)+'</span></span>':'');
     return '<div class="chg h-'+hue+'">'+
       '<span class="chg-i" title="'+esc(L('change.kind',c.kind))+'"><svg><use href="#'+(CHANGE_ICON[c.kind]||'i-spark')+'"/></svg></span>'+
       '<div class="chg-b">'+(c.summary?'<p>'+esc(c.summary)+'</p>':'')+
@@ -974,31 +1057,63 @@ function renderTasks(){
    关系明细（一次约 250px，粗调）和近期变化的每页条数（一条约 46px，细调）。
    先粗后细，两者就不会互相顶——明细摊开后剩下的零头才交给条数去补。 */
 let egoAuto=true;                                 // 用户手动开合过就不再自动管
+let egoAutoOpen=false;                            // 明细是配平自动摊开的（重新配平时先收回去再量）
 /* 窄屏两栏是上下堆的，这时候比高度没有意义（比了会把条数越削越少）。 */
 function side(){
   const c=P.$$('.main > .col');
   return c.length>1&&c[0].offsetTop===c[1].offsetTop?c:null;
 }
+const chgMoved=()=>$('#chgPanel').parentNode===$('#colR');
+function setEgoList(on){
+  $('#egoList').hidden=!on;
+  $('#egoMore').setAttribute('aria-expanded',String(on));
+  $('#egoMore').textContent=on?'收起明细 ▴':'关系明细 ▾';
+}
+/* 近期变化的落点。默认照原型跟关系变动并排；右栏比左栏矮出将近一整块近期变化时
+   （v1.0 一轮的事件、任务常常各只有一条），挪进右栏补那段空白。
+   每次先放回原位再量，窗口来回拉也不会越挪越偏。 */
+function placeChanges(){
+  const panel=$('#chgPanel'),duo=$('#duo');
+  if(chgMoved()){duo.appendChild(panel);duo.classList.remove('solo')}
+  const c=side();
+  if(!c)return;
+  if(c[0].offsetHeight-c[1].offsetHeight<panel.offsetHeight*.8)return;
+  $('#colR').appendChild(panel);
+  duo.classList.add('solo');
+}
 function fillEgoList(){
   if(!egoAuto||!$('#egoList').hidden)return;
   const c=side();
-  if(!c||c[1].offsetHeight-c[0].offsetHeight<200)return;
-  $('#egoList').hidden=false;
-  $('#egoMore').setAttribute('aria-expanded','true');
-  $('#egoMore').textContent='收起明细 ▴';
+  if(!c)return;
+  /* 两种空：右栏比左栏高出一截；或者并排时近期变化比星图高得多，
+     关系变动被拉成等高后，图上下各空一两百像素（1280 档是 737px 的面板里一条 70px 的图带）。 */
+  const ego=$('#ego').closest('.panel');
+  const egoNat=ego.offsetHeight-$('#ego').offsetHeight+EGO_NAT;
+  const slack=chgMoved()?0:$('#chgPanel').offsetHeight-egoNat;
+  if(c[1].offsetHeight-c[0].offsetHeight<200&&slack<200)return;
+  setEgoList(true);egoAutoOpen=true;
   renderEgo();
 }
 function fitChgPage(){
   const c=side(),rows=P.$$('#changes > *');
   if(!c||!rows.length)return;
   const unit=rows.reduce((s,e)=>s+e.offsetHeight,0)/rows.length;
-  const room=c[1].offsetHeight-c[0].offsetHeight;
+  // 近期变化在哪一栏，就由哪一栏去补另一栏的差
+  const room=chgMoved()?c[0].offsetHeight-c[1].offsetHeight:c[1].offsetHeight-c[0].offsetHeight;
   if(Math.abs(room)<unit)return;                  // 差不到一条，别来回抖
-  const next=Math.max(4,Math.min(12,CHG_PAGE+Math.round(room/unit)));
+  /* 挪进右栏后一条要一百一十来像素（320px 宽，一句话折三行），下限还按 4 条算的话
+     v0.9 那份在 1280 档右栏仍比左栏长出一百六，左栏底下空一截。右栏里放到 3 条。 */
+  const next=Math.max(chgMoved()?3:4,Math.min(12,CHG_PAGE+Math.round(room/unit)));
   if(next===CHG_PAGE)return;
   CHG_PAGE=next;renderChanges();renderEgo();
 }
-const balance=()=>{fillEgoList();fitChgPage()};
+const balance=()=>{
+  if(egoAutoOpen&&egoAuto){setEgoList(false);egoAutoOpen=false}
+  CHG_PAGE=5;renderChanges();
+  placeChanges();
+  renderEgo();
+  fillEgoList();fitChgPage();
+};
 
 /* ---------- 启动 ---------- */
 function paint(){

@@ -39,6 +39,8 @@
 .clock-date i{font-style:normal;white-space:nowrap}
 .clock-date i+i::before{content:" · ";color:var(--ink5)}
 .clock-time{color:var(--ink);font:700 30px/1 var(--serif);font-variant-numeric:tabular-nums}
+/* 没有钟点时这格写时段词（傍晚、下午）。两个汉字用 30px 粗体比「22:00」重一截，收一档 */
+.clock-time.is-part{font-size:26px;letter-spacing:.06em}
 .speed-val{color:var(--ink2);font:600 22px/1 var(--serif)}
 .speed-mark{color:var(--gold);font-size:16px}
 
@@ -403,6 +405,7 @@ img.av.crest,img.pav.crest{
   .hbox{height:auto;padding:8px 12px;gap:2px 10px;flex-wrap:wrap}
   .hbox>div{min-width:0}
   .clock-time{font-size:24px}
+  .clock-time.is-part{font-size:21px}
   .tl{grid-auto-flow:row;padding:6px 14px}
   /* 27px 是圆点真正的圆心：左内边距 14px + 圆点半径 13px */
   .tl::before{left:27px;right:auto;top:14px;bottom:14px;width:3px;height:auto;background:var(--tl-stops-v)}

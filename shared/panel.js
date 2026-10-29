@@ -405,16 +405,28 @@
     location.href = route ? route.file : String(target);
   }
 
+  /* v1.0 的世界时间常常没有钟点，只写时段：「12月3日 傍晚」。原来时刻格只认 HH:mm，
+     这种写法一律显示「--:--」，日期格里倒挂着「傍晚」。没有钟点时把日期后面那个
+     时段词挪进时刻格，日期格只留日期；有钟点的照旧。 */
   function updateWorldClock() {
     const raw = String(DATA.world?.[0]?.world_time || '');
     const dateEl = $('#wDate'), clockEl = $('#wClock');
+    const hhmm = timeHH(raw);
+    let date = raw.replace(/\s*[·・]?\s*\d{1,2}:\d{2}.*$/, '').trim();
+    let part = '';
+    if (!hhmm) {
+      const m = date.match(/^(.*\d+\s*日)\s*[·・]?\s*([^\d\s·・]{1,4})$/);
+      if (m) { date = m[1].trim(); part = m[2]; }
+    }
     if (dateEl) {
-      const date = raw.replace(/\s*[·・]?\s*\d{1,2}:\d{2}.*$/, '').trim();
       dateEl.innerHTML = date
         ? date.split(/\s*[·・]\s*/).filter(Boolean).map((seg) => `<i>${esc(seg)}</i>`).join('')
         : '时间未记录';
     }
-    if (clockEl) clockEl.textContent = timeHH(raw) || '--:--';
+    if (clockEl) {
+      clockEl.textContent = hhmm || part || '--:--';
+      clockEl.classList.toggle('is-part', !hhmm && !!part);
+    }
   }
 
   function initChrome(activeLabel) {

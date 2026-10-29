@@ -20,7 +20,9 @@
   };
 
   /** 一天之内的粗略时段，用于「霜月12日 夜」这种没有具体钟点的写法 */
-  const DAYPART = { 凌晨: 3, 清晨: 6, 早晨: 7, 上午: 9, 正午: 12, 午后: 14, 下午: 15, 傍晚: 18, 黄昏: 18, 夜: 21, 夜间: 21, 深夜: 23, 半夜: 23 };
+  // 长词在前：「深夜」含「夜」，「中午」「午后」都不能被更短的词先截走
+  const DAYPART = { 凌晨: 3, 黎明: 5, 拂晓: 5, 清晨: 6, 早晨: 7, 上午: 9, 正午: 12, 中午: 12, 午间: 12, 午后: 14, 下午: 15,
+                    傍晚: 18, 黄昏: 18, 深夜: 23, 半夜: 23, 夜间: 21, 夜晚: 21, 夜: 21 };
 
   /**
    * 解析成可比较的数值。解析不出来返回 null，调用方自行决定怎么排。
@@ -30,19 +32,24 @@
     const str = String(s || '').trim();
     if (!str) return null;
 
-    const m = str.match(/(?:(\d+)\s*年)?\s*([^\d\s]{1,4}?)?月\s*(\d+)\s*日/);
+    // 月份既可能是名字（霜月），也可能是序号（12月）。原来只认名字，
+    // 「11月28日」会被读成「月28日」、排到「12月3日」后面去。
+    const m = str.match(/(?:(\d+)\s*年)?\s*(?:(\d{1,2})|([^\d\s]{1,4}?))?月\s*(\d+)\s*日/);
     if (!m) return null;
 
     const year = m[1] ? Number(m[1]) : 0;
-    const month = m[2] ? monthIndex(m[2]) : 0;
-    const day = Number(m[3]);
+    const month = m[2] ? Number(m[2]) : m[3] ? monthIndex(m[3]) : 0;
+    const day = Number(m[4]);
 
     let minutes = -1;                                   // 没有钟点时排在当天最前
     const hhmm = str.match(/(\d{1,2}):(\d{2})/);
     if (hhmm) minutes = Number(hhmm[1]) * 60 + Number(hhmm[2]);
     else for (const [word, hour] of Object.entries(DAYPART)) if (str.includes(word)) { minutes = hour * 60; break; }
 
-    return ((year * 64 + month) * 64 + day) * 1500 + (minutes + 1);
+    // 一个月按 32 天进位（日最大 31，不会跟下个月撞上）。原来按 64 天进位，
+    // 排序一样对，可两个时间点的差值也要拿去画时间尺：跨一次月（11月28日 → 12月3日）
+    // 就被算成 39 天，当月那几天全挤在尺子最右一小截，刻度互相让位只剩两枚。
+    return ((year * 64 + month) * 32 + day) * 1500 + (minutes + 1);
   }
 
   /** 倒序比较器：时间新的排前面，解析不出来的沉到最后 */

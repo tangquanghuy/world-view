@@ -403,7 +403,6 @@
    窄屏（面板 <900px）退回竖排。 */
 @container (min-width:900px){
   .rexp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px;align-items:start}
-  .rexp .rx.wide{grid-column:1/-1}
 }
 
 /* 区块小标题：图标 + 主色 + 半粗，和正文一眼分得开 */
@@ -569,24 +568,40 @@
 .idxbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--idxmin,290px),1fr));gap:0 26px}
 /* 分了列之后 :last-child 只管得着最后一格，别的列末尾还挂着分隔线，
    而列与列之间又没有竖线——横平竖不平。索性整片去掉底线，靠间距分条。 */
-.idxbody .idx{border-bottom:0}
+/* align-content:start：一排里的格子被拉成同高（热点那页一条说明三行、一条两行），
+   格子自己的两行网格轨道会跟着撑开，名字留在顶上、说明被推到底，中间空一截。 */
+.idxbody .idx{border-bottom:0;align-content:start}
+/* 时间是一个整体，不许在「傍｜晚」中间折行 */
+.idx p .nw{white-space:nowrap}
 /* 真分成多列时才改列宽：名字原来占 1fr，把状态胶囊一路顶到格子右边，
    中间空一大截。让名字只占它自己那么宽，胶囊就贴着名字走。
    单列时（窄屏）胶囊靠右是对的，那是一张表的读法，所以套容器查询。 */
 @container (min-width:640px){
-  .idxbody .idx{grid-template-columns:30px minmax(0,max-content) minmax(0,1fr);padding:8px 0 10px}
+  /* 胶囊那一列至少留够胶囊自己的宽度：原来是 minmax(0,1fr)，名字一长（「第一层攻略联队
+     → 第一层头目攻略」）胶囊列被压到零，「影响」被挤得贴住名字、左半截被盖住。
+     让名字那列先让位、自己出省略号（全名在 title 里）。 */
+  .idxbody .idx{grid-template-columns:30px minmax(0,max-content) minmax(max-content,1fr);padding:8px 0 10px}
+  /* 第二行（说明／档位条）横跨名字和胶囊两列。胶囊列的下限是 max-content，跨列条目的
+     整句宽度会被算进这一列，把名字挤成「第一…」。让第二行不参与量列宽，宽度只随格子。 */
+  .idxbody .idx p,.idxbody .idx .steprow{contain:inline-size}
 }
 
 /* ---------- 底部通栏：世界演进时间轴 ----------
    auto-fill 而不是 repeat(N)：条目数变多时自动换行成第二排，
    旧版固定列数在 1280 和 390 上一律横向溢出。 */
 .wtl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px 14px;padding:14px 18px 4px}
-.wti{position:relative;padding:26px 12px 12px;border-radius:var(--r-card);text-align:left;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
+/* 纵向 flex、顶端对齐：<button> 默认把内容竖直居中，同一排几张卡被网格拉成等高后，
+   字少的那张整块往下沉，时间那行在一排里高低错开（v1.0 的时间没有钟点，
+   「12月3日 下午」这种长短不一，错得更明显）。圆点在顶上是绝对定位，不受影响。 */
+.wti{position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding:26px 12px 12px;border-radius:var(--r-card);text-align:left;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
 .wti::before{content:"";position:absolute;left:0;right:0;top:14px;height:2.5px;border-radius:2px;background:linear-gradient(90deg,var(--hue-track),transparent)}
 .wti::after{content:"";position:absolute;left:12px;top:8px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 0 0 2.5px var(--hue),0 1px 4px rgba(72,66,52,.2)}
 .wti.now{background:var(--card);box-shadow:var(--sh3)}
 .wti.now::after{background:var(--hue);box-shadow:0 0 0 2.5px var(--hue),0 0 12px var(--gold-glow)}
-.wti .wt{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+/* 时间与来源上下两行，不再同排换行：v1.0 的时间是「12月3日 傍晚」这种整段，
+   来源名短的（桐人）挤得进同一行、长的（第一层头目攻略）掉到第二行，
+   同一排卡片有的两行有的一行，正文的起点跟着高低错开。 */
+.wti .wt{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
 .wti time{flex:0 0 auto;color:var(--hue-ink);font:600 15px/1.3 var(--serif);font-variant-numeric:tabular-nums}
 .wti .wsrc{display:flex;align-items:center;gap:4px;min-width:0;color:var(--ink5);font:14px/1.4 var(--ui)}
 .wti .wsrc svg{flex:0 0 auto;width:13px;height:13px;opacity:.8}
@@ -605,6 +620,8 @@
   .rsig{width:44px;height:44px}
   .rsig img{width:24px;height:24px}
   .wtl{padding-left:14px;padding-right:14px;gap:16px 12px}
+  /* 窄屏一行一张、上下摞着，没有并排的卡可对齐，时间和来源放回同一行省一行高 */
+  .wti .wt{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:3px 8px}
 }
 </style>
 </head>
@@ -983,10 +1000,9 @@ function graphEdges(keys){
       hue:'green',icon:'i-crown',
       basis:r.name+' 记在 '+c.primary_faction+' 名下',change:'',
       from:c.primary_faction,to:r.name,kind:'势力与地区'});
-    regionFactions(r.name).contesting.map(x=>x.name).forEach(n=>add('f:'+n,'r:'+r.name,{rank:5,label:'争夺中',
-      hue:'rose',icon:'i-swords',
-      basis:n+' 正在争夺 '+r.name,change:'',
-      from:n,to:r.name,kind:'势力与地区'}));
+    /* 争夺方不再单独加一条角色：v1.0 的争夺方就是 areas 里 relation_type=contested 的那项
+       （P.regionFactions 也是从那儿推的），上面 areas 那一轮已经以「争夺中」加过了。
+       再加一次，同名角色会合并，依据栏就多出一句「X 正在争夺 Y」，把标签复述一遍。 */
   });
   return [...map.values()].map(e=>{
     e.roles.sort((x,y)=>y.rank-x.rank);
@@ -1721,6 +1737,10 @@ function regionRow(r){
   const cur=curFaction();
   const present=presentOf(r),contest=contestNames(r);
   const mine=cur&&(c.primary_faction===cur.name||present.some(x=>x.name===cur.name));
+  /* 在场与争夺都从势力 areas 推出，争夺方本身也在 present 里（relation_type=contested）。
+     在场那排只列没在争的，争夺方那排单独标红，同一个势力不出两次。 */
+  const staying=present.filter(x=>x.relation_type!=='contested');
+  const ownerText=c.primary_faction||(c.status==='unclaimed'?'无归属势力':'未记录归属');
   const pf=c.primary_faction?FACTION_BY.get(c.primary_faction):null;
   const conds=arr(r.conditions);
   // 收起态只露最新一条；P.changesFor 已按架空历法新的在前排好
@@ -1731,6 +1751,30 @@ function regionRow(r){
   if(open){
     const cp=Math.max(1,Math.ceil(conds.length/COND_PAGE)),cpi=Math.min(pg.c,cp-1);
     const gp=Math.max(1,Math.ceil(chgs.length/CHG_PAGE)),gpi=Math.min(pg.g,gp-1);
+    /* 「在场与争夺」原来是第三块、跨两栏通排在最底下。条件一页最多 3 条、每条两行，
+       变化每条还挂关联按钮，右栏几乎总是长出一截，左栏条件底下空着一块，
+       在场与争夺再从两栏都结束的地方另起一行。现在把它收进左栏、接在条件后面，
+       填的正是那块空当；窄屏单列时读序是 条件 → 在场 → 变化。
+       原来这里还有一格「主要控制势力」：行头「归属势力」已经写着，在场那排也列着
+       「X 控制」，三处说同一件事；而且那一格是强制三列的 kv 网格里唯一一项，
+       390 下被挤成「主要控制／势力」两行。删了。 */
+    const presence=
+      sectionH('i-people','在场与争夺')+
+      '<div style="margin-top:8px">'+
+        (staying.length
+          ?'<div class="linkrow">'+staying.map(x=>'<button class="linkbtn" data-fac="'+esc(x.name)+'"'+
+            (x.current_state?' title="'+esc(x.current_state)+'"':'')+'>'+
+            '<svg><use href="#i-shield"/></svg>'+esc(x.name)+
+            (x.relation_type?'　'+esc(L('area.relation',x.relation_type)):'')+'</button>').join('')+'</div>'
+          :contest.length?'':emptyNote('没有记录在场势力'))+
+        (contest.length
+          ?'<div class="linkrow"'+(staying.length?' style="margin-top:7px"':'')+'>'+contest.map(n=>{
+            const x=present.find(p=>p.name===n)||{};
+            return '<button class="linkbtn h-rose" data-fac="'+esc(n)+'"'+
+              (x.current_state?' title="'+esc(x.current_state)+'"':'')+'><svg><use href="#i-swords"/></svg>争夺方　'+esc(n)+'</button>';
+          }).join('')+'</div>'
+          :'')+
+      '</div>';
     exp='<div class="rexp h-'+hue+'">'+
       '<div class="rx">'+
       sectionH('i-scales','当前条件',hiddenCount(conds.length,COND_PAGE))+
@@ -1744,6 +1788,7 @@ function regionRow(r){
         }).join('')+'</ul>'+
          '<div class="pager" data-pg="c" data-n="'+esc(r.name)+'"></div>'
         :emptyNote('本轮没有记录在案的地区条件'))+
+      presence+
       '</div>'+
 
       '<div class="rx">'+
@@ -1759,25 +1804,6 @@ function regionRow(r){
          '<div class="pager" data-pg="g" data-n="'+esc(r.name)+'"></div>'
         :emptyNote('本轮这个地区没有值得展示的变化'))+
       '</div>'+
-
-      '<div class="rx wide">'+
-      sectionH('i-people','在场与争夺')+
-      '<div style="margin-top:8px">'+
-        (present.length
-          ?'<div class="linkrow">'+present.map(x=>'<button class="linkbtn" data-fac="'+esc(x.name)+'"'+
-            (x.current_state?' title="'+esc(x.current_state)+'"':'')+'>'+
-            '<svg><use href="#i-shield"/></svg>'+esc(x.name)+
-            (x.relation_type?'　'+esc(L('area.relation',x.relation_type)):'')+'</button>').join('')+'</div>'
-          :emptyNote('没有记录在场势力'))+
-        (contest.length
-          ?'<div class="linkrow" style="margin-top:7px">'+contest.map(n=>
-            '<button class="linkbtn h-rose" data-fac="'+esc(n)+'"><svg><use href="#i-swords"/></svg>争夺方　'+esc(n)+'</button>').join('')+'</div>'
-          :'')+
-      '</div>'+
-      '<div style="margin-top:12px">'+kvGrid([
-        ['i-crown','主要控制势力',c.primary_faction]
-      ],3)+'</div>'+
-      '</div>'+
     '</div>';
   }
 
@@ -1789,7 +1815,7 @@ function regionRow(r){
         '<span style="display:block;margin-top:4px">'+chip(chue,'',L('control.status',c.status))+'</span></span>'+
       '<span class="rcell">'+fieldKey('i-crown','归属势力')+
         '<span class="rown h-'+(pf?hueOf('f:'+pf.name):'indigo')+'" style="margin-top:5px">'+
-          '<i class="dot"></i><span>'+esc(c.primary_faction||'未记录归属')+'</span></span></span>'+
+          '<i class="dot"></i><span>'+esc(ownerText)+'</span></span></span>'+
       /* 档位条把 control.status 的强弱画出来。旧版旁边还写一句「第 3 / 5 档」，
          那只是把亮了几格念了一遍——格子自己数得出来，口径留在 title 里。 */
       '<span class="rcell">'+fieldKey('i-shield','控制稳固度')+
@@ -2177,8 +2203,11 @@ function hotspots(){
   const putChange=(c,self,where)=>changeLinked(c,self).forEach(l=>{
     if(l.kind==='task'||l.kind==='event')put(l.kind,l.name,where,c.summary,c.time);
   });
+  /* 势力那一路的地点是原文（「起始之镇西郊」），地区那一路记的是地区名（「起始之镇」）：
+     地点里写着某个已登记地区时归到那个地区，否则同一处地方会并排出现两次。 */
+  const regionAt=loc=>[...REGION_BY.keys()].find(n=>String(loc||'').includes(n))||'';
   REGIONS.forEach(r=>regionChanges(r).forEach(c=>putChange(c,r.name,r.name)));
-  FACTIONS.forEach(f=>changesFor(f.name).forEach(c=>putChange(c,f.name,c.location||f.name)));
+  FACTIONS.forEach(f=>changesFor(f.name).forEach(c=>putChange(c,f.name,regionAt(c.location)||c.location||f.name)));
   return [...m.values()].sort(WTime.byNewest('time'));
 }
 
@@ -2216,11 +2245,13 @@ function renderIdx(){
     html=pageOf(all).map(r=>{
       const c=r.control||{},hue=CONTROL_HUE[c.status]||'indigo';
       const rank=CONTROL_RANK[c.status]||0;
+      // 跟各地情势那一行同一个说法：无归属的写「无归属势力」，其余没写主控的写「未记录归属」
+      const owner=c.primary_faction||(c.status==='unclaimed'?'无归属势力':'未记录归属');
       return '<button class="idx h-'+hue+'" data-r="'+esc(r.name)+'">'+
         '<span class="idx-i" title="'+esc(sigilBasis(r))+'">'+sigilInner(r)+'</span>'+
         '<span class="idx-n">'+esc(r.name)+'</span>'+
         chip(hue,CONTROL_ICON[c.status]||'i-ask',L('control.status',c.status))+
-        steps(rank,5,hue,c.primary_faction||'无归属势力',
+        steps(rank,5,hue,owner,
           CONTROL_RANK_NOTE+'；当前第 '+rank+' 档，由 control.status 推导，不是评分也不是百分比')+
       '</button>';
     }).join('')||emptyNote('本轮没有地区记录');
@@ -2233,7 +2264,8 @@ function renderIdx(){
         '<span class="idx-i"><svg><use href="#'+(h.kind==='event'?'i-bell':'i-scroll')+'"/></svg></span>'+
         '<span class="idx-n">'+esc(h.name)+'</span>'+
         chip(hue,'',h.kind==='event'?'事件':'任务')+
-        '<p>'+esc([[...h.where].join('、'),h.time].filter(Boolean).join('　·　'))+'<br>'+esc(h.facts[0]||'')+'</p>'+
+        '<p>'+[esc([...h.where].join('、')),h.time?'<span class="nw">'+esc(h.time)+'</span>':''].filter(Boolean).join('　·　')+
+          '<br>'+esc(h.facts[0]||'')+'</p>'+
       '</button>';
     }).join('')||emptyNote('本轮的地区变化没有关联到任务或事件');
   }else{
@@ -2243,7 +2275,7 @@ function renderIdx(){
       const hue=REL_HUE[r.type]||'indigo';
       return '<button class="idx h-'+hue+'" data-fac2="'+esc(r.from)+'">'+
         '<span class="idx-i"><svg><use href="#'+(TARGET_ICON[r.target]||'i-spark')+'"/></svg></span>'+
-        '<span class="idx-n">'+esc(r.from+' → '+r.to)+'</span>'+
+        '<span class="idx-n" title="'+esc(r.from+' → '+r.to)+'">'+esc(r.from+' → '+r.to)+'</span>'+
         chip(hue,'',L('relation.type',r.type))+
         ([r.basis,r.change].some(Boolean)?'<p>'+esc([r.basis,r.change].filter(Boolean).join('　·　'))+'</p>':'')+
       '</button>';

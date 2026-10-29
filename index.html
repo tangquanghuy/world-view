@@ -181,10 +181,20 @@
       delete x.present_factions; delete x.recent_changes; delete x.updated_at; delete x.next_update;
       return x;
     });
+    const knownNames = new Set([].concat(world.npcs, world.candidates, world.factions)
+      .map(function (e) { return e && e.name; }).filter(Boolean));
     world.tasks = world.tasks.map(function (t) {
       const x = Object.assign({}, t);
       x.participants = arrOf(t.participants).map(function (p) { const y = Object.assign({}, p); delete y.type; return y; });
-      if (t.source) x.participants.unshift({ name: t.source, role: '委托方' });
+      // v0.9 的 source 有时是人名，有时是一句「谁委托、为什么」。
+      // 只有能对上已登记的人物/势力时才当成委托方参与者；对不上的整句并进目标，不伪装成一个人。
+      const src = String(t.source || '').trim();
+      if (src) {
+        const inList = x.participants.find(function (p) { return p && p.name === src; });
+        if (inList) inList.role = '委托方';
+        else if (knownNames.has(src)) x.participants.unshift({ name: src, role: '委托方' });
+        else x.objective = joinText(t.objective, '来源：' + src);
+      }
       if (t.failure_condition) x.completion_condition = joinText(t.completion_condition, '失败：' + t.failure_condition);
       x.stages = arrOf(t.stages).map(function (s) { const y = Object.assign({}, s); delete y.parent_stage; return y; });
       delete x.source; delete x.failure_condition; delete x.updated_at; delete x.next_update;
