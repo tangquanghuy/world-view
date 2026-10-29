@@ -45,15 +45,16 @@
     tasks: '任务与事件.html',
   };
   const DEFAULT = 'overview';
-  // 同时订阅各版本方案的视图，排位高的有数据就用它：v1.1 > v1.0 > v0.9。
-  // v1.1 只改了字段说明，数据形状和 v1.0 相同；v0.9 进页面前转成 v1.0 形状。
+  // 同时订阅各版本方案的视图，排位高的有数据就用它：v1.2 > v1.1 > v1.0 > v0.9。
+  // v1.1、v1.2 只改了字段说明和提示词，数据形状和 v1.0 相同；v0.9 进页面前转成 v1.0 形状。
   // 方案里没有的视图只会静默不回，所以全部订阅也不会报错。
   const VIEWS = [
+    { watchId: 'bg-world-panel-v12', viewId: 'bg_world_structured_v12', shape: 'v10', rank: 4 },
     { watchId: 'bg-world-panel-v11', viewId: 'bg_world_structured_v11', shape: 'v10', rank: 3 },
     { watchId: 'bg-world-panel', viewId: 'bg_world_structured_v10', shape: 'v10', rank: 2 },
     { watchId: 'bg-world-panel-v09', viewId: 'bg_world_structured_v09', shape: 'v09', rank: 1 },
   ];
-  const WATCH_ID = VIEWS[1].watchId;
+  const WATCH_ID = 'bg-world-panel';
   let dataVersion = '';
   let dataRank = 0;
   const bridgeEnabled = new URLSearchParams(location.search).get('acuBridge') === '1';

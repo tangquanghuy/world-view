@@ -72,7 +72,7 @@
     }
     try {
       await D.ready();
-      var result = await D.queryView(msg.viewId || 'bg_world_structured_v11', msg.params || {}, msg.options || {});
+      var result = await D.queryView(msg.viewId || 'bg_world_structured_v12', msg.params || {}, msg.options || {});
       reply(source, { type: 'we-query-view-result', id: msg.id, ok: true, result: result });
     } catch (err) {
       reply(source, { type: 'we-query-view-result', id: msg.id, ok: false, error: String(err && err.message || err) });
@@ -89,7 +89,7 @@
     try {
       await D.ready();
       if (watchers[wid] && typeof watchers[wid] === 'function') watchers[wid]();
-      watchers[wid] = await D.watchView(msg.viewId || 'bg_world_structured_v11', msg.params || {}, function (result) {
+      watchers[wid] = await D.watchView(msg.viewId || 'bg_world_structured_v12', msg.params || {}, function (result) {
         reply(source, { type: 'we-watch-view-result', watchId: wid, ok: true, result: result });
       }, msg.options || {});
       reply(source, { type: 'we-watch-view-ready', watchId: wid, ok: true });
